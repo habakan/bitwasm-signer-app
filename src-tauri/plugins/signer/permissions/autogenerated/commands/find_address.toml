@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-find-address"
+description = "Enables the find_address command without any pre-configured scope."
+commands.allow = ["find_address"]
+
+[[permission]]
+identifier = "deny-find-address"
+description = "Denies the find_address command without any pre-configured scope."
+commands.deny = ["find_address"]

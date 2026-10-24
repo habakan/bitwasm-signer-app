@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-erase-saved"
+description = "Enables the erase_saved command without any pre-configured scope."
+commands.allow = ["erase_saved"]
+
+[[permission]]
+identifier = "deny-erase-saved"
+description = "Denies the erase_saved command without any pre-configured scope."
+commands.deny = ["erase_saved"]

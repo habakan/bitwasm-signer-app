@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-restriction"
+description = "Enables the set_restriction command without any pre-configured scope."
+commands.allow = ["set_restriction"]
+
+[[permission]]
+identifier = "deny-set-restriction"
+description = "Denies the set_restriction command without any pre-configured scope."
+commands.deny = ["set_restriction"]

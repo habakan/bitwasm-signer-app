@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-scan-seed-qr"
+description = "Enables the scan_seed_qr command without any pre-configured scope."
+commands.allow = ["scan_seed_qr"]
+
+[[permission]]
+identifier = "deny-scan-seed-qr"
+description = "Denies the scan_seed_qr command without any pre-configured scope."
+commands.deny = ["scan_seed_qr"]

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-scan-psbt"
+description = "Enables the scan_psbt command without any pre-configured scope."
+commands.allow = ["scan_psbt"]
+
+[[permission]]
+identifier = "deny-scan-psbt"
+description = "Denies the scan_psbt command without any pre-configured scope."
+commands.deny = ["scan_psbt"]

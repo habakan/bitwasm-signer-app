@@ -1,0 +1,3 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = ["allow-state", "allow-set-network", "allow-scan-seed-qr", "allow-import-mnemonic", "allow-set-storage", "allow-set-restriction", "allow-set-theme", "allow-unlock-saved", "allow-erase-saved", "allow-scan-psbt", "allow-export-account", "allow-register-multisig", "allow-export-multisig", "allow-forget-multisig", "allow-create-mnemonic", "allow-bip85-mnemonic", "allow-find-address", "allow-sign-message", "allow-lock", "allow-parser-info"]
