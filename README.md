@@ -4,6 +4,8 @@
 
 An Android / iOS signing app built on the `bitwasm-signer` parser and signer WASM modules. By default the app keeps no key: it loads the key for each signing and erases it when you are done.
 
+**[Try the testnet demo in your browser](https://habakan.github.io/bitwasm-signer-app/)**
+
 > **Warning:** This is experimental software. It has not been audited and comes with no warranty. The author is not responsible for lost funds or any other damage from using it. Keep amounts small.
 
 ## Screenshots
