@@ -106,6 +106,8 @@ release鍵を変えると上書きインストールできず、アンインス�
 
 ## ブラウザ版のデモ
 
+https://habakan.github.io/bitwasm-signer-app/ で試せます（`main`からGitHub Actionsで公開）。
+
 iOSと同じエンジン(`wasmi_host.rs`)をwasm32向けにビルドし、ページの中で動かします。テストネットだけで、鍵はBIP39のテスト用の単語(`abandon`を11回と`about`)に限ります。単語やSeedQRの入力はできません。ネットにつながった端末で動くので、本物の鍵やお金には使わないでください。
 
 ```sh

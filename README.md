@@ -106,6 +106,8 @@ With a different release key the app cannot be installed over the old one, and u
 
 ## Browser demo
 
+Try it at https://habakan.github.io/bitwasm-signer-app/ (deployed from `main` by GitHub Actions).
+
 The same engine as iOS (`wasmi_host.rs`) is built for wasm32 and runs inside the page. It is testnet only, and the key is limited to the BIP39 test words (`abandon` eleven times and `about`). Words and SeedQRs cannot be entered. It runs on a device that is online, so never use it with real keys or funds.
 
 ```sh
