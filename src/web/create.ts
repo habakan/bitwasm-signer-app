@@ -1,3 +1,4 @@
+import { icon } from "../design/icons";
 import { tr } from "../views";
 import { button, escape, sheet } from "./demo";
 import { call } from "./engine";
@@ -15,6 +16,19 @@ function steps(current: number) {
   const [ja, en] = STEPS[current - 1];
   return `<div class="steps"><div class="steps-bars">${STEPS.map((_, i) => `<span class="${i < current ? "done" : ""}"></span>`).join("")}</div>
     <span class="overline">${tr(`${current} / 3  ${ja}`, `${current} OF 3  ${en.toUpperCase()}`)}</span></div>`;
+}
+
+// A sheet of this flow: Back in the top bar as on the phones, so the footer keeps only the step's own action
+function step(title: string, body: string, actions: string, onBack: () => void) {
+  const view = sheet(title, body, actions);
+  view.querySelector(".screen-body")!.classList.add("tight");
+  const back = document.createElement("button");
+  back.className = "topbar-back";
+  back.setAttribute("aria-label", tr("戻る", "Back"));
+  back.innerHTML = icon("back");
+  back.addEventListener("click", onBack);
+  view.querySelector(".topbar")!.prepend(back);
+  return view;
 }
 
 const stamp = () => `<div class="demo-stamp" aria-hidden="true">${tr("デモ・本物の資金に使わない", "DEMO · NEVER USE FOR FUNDS")}</div>`;
@@ -50,7 +64,8 @@ function walkthrough(): Promise<"random" | "dice"> {
     [tr("確かめる", "Check them"), tr("書いた単語を5問のクイズで確かめます。書き間違いがあれば、ここで気づけます。", "A five-question quiz checks what you wrote, so a slip of the pen shows up now.")],
     [tr("始める前に", "Before you start"), tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes.")],
   ];
-  const view = sheet(tr("新しいウォレット", "New wallet"), `<div class="walk"></div>`, "");
+  let leave = () => {};
+  const view = step(tr("新しいウォレット", "New wallet"), `<div class="walk"></div>`, "", () => leave());
   const walk = view.querySelector<HTMLElement>(".walk")!;
   const footer = view.querySelector<HTMLElement>(".screen-actions")!;
   let page = 0;
@@ -60,17 +75,16 @@ function walkthrough(): Promise<"random" | "dice"> {
       walk.innerHTML = `${art(page)}<div class="dots">${pages.map((_, i) => `<span class="${i === page ? "on" : ""}"></span>`).join("")}</div>
         <span class="overline">${page + 1} / ${pages.length}</span><div class="question"><h1>${title}</h1><p class="lead">${body}</p></div>`;
       footer.innerHTML = page < pages.length - 1
-        ? button("walk-next", tr("次へ", "Next"), "primary") + button("walk-cancel", tr("キャンセル", "Cancel"), "secondary")
-        : button("walk-random", tr("安全な乱数で作る", "Use secure random"), "primary") + button("walk-dice", tr("サイコロを振って作る", "Roll dice"), "secondary")
-          + button("walk-cancel", tr("キャンセル", "Cancel"), "secondary");
+        ? button("walk-next", tr("次へ", "Next"), "primary")
+        : button("walk-random", tr("安全な乱数で作る", "Use secure random"), "primary") + button("walk-dice", tr("サイコロを振って作る", "Roll dice"), "secondary");
     };
     const go = (to: number) => { if (to >= 0 && to < pages.length) { page = to; render(); } };
     footer.addEventListener("click", (event) => {
       const id = (event.target as HTMLElement).closest("button")?.id;
       if (id === "walk-next") go(page + 1);
       if (id === "walk-random" || id === "walk-dice") { view.remove(); resolve(id === "walk-dice" ? "dice" : "random"); }
-      if (id === "walk-cancel") { view.remove(); reject(cancelled()); }
     });
+    leave = () => { view.remove(); reject(cancelled()); };
     // A sideways swipe turns the page, as on the phones
     let startX = 0;
     walk.addEventListener("pointerdown", (event) => { startX = event.clientX; });
@@ -82,16 +96,19 @@ function walkthrough(): Promise<"random" | "dice"> {
 function chooseWords(dice: boolean): Promise<12 | 24> {
   const option = (count: 12 | 24, detail: string) => `<button class="tile tile-wide" id="words-${count}"><span class="tile-copy">
     <span class="tile-title">${tr(`${count}個の単語`, `${count} words`)}</span><span class="tile-detail">${detail}</span></span></button>`;
-  const view = sheet(tr("新しいウォレット", "New wallet"), `${steps(1)}<div class="question"><h1>${tr("単語の数を選ぶ", "Choose how many words")}</h1>
+  let leave = () => {};
+  const view = step(tr("新しいウォレット", "New wallet"), `${steps(1)}<div class="question"><h1>${tr("単語の数を選ぶ", "Choose how many words")}</h1>
     <p class="lead">${tr("どちらも安全です。24個のほうが余裕がありますが、書き写す量が倍になります。", "Both are safe. 24 words leave more margin but take twice as long to write down.")}</p></div>
     ${option(12, dice ? tr("サイコロを50回振る", "Roll a die 50 times") : tr("いちばんよく使われる長さ", "The most common length"))}
-    ${option(24, dice ? tr("サイコロを99回振る", "Roll a die 99 times") : tr("より長く、より強い", "Longer and stronger"))}`,
-    button("words-cancel", tr("キャンセル", "Cancel"), "secondary"));
-  return new Promise((resolve, reject) => view.addEventListener("click", (event) => {
-    const id = (event.target as HTMLElement).closest("button")?.id;
-    if (id === "words-12" || id === "words-24") { view.remove(); resolve(id === "words-12" ? 12 : 24); }
-    if (id === "words-cancel") { view.remove(); reject(cancelled()); }
-  }));
+    ${option(24, dice ? tr("サイコロを99回振る", "Roll a die 99 times") : tr("より長く、より強い", "Longer and stronger"))}`, "", () => leave());
+  view.querySelector(".screen-actions")!.remove();
+  return new Promise((resolve, reject) => {
+    leave = () => { view.remove(); reject(cancelled()); };
+    view.addEventListener("click", (event) => {
+      const id = (event.target as HTMLElement).closest("button")?.id;
+      if (id === "words-12" || id === "words-24") { view.remove(); resolve(id === "words-12" ? 12 : 24); }
+    });
+  });
 }
 
 const face = (n: number) => `<svg viewBox="0 0 30 30" aria-hidden="true">${({ 1: [[1, 1]], 2: [[0, 0], [2, 2]], 3: [[0, 0], [1, 1], [2, 2]], 4: [[0, 0], [2, 0], [0, 2], [2, 2]],
@@ -129,13 +146,13 @@ function markSheet(rolls: number[], need: number) {
 function rollDice(count: 12 | 24): Promise<Uint8Array> {
   const need = count === 12 ? 50 : 99;
   const rolls: number[] = [];
-  const view = sheet(tr("サイコロ", "Dice"), `${steps(1)}<div class="question"><h1>${tr("サイコロを振る", "Roll the die")}</h1>
-    <p class="lead">${tr(`1回振るごとに、出た目を押してください。ちょうど${need}回で単語を作れます。`, `After each roll, tap the face that came up. Exactly ${need} rolls make the words.`)}</p></div>
+  const key = (n: number) => `<button class="die-key" data-face="${n}" aria-label="${n}">${face(n)}</button>`;
+  let leave = () => {};
+  const view = step(tr("サイコロ", "Dice"), `${steps(1)}<p class="lead">${tr(`1回振るごとに、出た目を押してください。ちょうど${need}回で単語になります。`, `After each roll, tap the face that came up. Exactly ${need} rolls make the words.`)}</p>
     <div class="roll-well"><div class="roll-head"><span class="roll-history"></span><span class="roll-count"></span></div><div class="roll-sheet"></div></div>
-    <div class="die-grid">${[1, 2, 3, 4, 5, 6].map((n) => `<button class="die-key" data-face="${n}" aria-label="${n}">${face(n)}</button>`).join("")}</div>
-    <div class="die-edits">${button("die-undo", tr("1つ消す", "Undo"), "secondary")}${button("die-clear", tr("全部消す", "Clear all"), "secondary")}</div>
-    <p class="caption">${tr("出た目をそのまま文字として並べ、SHA-256 を取って単語にしています。SeedSigner や Krux、bitcoiner.guide/seed と同じ方法です。", "The rolls are hashed as text with SHA-256, the same way SeedSigner, Krux and bitcoiner.guide/seed do it.")}</p>`,
-    button("die-make", tr("単語を作る", "Make the words"), "primary") + button("die-cancel", tr("キャンセル", "Cancel"), "secondary"));
+    <div class="die-grid">${key(1)}${key(2)}${key(3)}<button class="die-key die-edit" id="die-undo" aria-label="${tr("1つ消す", "Undo")}">⌫</button>
+      ${key(4)}${key(5)}${key(6)}<button class="die-key die-edit" id="die-clear">${tr("全消去", "Clear")}</button></div>`,
+    button("die-make", tr("単語を作る", "Make the words"), "primary"), () => leave());
   const history = view.querySelector<HTMLElement>(".roll-history")!;
   const counter = view.querySelector<HTMLElement>(".roll-count")!;
   const marks = view.querySelector<HTMLElement>(".roll-sheet")!;
@@ -147,33 +164,35 @@ function rollDice(count: 12 | 24): Promise<Uint8Array> {
     counter.textContent = `${rolls.length} / ${need}`;
     counter.classList.toggle("full", rolls.length === need);
     marks.innerHTML = markSheet(rolls, need);
-    view.querySelectorAll<HTMLButtonElement>(".die-key").forEach((key) => { key.disabled = rolls.length >= need; });
+    view.querySelectorAll<HTMLButtonElement>(".die-key[data-face]").forEach((key) => { key.disabled = rolls.length >= need; });
     view.querySelector<HTMLButtonElement>("#die-undo")!.disabled = !rolls.length;
     view.querySelector<HTMLButtonElement>("#die-clear")!.disabled = !rolls.length;
     make.disabled = rolls.length !== need;
   };
   update();
-  return new Promise((resolve, reject) => view.addEventListener("click", (event) => {
-    const target = (event.target as HTMLElement).closest("button");
-    if (!target) return;
-    if (target.dataset.face && rolls.length < need) { rolls.push(Number(target.dataset.face)); navigator.vibrate?.(10); }
-    if (target.id === "die-undo") rolls.pop();
-    if (target.id === "die-clear" && confirm(tr("入れた目を全部消しますか", "Clear every roll?"))) rolls.length = 0;
-    if (target.id === "die-cancel") { rolls.fill(0); view.remove(); reject(cancelled()); return; }
-    if (target.id === "die-make") {
-      const bytes = new TextEncoder().encode(rolls.join(""));
-      const flags = call<{ flags: number }>("dice_check", bytes, count).flags;
-      if (!(flags & (DICE_BIASED | DICE_PATTERN)) || confirm(flags & DICE_BIASED
-        ? tr("出た目に偏りがあります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls are uneven. A fair die almost never gives rolls like these. Use them anyway?")
-        : tr("出た目に規則性があります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls follow a pattern. A fair die almost never gives rolls like these. Use them anyway?"))) {
-        view.remove();
-        resolve(bytes);
-        return;
+  return new Promise((resolve, reject) => {
+    leave = () => { rolls.fill(0); view.remove(); reject(cancelled()); };
+    view.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement).closest("button");
+      if (!target || target.classList.contains("topbar-back")) return;
+      if (target.dataset.face && rolls.length < need) { rolls.push(Number(target.dataset.face)); navigator.vibrate?.(10); }
+      if (target.id === "die-undo") rolls.pop();
+      if (target.id === "die-clear" && confirm(tr("入れた目を全部消しますか", "Clear every roll?"))) rolls.length = 0;
+      if (target.id === "die-make") {
+        const bytes = new TextEncoder().encode(rolls.join(""));
+        const flags = call<{ flags: number }>("dice_check", bytes, count).flags;
+        if (!(flags & (DICE_BIASED | DICE_PATTERN)) || confirm(flags & DICE_BIASED
+          ? tr("出た目に偏りがあります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls are uneven. A fair die almost never gives rolls like these. Use them anyway?")
+          : tr("出た目に規則性があります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls follow a pattern. A fair die almost never gives rolls like these. Use them anyway?"))) {
+          view.remove();
+          resolve(bytes);
+          return;
+        }
+        bytes.fill(0);
       }
-      bytes.fill(0);
-    }
-    update();
-  }));
+      update();
+    });
+  });
 }
 
 function derivation(phrase: string[], rolls: Uint8Array | null) {
@@ -186,12 +205,12 @@ function derivation(phrase: string[], rolls: Uint8Array | null) {
     const shown = i === phrase.length - 1 ? `${b.slice(0, 11 - checksum)}<strong class="checksum">${b.slice(11 - checksum)}</strong>` : b;
     return `${String(i + 1).padStart(2, " ")}  ${shown}  ${String(index).padStart(4, " ")}  ${escape(word)}`;
   }).join("\n");
-  const view = sheet(tr("単語のでき方", "How it was made"), `${stamp()}<div class="question"><h1>${tr("この単語のでき方", "How these words were made")}</h1>
+  const view = step(tr("単語のでき方", "How it was made"), `${stamp()}<div class="question"><h1>${tr("この単語のでき方", "How these words were made")}</h1>
     <p class="lead">${tr("あなたの単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words.")}</p></div>
     ${rolls ? `<h2 class="heading">1  ${tr(`サイコロの目(${rolls.length}回)`, `The rolls (${rolls.length})`)}</h2>
       <pre class="well" id="derive-rolls">${cleared ? tr("メモリから消しました。", "Cleared from memory.") : new TextDecoder().decode(rolls).match(/.{1,10}/g)!.join("\n")}</pre>
       ${button("derive-forget", tr("サイコロの目をメモリから消す", "Clear the rolls from memory"), "secondary")}
-      <p class="arrow">↓  ${tr(`目を文字として並べて SHA-256 を取り、先頭${bits}ビットを使う`, `SHA-256 of the rolls as text; the first ${bits} bits are kept`)}</p>`
+      <p class="arrow">↓  ${tr(`目を文字として並べて SHA-256 を取り、先頭${bits}ビットを使う。SeedSigner、Krux、bitcoiner.guide/seed と同じ方法です`, `SHA-256 of the rolls as text; the first ${bits} bits are kept. SeedSigner, Krux and bitcoiner.guide/seed do the same`)}</p>`
       : `<h2 class="heading">1  ${tr("安全な乱数", "Secure random")}</h2><p>${tr(`ブラウザの安全な乱数(crypto.getRandomValues)から${bits}ビットを取りました。`, `${bits} bits from the browser's secure random numbers (crypto.getRandomValues).`)}</p>
       <p class="arrow">↓  ${tr("そのまま使う", "Used as they are")}</p>`}
     <h2 class="heading">2  ${tr(`エントロピー(${bits}ビット、16進)`, `The entropy (${bits} bits, in hex)`)}</h2>
@@ -199,7 +218,7 @@ function derivation(phrase: string[], rolls: Uint8Array | null) {
     <p class="arrow">↓  ${tr(`SHA-256 の先頭${checksum}ビットをチェックサムとして末尾に足し、11ビットずつ${phrase.length}個に区切る`, `The first ${checksum} bits of its SHA-256 go on the end as a checksum; then ${phrase.length} groups of 11 bits`)}</p>
     <h2 class="heading">3  ${tr("11ビットの番号と単語", "Eleven bits, a number, a word")}</h2>
     <p class="caption">${tr("番号は 2048語の単語表(BIP39)の位置です。色の付いたビットがチェックサムです。", "The number is the place in the 2048-word BIP39 list. The coloured bits are the checksum.")}</p>
-    <pre class="well">${table}</pre>`, button("derive-close", tr("閉じる", "Close"), "primary"));
+    <pre class="well">${table}</pre>`, button("derive-close", tr("閉じる", "Close"), "primary"), () => view.remove());
   entropy.fill(0);
   const forget = view.querySelector<HTMLButtonElement>("#derive-forget");
   if (forget) forget.disabled = !!cleared;
@@ -212,44 +231,46 @@ function derivation(phrase: string[], rolls: Uint8Array | null) {
 }
 
 function writeDown(phrase: string[], rolls: Uint8Array | null): Promise<void> {
-  const half = Math.ceil(phrase.length / 2);
-  const column = (from: number) => phrase.slice(from, from + half).map((w, i) => `<li><span>${from + i + 1}</span>${escape(w)}</li>`).join("");
-  const view = sheet(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(2)}<div class="question"><h1>${tr(`${phrase.length}個の単語を書き写す`, `Write down your ${phrase.length} words`)}</h1>
-    <p class="lead">${tr("紙に、この順番で書いてください。この単語を見た人は、ビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees these words can take your bitcoin.")}</p></div>
-    <div class="card word-grid"><ol>${column(0)}</ol><ol>${column(half)}</ol></div>
+  const per = Math.ceil(phrase.length / (phrase.length > 12 ? 3 : 2));
+  const column = (from: number) => `<ol>${phrase.slice(from, from + per).map((w, i) => `<li><span>${from + i + 1}</span>${escape(w)}</li>`).join("")}</ol>`;
+  let leave = () => {};
+  const view = step(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(2)}<div class="question"><h1>${tr(`${phrase.length}個の単語を書き写す`, `Write down your ${phrase.length} words`)}</h1>
+    <p class="lead">${tr("紙に、この順番で書いてください。見た人はビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees them can take your bitcoin.")}</p></div>
+    <div class="card word-grid${phrase.length > 12 ? " three" : ""}">${[0, per, 2 * per].filter((f) => f < phrase.length).map(column).join("")}</div>
     <button class="link" id="write-explain">${tr("この単語のでき方を見る", "See how these words were made")}</button>`,
-    button("write-done", tr("書き写しました", "I wrote them down"), "primary") + button("write-cancel", tr("キャンセル", "Cancel"), "secondary"));
+    button("write-done", tr("書き写しました", "I wrote them down"), "primary"), () => leave());
   view.querySelector("#write-explain")!.addEventListener("click", () => derivation(phrase, rolls));
-  return new Promise((resolve, reject) => view.addEventListener("click", (event) => {
-    const id = (event.target as HTMLElement).closest("button")?.id;
-    if (id === "write-done") { view.remove(); resolve(); }
-    if (id === "write-cancel") { view.remove(); reject(cancelled()); }
-  }));
+  return new Promise((resolve, reject) => {
+    leave = () => { view.remove(); reject(cancelled()); };
+    view.querySelector("#write-done")!.addEventListener("click", () => { view.remove(); resolve(); });
+  });
 }
 
 // Five random positions against three decoys each; a wrong answer goes back to the words
 function quiz(phrase: string[]): Promise<boolean> {
   const list = words();
   const positions = [...phrase.keys()].sort(() => Math.random() - .5).slice(0, 5);
-  const view = sheet(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(3)}<div class="quiz"></div>`, button("quiz-cancel", tr("キャンセル", "Cancel"), "secondary"));
+  let leave = () => {};
+  const view = step(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(3)}<div class="quiz"></div>`, "", () => leave());
+  view.querySelector(".screen-actions")!.remove();
   const body = view.querySelector<HTMLElement>(".quiz")!;
-  let step = 0;
+  let round = 0;
   return new Promise((resolve, reject) => {
+    leave = () => { view.remove(); reject(cancelled()); };
     const ask = () => {
-      if (step === positions.length) { view.remove(); resolve(true); return; }
-      const answer = phrase[positions[step]];
+      if (round === positions.length) { view.remove(); resolve(true); return; }
+      const answer = phrase[positions[round]];
       const options = [...list.filter((w) => w !== answer).sort(() => Math.random() - .5).slice(0, 3), answer].sort(() => Math.random() - .5);
-      body.innerHTML = `<div class="question"><h1>${tr(`${positions[step] + 1}番目の単語はどれですか`, `Which is word ${positions[step] + 1}?`)}</h1>
-        <p class="lead">${tr(`バックアップの確認(${step + 1}/${positions.length})`, `Check your backup · ${step + 1}/${positions.length}`)}</p></div>
+      body.innerHTML = `<div class="question"><h1>${tr(`${positions[round] + 1}番目の単語はどれですか`, `Which is word ${positions[round] + 1}?`)}</h1>
+        <p class="lead">${tr(`バックアップの確認(${round + 1}/${positions.length})`, `Check your backup · ${round + 1}/${positions.length}`)}</p></div>
         <div class="quiz-options">${options.map((o) => `<button class="button button-secondary" data-word="${escape(o)}"><span>${escape(o)}</span></button>`).join("")}</div>`;
     };
     view.addEventListener("click", (event) => {
       const target = (event.target as HTMLElement).closest("button");
-      if (target?.id === "quiz-cancel") { view.remove(); reject(cancelled()); return; }
       if (!target?.dataset.word) return;
-      if (target.dataset.word === phrase[positions[step]]) { step++; ask(); return; }
+      if (target.dataset.word === phrase[positions[round]]) { round++; ask(); return; }
       view.remove();
-      alert(tr(`${positions[step] + 1}番目の単語ではありません。紙に書いた単語と見比べて、もう一度試してください。`, `That is not word ${positions[step] + 1}. Compare your backup with the words and try again.`));
+      alert(tr(`${positions[round] + 1}番目の単語ではありません。紙に書いた単語と見比べて、もう一度試してください。`, `That is not word ${positions[round] + 1}. Compare your backup with the words and try again.`));
       resolve(false);
     });
     ask();

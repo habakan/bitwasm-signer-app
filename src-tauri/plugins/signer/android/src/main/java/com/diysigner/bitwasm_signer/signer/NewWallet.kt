@@ -144,8 +144,8 @@ internal class NewWallet(
             addView(sheet, LinearLayout.LayoutParams(-1, sheet.wanted).apply { topMargin = dp(DesignTokens.SPACE_2) })
         }
         val faces = (1..6).map { face -> DieKey(activity, p, face) }
-        val undo = Design.button(activity, tr("1つ消す", "Undo"), false, p)
-        val clear = Design.button(activity, tr("全部消す", "Clear all"), false, p)
+        val undo = Design.button(activity, "⌫", false, p).apply { contentDescription = tr("1つ消す", "Undo") }
+        val clear = Design.button(activity, tr("全消去", "Clear"), false, p)
         val make = Design.button(activity, tr("単語を作る", "Make the words"), true, p)
         fun update() {
             counter.text = "$count / $need"
@@ -162,6 +162,8 @@ internal class NewWallet(
             faces.forEach { it.isEnabled = count < need; it.alpha = if (count < need) 1f else 0.4f }
             undo.isEnabled = count > 0
             clear.isEnabled = count > 0
+            undo.alpha = if (count > 0) 1f else 0.4f
+            clear.alpha = undo.alpha
             make.isEnabled = count == need
             make.alpha = if (count == need) 1f else 0.5f
         }
@@ -182,35 +184,20 @@ internal class NewWallet(
                 .create().also { d -> d.setOnShowListener { Design.styleDialog(d) } }.show()
         }
         make.setOnClickListener { onDice(rolls.copyOf(), words) { rolls.fill(0); count = 0; update() } }
+        // Three faces a row, with Undo and Clear as a fourth column so the keys keep one block
         val pad = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             for (row in 0..1) addView(LinearLayout(activity).apply {
-                for (col in 0..2) addView(faces[row * 3 + col], LinearLayout.LayoutParams(0, dp(60), 1f).apply {
-                    if (col > 0) marginStart = dp(DesignTokens.SPACE_2)
-                })
+                (faces.subList(row * 3, row * 3 + 3) + (if (row == 0) undo else clear)).forEachIndexed { col, key ->
+                    addView(key, LinearLayout.LayoutParams(0, dp(56), if (col < 3) 1f else 0.8f).apply { if (col > 0) marginStart = dp(DesignTokens.SPACE_2) })
+                }
             }, LinearLayout.LayoutParams(-1, -2).apply { if (row > 0) topMargin = dp(DesignTokens.SPACE_2) })
-            addView(LinearLayout(activity).apply {
-                addView(undo, LinearLayout.LayoutParams(0, -2, 1f))
-                addView(clear, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(DesignTokens.SPACE_2) })
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(DesignTokens.SPACE_3) })
-        }
-        val verify = Design.text(activity, tr("別の道具で確かめる", "Check elsewhere"), Design.Style.LABEL, p.primary).apply {
-            setPadding(dp(DesignTokens.SPACE_2), dp(DesignTokens.SPACE_3), 0, dp(DesignTokens.SPACE_3))
-            setOnClickListener {
-                Design.alert(activity).setTitle(tr("別の道具で確かめる", "Check with another tool"))
-                    .setMessage(tr("出た目をそのまま文字として並べ、SHA-256 を取って単語にしています。SeedSigner や Krux、bitcoiner.guide/seed と同じ方法なので、同じ目を入れれば同じ単語になります。確かめるのは、ネットにつながっていない端末だけにしてください。",
-                        "The rolls are hashed as text with SHA-256 and turned into words, the same way SeedSigner, Krux and bitcoiner.guide/seed do it, so the same rolls give the same words there. Only check on a device that is offline."))
-                    .setPositiveButton(tr("閉じる", "Close"), null)
-                    .create().also { d -> d.setOnShowListener { Design.styleDialog(d) } }.show()
-            }
         }
         val content = column(
             Design.steps(activity, p, 1),
-            Design.text(activity, tr("サイコロを振る", "Roll the die"), Design.Style.DISPLAY, p.ink).spaced(8),
-            Design.text(activity, tr("1回振るごとに、出た目を押してください。ちょうど${need}回で単語を作れます。", "After each roll, tap the face that came up. Exactly $need rolls make the words."),
-                Design.Style.BODY, p.inkMuted).spaced(8),
-            well.spaced(16),
-            verify.spaced(4),
+            Design.text(activity, tr("1回振るごとに、出た目を押してください。ちょうど${need}回で単語になります。", "After each roll, tap the face that came up. Exactly $need rolls make the words."),
+                Design.Style.BODY, p.inkMuted).spaced(12),
+            well.spaced(12),
             View(activity).apply { layoutParams = LinearLayout.LayoutParams(-1, 0, 1f) },
             pad.spaced(12),
         )
@@ -359,7 +346,7 @@ private class RollSheet(context: Context, private val p: Palette, private val ne
     var rolls = ByteArray(0)
         set(value) { field.fill(0); field = value; invalidate() }
     private val bands = (need + 49) / 50
-    private val row = Design.dp(context, 11).toFloat()
+    private val row = Design.dp(context, if (bands == 1) 11 else 9).toFloat()
     private val gap = Design.dp(context, 10).toFloat()
     val wanted = (bands * 6 * row + (bands - 1) * gap).toInt()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = Design.dp(context, 8).toFloat(); typeface = Typeface.MONOSPACE }
@@ -457,7 +444,7 @@ internal fun showDerivation(activity: Activity, testnet: Boolean, words: List<St
             add(step("1", tr("サイコロの目(${rolls?.size ?: if (words.size == 12) 50 else 99}回)", "The rolls (${rolls?.size ?: if (words.size == 12) 50 else 99})")), 24)
             add(rollsView, 8)
             add(forget, 8)
-            add(arrow(tr("目を文字として並べて SHA-256 を取り、先頭${bits}ビットを使う", "SHA-256 of the rolls as text; the first $bits bits are kept")), 12)
+            add(arrow(tr("目を文字として並べて SHA-256 を取り、先頭${bits}ビットを使う。SeedSigner、Krux、bitcoiner.guide/seed と同じ方法です", "SHA-256 of the rolls as text; the first $bits bits are kept. SeedSigner, Krux and bitcoiner.guide/seed do the same")), 12)
         } else {
             add(step("1", tr("安全な乱数", "Secure random")), 24)
             add(Design.text(activity, tr("スマホの OS の安全な乱数から${bits}ビットを取りました。", "$bits bits from the phone's secure random number generator."), Design.Style.BODY, p.inkMuted), 8)
