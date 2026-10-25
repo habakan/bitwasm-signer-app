@@ -13,13 +13,11 @@ internal fun restrictedMessage(name: String) =
 internal class SignerEngine(private val context: Context) {
     private var signer: Signer? = null
     private var selectedTestnet = false
-    private val parserDelegate = lazy {
+    private val parser by lazy {
         val wasm = context.assets.open("parser.wasm").use { it.readBytes() }
         try { Parser(wasm, PARSER_SHA256) } finally { wasm.fill(0) }
     }
-    private val parser by parserDelegate
-    private val checkerDelegate = lazy { CheckerReview(context.assets.open("checker.wasm").use { it.readBytes() }) }
-    private val checker by checkerDelegate
+    private val checker by lazy { CheckerReview(context.assets.open("checker.wasm").use { it.readBytes() }) }
     private val wallets = context.getSharedPreferences("bitwasm-signer-multisig", Context.MODE_PRIVATE)
     var multisig: Multisig? = null
         private set
@@ -47,13 +45,6 @@ internal class SignerEngine(private val context: Context) {
         val wasm = context.assets.open("signer.wasm").use { it.readBytes() }
         try { Signer(wasm, SIGNER_SHA256).close() } finally { wasm.fill(0) }
         return PARSER_SHA256
-    }
-
-    fun close() {
-        try { lock() } finally {
-            if (parserDelegate.isInitialized()) parser.close()
-            if (checkerDelegate.isInitialized()) checker.close()
-        }
     }
 
     @Synchronized
@@ -199,6 +190,10 @@ internal class SignerEngine(private val context: Context) {
         it.mnemonicFromDice(rolls, words)
     }
 
+    // DICE_OK, with 2 when the faces are uneven and 4 when the steps between rolls are; 0 for a wrong count
+    @Synchronized
+    fun diceCheck(rolls: ByteArray, words: Int): Int = withTemporarySigner { it.diceCheck(rolls, words) }
+
     @Synchronized
     fun seedQrFromMnemonic(mnemonic: CharArray, compact: Boolean = false): ByteArray = withTemporarySigner {
         it.seedQrFromMnemonic(mnemonic, compact)
@@ -279,7 +274,7 @@ internal class SignerEngine(private val context: Context) {
 
     companion object {
         const val PARSER_SHA256 = "9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab"
-        private const val SIGNER_SHA256 = "f1ec4d091292d83f44cd479219914e1b2f080c930867e8086d731bf76deb979c"
+        private const val SIGNER_SHA256 = "d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508"
     }
 }
 

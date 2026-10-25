@@ -66,6 +66,9 @@ private func bitwasmEngineAccount(_ purpose: Int32, _ account: Int32) -> UnsafeM
 @_silgen_name("bitwasm_ios_engine_mnemonic_from_entropy")
 private func bitwasmEngineMnemonicFromEntropy(_ bytes: UnsafePointer<UInt8>, _ length: Int32) -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("bitwasm_ios_engine_dice_check")
+private func bitwasmEngineDiceCheck(_ bytes: UnsafePointer<UInt8>, _ length: Int32, _ words: Int32) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("bitwasm_ios_engine_mnemonic_from_dice")
 private func bitwasmEngineMnemonicFromDice(_ bytes: UnsafePointer<UInt8>, _ length: Int32, _ words: Int32) -> UnsafeMutablePointer<CChar>?
 
@@ -271,6 +274,14 @@ private enum SignerBridge {
       guard let bytes = buffer.bindMemory(to: UInt8.self).baseAddress else { throw SignerError.missingData }
       guard let mnemonic = try read(bitwasmEngineMnemonicFromDice(bytes, Int32(rolls.count), Int32(words)))["mnemonic"] as? String else { throw SignerError.missingData }
       return mnemonic
+    }
+  }
+
+  // 1 for the right count of 1 to 6, with 2 when the faces are uneven and 4 when the steps between rolls are
+  static func diceCheck(_ rolls: Data, words: Int) throws -> Int {
+    try rolls.withUnsafeBytes { buffer in
+      guard let bytes = buffer.bindMemory(to: UInt8.self).baseAddress else { throw SignerError.missingData }
+      return try read(bitwasmEngineDiceCheck(bytes, Int32(rolls.count), Int32(words)))["flags"] as? Int ?? 0
     }
   }
 
@@ -1062,17 +1073,59 @@ final class SignerPlugin: Plugin {
     }
   }
 
+  // How the new wallet being written down was made: its rolls, kept until the flow ends or the user clears them
+  private var origin: (dice: Bool, rolls: [UInt8]?)?
+
+  private func forgetOrigin() {
+    origin?.rolls?.withUnsafeMutableBytes { $0.initializeMemory(as: UInt8.self, repeating: 0) }
+    origin = nil
+  }
+
   @objc public func createMnemonic(_ invoke: Invoke) {
     guard Thread.isMainThread else { return DispatchQueue.main.async { self.createMnemonic(invoke) } }
     guard ready(invoke) else { return }
     if let name = DeviceRestrictions.blockedBy { return invoke.reject(SignerError.restricted(name).localizedDescription) }
-    let alert = UIAlertController(title: Design.tr("新しいウォレットを作る", "Create a new wallet"), message: Design.tr("リカバリーワードの作り方を選んでください。", "Choose how to make the recovery words."), preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: Design.tr("安全な乱数", "Secure random"), style: .default) { [weak self] _ in self?.chooseEntropyWords(invoke) })
-    alert.addAction(UIAlertAction(title: Design.tr("サイコロ", "Dice rolls"), style: .default) { [weak self] _ in
-      self?.chooseDiceWordCount(invoke)
-    })
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Mnemonic creation was cancelled") })
-    present(alert)
+    let flow = NewWalletController()
+    func show(_ make: @escaping () throws -> String) {
+      worker.async {
+        do {
+          let phrase = try make()
+          DispatchQueue.main.async {
+            flow.dismiss(animated: true) { self.showMnemonic(phrase, title: Design.tr("新しいウォレット", "New wallet"), seedQrAvailable: true, verify: true, invoke: invoke) }
+          }
+        } catch {
+          DispatchQueue.main.async { flow.dismiss(animated: true) { invoke.reject(error.localizedDescription) } }
+        }
+      }
+    }
+    flow.onRandom = { [weak self] words in
+      self?.origin = (false, nil)
+      show {
+        var entropy = Data(count: words / 3 * 4)
+        defer { entropy.resetBytes(in: 0..<entropy.count) }
+        let status = entropy.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, $0.count, $0.baseAddress!) }
+        guard status == errSecSuccess else { throw SignerError.initialization("Could not get secure random bytes") }
+        return try SignerBridge.mnemonicFromEntropy(entropy)
+      }
+    }
+    flow.onDice = { [weak flow] rolls, words, reset in
+      let flags = (try? SignerBridge.diceCheck(rolls, words: words)) ?? 0
+      func make() {
+        self.origin = (true, [UInt8](rolls))
+        show { try SignerBridge.mnemonicFromDice(rolls, words: words) }
+      }
+      if flags & 6 == 0 { return make() }
+      let alert = UIAlertController(title: flags & 2 != 0 ? Design.tr("出た目に偏りがあります", "The rolls are uneven") : Design.tr("出た目に規則性があります", "The rolls follow a pattern"),
+                                    message: Design.tr("公平なサイコロなら、ほとんど起きない並びです。目の押し間違いや、偏ったサイコロでないか確かめてください。振り直すことをおすすめします。",
+                                                       "A fair die almost never gives rolls like these. Check for mistyped rolls or a weighted die. Rolling again is recommended."),
+                                    preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: Design.tr("このまま作る", "Use them anyway"), style: .destructive) { _ in make() })
+      alert.addAction(UIAlertAction(title: Design.tr("振り直す", "Roll again"), style: .cancel) { _ in reset() })
+      Design.style(alert)
+      flow?.present(alert, animated: true)
+    }
+    flow.onCancel = { Design.fail(invoke, "Mnemonic creation was cancelled") }
+    present(flow)
   }
 
   @objc public func bip85Mnemonic(_ invoke: Invoke) {
@@ -1177,74 +1230,21 @@ final class SignerPlugin: Plugin {
     present(alert)
   }
 
-  private func chooseDiceWordCount(_ invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("単語の数", "Number of words"), message: nil, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: Design.tr("12個の単語・50回以上振る", "12 words · 50 rolls"), style: .default) { [weak self] _ in self?.enterDiceRolls(12, invoke: invoke) })
-    alert.addAction(UIAlertAction(title: Design.tr("24個の単語・99回以上振る", "24 words · 99 rolls"), style: .default) { [weak self] _ in self?.enterDiceRolls(24, invoke: invoke) })
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Dice entry was cancelled") })
-    present(alert)
-  }
-
-  private func chooseEntropyWords(_ invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("単語の数", "Number of words"), message: nil, preferredStyle: .alert)
-    for words in [12, 15, 18, 21, 24] {
-      alert.addAction(UIAlertAction(title: Design.tr("\(words)個の単語", "\(words) words"), style: .default) { [weak self] _ in
-        guard let self else { return }
-        self.worker.async {
-          var entropy = Data(count: 16 + (words - 12) / 3 * 4)
-          let status = entropy.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, $0.count, $0.baseAddress!) }
-          guard status == errSecSuccess else {
-            entropy.resetBytes(in: 0..<entropy.count)
-            DispatchQueue.main.async { Design.fail(invoke, "Could not get secure random bytes") }
-            return
-          }
-          do {
-            let phrase = try SignerBridge.mnemonicFromEntropy(entropy)
-            entropy.resetBytes(in: 0..<entropy.count)
-            DispatchQueue.main.async { self.showMnemonic(phrase, title: Design.tr("新しいウォレット", "New wallet"), seedQrAvailable: words == 12 || words == 24, verify: true, invoke: invoke) }
-          } catch {
-            entropy.resetBytes(in: 0..<entropy.count)
-            DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
-          }
-        }
-      })
-    }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Mnemonic creation was cancelled") })
-    present(alert)
-  }
-
-  private func enterDiceRolls(_ words: Int, invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("サイコロの目", "Dice rolls"), message: words == 12 ? Design.tr("出た目(1〜6)を50回分以上入れてください。", "Enter at least 50 rolls, using 1–6.") : Design.tr("出た目(1〜6)を99回分以上入れてください。", "Enter at least 99 rolls, using 1–6."), preferredStyle: .alert)
-    alert.addTextField { field in
-      field.placeholder = Design.tr("例: 123456", "e.g. 123456")
-      field.keyboardType = .numberPad
-      field.autocorrectionType = .no
-      field.spellCheckingType = .no
-    }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Dice entry was cancelled") })
-    alert.addAction(UIAlertAction(title: Design.tr("作る", "Create"), style: .default) { [weak self] _ in
-      guard let self, let rolls = alert.textFields?.first?.text, !rolls.isEmpty else {
-        Design.fail(invoke, "Enter dice rolls")
-        return
-      }
-      self.worker.async {
-        do {
-          let phrase = try SignerBridge.mnemonicFromDice(Data(rolls.utf8), words: words)
-          DispatchQueue.main.async { self.showMnemonic(phrase, title: Design.tr("新しいウォレット", "New wallet"), seedQrAvailable: true, verify: true, invoke: invoke) }
-        } catch {
-          DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
-        }
-      }
-    })
-    present(alert)
-  }
-
   private func showMnemonic(_ phrase: String, title: String, seedQrAvailable: Bool, verify: Bool = false, invoke: Invoke) {
     let controller = WriteDownViewController(phrase: phrase, title: title, verify: verify, seedQrAvailable: seedQrAvailable)
     controller.onWrote = { [weak self] in
       if verify { self?.checkBackup(phrase, title: title, seedQrAvailable: seedQrAvailable, invoke: invoke) } else { invoke.resolve(["shown": true]) }
     }
     controller.onSeedQr = { [weak self] in self?.chooseSeedQrFormat(phrase, invoke: invoke) }
+    if verify, let made = origin {
+      controller.onExplain = { [weak self, weak controller] in
+        guard let self, let entropy = try? SignerBridge.seedQrFromMnemonic(phrase, compact: true) else { return }
+        let explain = DerivationViewController(words: phrase.split(separator: " ").map(String.init), entropy: [UInt8](entropy), dice: made.dice, rolls: self.origin?.rolls)
+        explain.onForget = { [weak self] in self?.forgetOrigin(); self?.origin = (made.dice, nil) }
+        Design.style(explain)
+        controller?.present(explain, animated: true)
+      }
+    }
     present(controller)
   }
 
@@ -1267,7 +1267,7 @@ final class SignerPlugin: Plugin {
           self?.present(wrong)
         })
       }
-      alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in invoke.resolve(["shown": false]) })
+      alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { [weak self] _ in self?.forgetOrigin(); invoke.resolve(["shown": false]) })
       present(alert)
     }
     ask(0)
@@ -1275,6 +1275,7 @@ final class SignerPlugin: Plugin {
 
   private func backupChecked(_ phrase: String, invoke: Invoke) {
     let alert = UIAlertController(title: Design.tr("バックアップを確かめました", "Backup checked"), message: Design.tr("このリカバリーワードを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"), preferredStyle: .alert)
+    forgetOrigin()
     alert.addAction(UIAlertAction(title: Design.tr("完了", "Done"), style: .cancel) { _ in invoke.resolve(["shown": true]) })
     alert.addAction(UIAlertAction(title: Design.tr("読み込む", "Load it"), style: .default) { [weak self] _ in
       self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
@@ -1398,11 +1399,10 @@ final class SignerPlugin: Plugin {
     present(controller)
   }
 
+  // The Simulator can leave the app without a key window; any window of ours can still present
   private func keyWindow() -> UIWindow? {
-    UIApplication.shared.connectedScenes
-      .compactMap({ $0 as? UIWindowScene })
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)
+    let windows = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows)
+    return windows.first(where: \.isKeyWindow) ?? windows.first
   }
 
   private func present(_ controller: UIViewController) {
@@ -1958,6 +1958,7 @@ private final class WriteDownViewController: UIViewController {
   private var wordLabels: [UILabel] = []
   var onWrote: (() -> Void)?
   var onSeedQr: (() -> Void)?
+  var onExplain: (() -> Void)?
 
   init(phrase: String, title: String, verify: Bool, seedQrAvailable: Bool) {
     words = phrase.split(separator: " ").map(String.init)
@@ -1995,13 +1996,21 @@ private final class WriteDownViewController: UIViewController {
     Design.pad(grid, in: card, DesignTokens.space3)
 
     var items: [UIView] = []
-    if verify { items.append(Design.label(Design.tr("ステップ 2 / 3", "STEP 2 OF 3"), .overline, p.inkMuted)) }
+    if verify { items.append(Design.steps(2)) }
     items += [
       Design.label(Design.tr("\(words.count)個の単語を書き写す", "Write down your \(words.count) words"), .display, p.ink),
       Design.label(Design.tr("紙に、この順番で書いてください。この単語を見た人は、ビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees these words can take your bitcoin."), .body, p.inkMuted),
       card,
       Design.label(Design.tr("画面の録画やミラーリング中は、この画面を隠します。", "The screen is covered while it is recorded or mirrored."), .caption, p.inkMuted),
     ]
+    if onExplain != nil {
+      let explain = UIButton(type: .system)
+      explain.setTitle(Design.tr("この単語のでき方を見る", "See how these words were made"), for: .normal)
+      explain.titleLabel?.font = Design.font(.label)
+      explain.contentHorizontalAlignment = .leading
+      explain.addAction(UIAction { [weak self] _ in self?.onExplain?() }, for: .touchUpInside)
+      items.append(explain)
+    }
     let content = Design.stack(items, spacing: DesignTokens.space4)
 
     let wrote = Design.button(verify ? Design.tr("書き写しました", "I wrote them down") : Design.tr("完了", "Done"), primary: true)
@@ -2018,6 +2027,517 @@ private final class WriteDownViewController: UIViewController {
   private func close(_ then: @escaping () -> Void) {
     wordLabels.forEach { $0.text = "" }
     dismiss(animated: true, completion: then)
+  }
+}
+
+// The screens before a new wallet's words: what is about to happen, how many words, and the dice rolls.
+// Each is pushed over the last, so Back returns to the one before
+private final class NewWalletController: UINavigationController {
+  var onRandom: ((Int) -> Void)?
+  var onDice: ((Data, Int, @escaping () -> Void) -> Void)?
+  var onCancel: (() -> Void)?
+  private let p = Design.palette
+  private var pageWatcher: PageWatcher?
+
+  init() {
+    super.init(nibName: nil, bundle: nil)
+    modalPresentationStyle = .fullScreen
+    isModalInPresentation = true
+    setNavigationBarHidden(true, animated: false)
+    viewControllers = [intro()]
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  private func screen(_ title: String, _ items: [UIView], actions: [UIView], onBack: @escaping () -> Void) -> UIViewController {
+    let controller = UIViewController()
+    controller.loadViewIfNeeded()
+    _ = Design.screen(controller, title: title, testnet: SignerBridge.testnet, content: Design.stack(items, spacing: DesignTokens.space4), actions: actions, onBack: onBack)
+    return controller
+  }
+
+  // A walkthrough of the steps ahead, one picture a page; the last page picks how the words are made
+  private func intro() -> UIViewController {
+    let pages = [
+      (Design.tr("単語を作る", "Make the words"), Design.tr("安全な乱数か、自分で振ったサイコロの目から、12個か24個のリカバリーワードを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself.")),
+      (Design.tr("紙に書き写す", "Write them down"), Design.tr("単語を順番どおりに紙に書きます。この紙があれば、スマホをなくしてもビットコインを取り戻せます。", "Write the words on paper, in order. With that paper you can get your bitcoin back even if the phone is lost.")),
+      (Design.tr("確かめる", "Check them"), Design.tr("書いた単語を5問のクイズで確かめます。書き間違いがあれば、ここで気づけます。", "A five-question quiz checks what you wrote, so a slip of the pen shows up now.")),
+      (Design.tr("始める前に", "Before you start"), Design.tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes.")),
+    ]
+    let controller = UIViewController()
+    let view = controller.view!
+    view.backgroundColor = p.surface
+    let bar = Design.topBar(Design.tr("新しいウォレット", "New wallet"), testnet: SignerBridge.testnet) { [weak self] in self?.dismiss(animated: true) { self?.onCancel?() } }
+    let pager = UIScrollView()
+    pager.isPagingEnabled = true
+    pager.showsHorizontalScrollIndicator = false
+    let strip = UIStackView()
+    strip.distribution = .fillEqually
+    for (i, (title, body)) in pages.enumerated() {
+      let art = IllustrationView(scene: i)
+      art.heightAnchor.constraint(equalToConstant: 200).isActive = true
+      let stack = Design.stack([art, Design.label("\(i + 1) / \(pages.count)", .overline, p.inkMuted), Design.label(title, .display, p.ink), Design.label(body, .body, p.inkMuted)], spacing: DesignTokens.space3)
+      stack.setCustomSpacing(DesignTokens.space6, after: art)
+      let page = UIView()
+      stack.translatesAutoresizingMaskIntoConstraints = false
+      page.addSubview(stack)
+      NSLayoutConstraint.activate([
+        stack.topAnchor.constraint(equalTo: page.topAnchor, constant: DesignTokens.space6),
+        stack.leadingAnchor.constraint(equalTo: page.leadingAnchor, constant: DesignTokens.space4),
+        stack.trailingAnchor.constraint(equalTo: page.trailingAnchor, constant: -DesignTokens.space4),
+      ])
+      strip.addArrangedSubview(page)
+    }
+    let dots = UIPageControl()
+    dots.numberOfPages = pages.count
+    dots.currentPageIndicatorTintColor = p.primary
+    dots.pageIndicatorTintColor = p.lineStrong
+    dots.isUserInteractionEnabled = false
+    let next = Design.button(Design.tr("次へ", "Next"), primary: true)
+    let random = Design.button(Design.tr("安全な乱数で作る", "Use secure random"), primary: true)
+    let dice = Design.button(Design.tr("サイコロを振って作る", "Roll dice"), primary: false)
+    let footer = Design.stack([next, random, dice], spacing: DesignTokens.space3)
+    func show(_ page: Int) {
+      dots.currentPage = page
+      next.isHidden = page == pages.count - 1
+      random.isHidden = !next.isHidden
+      dice.isHidden = !next.isHidden
+    }
+    next.addAction(UIAction { _ in
+      let page = min(dots.currentPage + 1, pages.count - 1)
+      pager.setContentOffset(CGPoint(x: CGFloat(page) * pager.bounds.width, y: 0), animated: true)
+      show(page)
+    }, for: .touchUpInside)
+    random.addAction(UIAction { [weak self] _ in guard let self else { return }; self.pushViewController(self.wordCount(dice: false), animated: true) }, for: .touchUpInside)
+    dice.addAction(UIAction { [weak self] _ in guard let self else { return }; self.pushViewController(self.wordCount(dice: true), animated: true) }, for: .touchUpInside)
+    pageWatcher = PageWatcher { show(Int((pager.contentOffset.x / max(pager.bounds.width, 1)).rounded())) }
+    pager.delegate = pageWatcher
+    show(0)
+    for item in [bar, pager, strip, dots, footer] as [UIView] { item.translatesAutoresizingMaskIntoConstraints = false }
+    pager.addSubview(strip)
+    for item in [bar, pager, dots, footer] { view.addSubview(item) }
+    NSLayoutConstraint.activate([
+      bar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      pager.topAnchor.constraint(equalTo: bar.bottomAnchor),
+      pager.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      pager.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      pager.bottomAnchor.constraint(equalTo: dots.topAnchor),
+      strip.topAnchor.constraint(equalTo: pager.contentLayoutGuide.topAnchor),
+      strip.bottomAnchor.constraint(equalTo: pager.contentLayoutGuide.bottomAnchor),
+      strip.leadingAnchor.constraint(equalTo: pager.contentLayoutGuide.leadingAnchor),
+      strip.trailingAnchor.constraint(equalTo: pager.contentLayoutGuide.trailingAnchor),
+      strip.heightAnchor.constraint(equalTo: pager.frameLayoutGuide.heightAnchor),
+      strip.widthAnchor.constraint(equalTo: pager.frameLayoutGuide.widthAnchor, multiplier: CGFloat(pages.count)),
+      dots.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      dots.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -DesignTokens.space3),
+      footer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: DesignTokens.space4),
+      footer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -DesignTokens.space4),
+      footer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -DesignTokens.space3),
+    ])
+    return controller
+  }
+
+  private func wordCount(dice: Bool) -> UIViewController {
+    let options = [(12, dice ? Design.tr("サイコロを50回振る", "Roll a die 50 times") : Design.tr("いちばんよく使われる長さ", "The most common length")),
+                   (24, dice ? Design.tr("サイコロを99回振る", "Roll a die 99 times") : Design.tr("より長く、より強い", "Longer and stronger"))]
+      .map { words, detail -> UIView in
+        let button = UIButton(type: .system)
+        let text = Design.stack([Design.label(Design.tr("\(words)個の単語", "\(words) words"), .heading, p.ink), Design.label(detail, .caption, p.inkMuted)], spacing: 4)
+        text.isUserInteractionEnabled = false
+        let card = Design.card()
+        Design.pad(text, in: card)
+        card.isUserInteractionEnabled = false
+        Design.pad(card, in: button, 0)
+        button.addAction(UIAction { [weak self] _ in
+          guard let self else { return }
+          if dice { self.pushViewController(self.rolls(words), animated: true) } else { self.dismiss(animated: true) { self.onRandom?(words) } }
+        }, for: .touchUpInside)
+        return button
+      }
+    return screen(Design.tr("新しいウォレット", "New wallet"), [
+      Design.steps(1),
+      Design.label(Design.tr("単語の数を選ぶ", "Choose how many words"), .display, p.ink),
+      Design.label(Design.tr("どちらも安全です。24個のほうが余裕がありますが、書き写す量が倍になります。", "Both are safe. 24 words leave more margin but take twice as long to write down."), .body, p.inkMuted),
+    ] + options, actions: []) { [weak self] in self?.popViewController(animated: true) }
+  }
+
+  private func rolls(_ words: Int) -> UIViewController {
+    let need = words == 12 ? 50 : 99
+    var rolls = [UInt8]()
+    let counter = Design.label("", .label, p.inkMuted)
+    counter.font = .monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
+    counter.setContentHuggingPriority(.required, for: .horizontal)
+    let history = Design.label("", .data, p.ink)
+    let well = UIView()
+    well.backgroundColor = p.surfaceSunken
+    well.layer.cornerRadius = DesignTokens.radiusSm
+    let sheet = RollSheetView(need: need)
+    let header = UIStackView(arrangedSubviews: [history, counter])
+    header.alignment = .firstBaseline
+    Design.pad(Design.stack([header, sheet], spacing: DesignTokens.space2), in: well, DesignTokens.space3)
+    let faces = (1...6).map { face -> UIButton in
+      let key = Design.button("", primary: false)
+      key.setImage(UIImage(systemName: "die.face.\(face)", withConfiguration: UIImage.SymbolConfiguration(pointSize: 40)), for: .normal)
+      key.tintColor = p.ink
+      key.accessibilityLabel = "\(face)"
+      key.heightAnchor.constraint(equalToConstant: 72).isActive = true
+      return key
+    }
+    let undo = Design.button(Design.tr("1つ消す", "Undo"), primary: false)
+    let clear = Design.button(Design.tr("全部消す", "Clear all"), primary: false)
+    let make = Design.button(Design.tr("単語を作る", "Make the words"), primary: true)
+    func update() {
+      sheet.rolls = rolls
+      counter.text = "\(rolls.count) / \(need)"
+      counter.textColor = rolls.count == need ? p.primary : p.inkMuted
+      // The last ten rolls in full and how many came before, so a mistyped one is easy to spot
+      let shown = rolls.suffix(10).map { String($0 - 48) }.joined(separator: " ")
+      if rolls.isEmpty { history.text = Design.tr("出た目を下で押してください。", "Tap the face that came up.") } else {
+        // The roll just entered stands out, so each tap visibly lands
+        let text = NSMutableAttributedString(string: rolls.count > 10 ? "… \(shown)" : shown, attributes: [.font: Design.font(.data), .foregroundColor: p.ink])
+        text.addAttributes([.font: UIFont.monospacedSystemFont(ofSize: 21, weight: .bold), .foregroundColor: p.primary], range: NSRange(location: text.length - 1, length: 1))
+        history.attributedText = text
+      }
+      faces.forEach { $0.isEnabled = rolls.count < need; $0.alpha = rolls.count < need ? 1 : 0.4 }
+      undo.isEnabled = !rolls.isEmpty
+      clear.isEnabled = !rolls.isEmpty
+      make.isEnabled = rolls.count == need
+      make.alpha = rolls.count == need ? 1 : 0.5
+    }
+    func reset() {
+      for i in rolls.indices { rolls[i] = 0 }
+      rolls.removeAll()
+      update()
+    }
+    for (i, key) in faces.enumerated() {
+      key.addAction(UIAction { _ in
+        guard rolls.count < need else { return }
+        rolls.append(UInt8(49 + i))
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        update()
+      }, for: .touchUpInside)
+      let (soft, raised) = (p.primarySoft, p.surfaceRaised)
+      key.addAction(UIAction { [weak key] _ in UIView.animate(withDuration: 0.08) { key?.transform = CGAffineTransform(scaleX: 0.92, y: 0.92); key?.backgroundColor = soft } }, for: .touchDown)
+      key.addAction(UIAction { [weak key] _ in UIView.animate(withDuration: 0.12) { key?.transform = .identity; key?.backgroundColor = raised } }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+    undo.addAction(UIAction { _ in if !rolls.isEmpty { rolls[rolls.count - 1] = 0; rolls.removeLast(); update() } }, for: .touchUpInside)
+    clear.addAction(UIAction { [weak self] _ in
+      let alert = UIAlertController(title: Design.tr("入れた目を全部消しますか", "Clear every roll?"), message: nil, preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel))
+      alert.addAction(UIAlertAction(title: Design.tr("全部消す", "Clear all"), style: .destructive) { _ in reset() })
+      Design.style(alert)
+      self?.present(alert, animated: true)
+    }, for: .touchUpInside)
+    make.addAction(UIAction { [weak self] _ in self?.onDice?(Data(rolls), words) { reset() } }, for: .touchUpInside)
+    let grid = Design.stack([0, 1].map { row -> UIView in
+      let line = UIStackView(arrangedSubviews: Array(faces[row * 3..<row * 3 + 3]))
+      line.distribution = .fillEqually
+      line.spacing = DesignTokens.space2
+      return line
+    }, spacing: DesignTokens.space2)
+    let edits = UIStackView(arrangedSubviews: [undo, clear])
+    edits.distribution = .fillEqually
+    edits.spacing = DesignTokens.space2
+    let verify = UIButton(type: .system)
+    verify.setTitle(Design.tr("別の道具で確かめるには", "Checking with another tool"), for: .normal)
+    verify.titleLabel?.font = Design.font(.label)
+    verify.contentHorizontalAlignment = .leading
+    verify.addAction(UIAction { [weak self] _ in
+      let alert = UIAlertController(title: Design.tr("別の道具で確かめる", "Check with another tool"),
+                                    message: Design.tr("出た目をそのまま文字として並べ、SHA-256 を取って単語にしています。SeedSigner や Krux、bitcoiner.guide/seed と同じ方法なので、同じ目を入れれば同じ単語になります。確かめるのは、ネットにつながっていない端末だけにしてください。",
+                                                       "The rolls are hashed as text with SHA-256 and turned into words, the same way SeedSigner, Krux and bitcoiner.guide/seed do it, so the same rolls give the same words there. Only check on a device that is offline."),
+                                    preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: Design.tr("閉じる", "Close"), style: .cancel))
+      Design.style(alert)
+      self?.present(alert, animated: true)
+    }, for: .touchUpInside)
+    update()
+    return screen(Design.tr("サイコロ", "Dice"), [
+      Design.steps(1),
+      Design.label(Design.tr("サイコロを振る", "Roll the die"), .display, p.ink),
+      Design.label(Design.tr("1回振るごとに、出た目を押してください。ちょうど\(need)回で単語を作れます。", "After each roll, tap the face that came up. Exactly \(need) rolls make the words."), .body, p.inkMuted),
+      well, grid, edits, verify,
+    ], actions: [make]) { [weak self] in reset(); self?.popViewController(animated: true) }
+  }
+}
+
+// The rolls as a mark sheet: one column a roll, one row a face, with each face's count as a bar on the right.
+// Fifty columns a band, so 99 rolls take two
+// How the words came from the entropy, with this wallet's own values: the rolls if any, the entropy, and each
+// word's eleven bits and wordlist number, the last word's checksum bits marked
+private final class DerivationViewController: UIViewController {
+  private let words: [String]
+  private var entropy: [UInt8]
+  private let dice: Bool
+  private let rolls: [UInt8]?
+  private let table = UILabel()
+  var onForget: (() -> Void)?
+
+  init(words: [String], entropy: [UInt8], dice: Bool, rolls: [UInt8]?) {
+    self.words = words
+    self.entropy = entropy
+    self.dice = dice
+    self.rolls = rolls
+    super.init(nibName: nil, bundle: nil)
+    modalPresentationStyle = .fullScreen
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    let p = Design.palette
+    let bits = entropy.count * 8, checksum = words.count / 3
+    func well(_ text: String) -> UIView {
+      let label = Design.label(text, .data, p.ink)
+      let well = UIView()
+      well.backgroundColor = p.surfaceSunken
+      well.layer.cornerRadius = DesignTokens.radiusSm
+      Design.pad(label, in: well, DesignTokens.space3)
+      return well
+    }
+    func step(_ n: String, _ title: String) -> UIView { Design.label("\(n)  \(title)", .heading, p.ink) }
+    func arrow(_ text: String) -> UIView { Design.label("↓  \(text)", .caption, p.accentInk) }
+    let count = words.count == 12 ? 50 : 99
+    var items: [UIView] = [
+      Design.label(Design.tr("この単語のでき方", "How these words were made"), .display, p.ink),
+      Design.label(Design.tr("あなたの単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words."), .body, p.inkMuted),
+    ]
+    if dice {
+      let shown = Design.label(rolls.map { r in stride(from: 0, to: r.count, by: 10).map { String(decoding: r[$0..<min($0 + 10, r.count)], as: UTF8.self) }.joined(separator: "\n") } ?? Design.tr("メモリから消しました。", "Cleared from memory."), .data, p.ink)
+      let rollsWell = UIView()
+      rollsWell.backgroundColor = p.surfaceSunken
+      rollsWell.layer.cornerRadius = DesignTokens.radiusSm
+      Design.pad(shown, in: rollsWell, DesignTokens.space3)
+      let forget = Design.button(Design.tr("サイコロの目をメモリから消す", "Clear the rolls from memory"), primary: false)
+      forget.isEnabled = rolls != nil
+      forget.addAction(UIAction { [weak self] _ in
+        self?.onForget?()
+        shown.text = Design.tr("メモリから消しました。", "Cleared from memory.")
+        forget.isEnabled = false
+      }, for: .touchUpInside)
+      items += [step("1", Design.tr("サイコロの目(\(count)回)", "The rolls (\(count))")), rollsWell, forget,
+                arrow(Design.tr("目を文字として並べて SHA-256 を取り、先頭\(bits)ビットを使う", "SHA-256 of the rolls as text; the first \(bits) bits are kept"))]
+    } else {
+      items += [step("1", Design.tr("安全な乱数", "Secure random")),
+                Design.label(Design.tr("スマホの OS の安全な乱数から\(bits)ビットを取りました。", "\(bits) bits from the phone's secure random number generator."), .body, p.inkMuted),
+                arrow(Design.tr("そのまま使う", "Used as they are"))]
+    }
+    let hex = entropy.map { String(format: "%02x", $0) }.joined()
+    let groups = stride(from: 0, to: hex.count, by: 4).map { String(hex.dropFirst($0).prefix(4)) }
+    items += [
+      step("2", Design.tr("エントロピー(\(bits)ビット、16進)", "The entropy (\(bits) bits, in hex)")),
+      well(stride(from: 0, to: groups.count, by: 4).map { groups[$0..<min($0 + 4, groups.count)].joined(separator: " ") }.joined(separator: "\n")),
+      arrow(Design.tr("SHA-256 の先頭\(checksum)ビットをチェックサムとして末尾に足し、11ビットずつ\(words.count)個に区切る", "The first \(checksum) bits of its SHA-256 go on the end as a checksum; then \(words.count) groups of 11 bits")),
+      step("3", Design.tr("11ビットの番号と単語", "Eleven bits, a number, a word")),
+      Design.label(Design.tr("番号は 2048語の単語表(BIP39)の位置です。色の付いたビットがチェックサムです。", "The number is the place in the 2048-word BIP39 list. The coloured bits are the checksum."), .caption, p.inkMuted),
+    ]
+    let text = NSMutableAttributedString()
+    let font = Design.font(.data)
+    for (i, word) in words.enumerated() {
+      let index = SignerBridge.words.firstIndex(of: word) ?? 0
+      let b = String(String(index, radix: 2).reversed()).padding(toLength: 11, withPad: "0", startingAt: 0).reversed()
+      let bitsText = String(b)
+      text.append(NSAttributedString(string: String(format: "%2d  ", i + 1), attributes: [.font: font, .foregroundColor: p.ink]))
+      if i == words.count - 1 {
+        text.append(NSAttributedString(string: String(bitsText.dropLast(checksum)), attributes: [.font: font, .foregroundColor: p.ink]))
+        text.append(NSAttributedString(string: String(bitsText.suffix(checksum)), attributes: [.font: UIFont.monospacedSystemFont(ofSize: 15, weight: .bold), .foregroundColor: p.accentInk]))
+      } else {
+        text.append(NSAttributedString(string: bitsText, attributes: [.font: font, .foregroundColor: p.ink]))
+      }
+      text.append(NSAttributedString(string: String(format: "  %4d  ", index) + word + (i < words.count - 1 ? "\n" : ""), attributes: [.font: font, .foregroundColor: p.ink]))
+    }
+    table.attributedText = text
+    table.numberOfLines = 0
+    let tableWell = UIView()
+    tableWell.backgroundColor = p.surfaceSunken
+    tableWell.layer.cornerRadius = DesignTokens.radiusSm
+    Design.pad(table, in: tableWell, DesignTokens.space3)
+    items.append(tableWell)
+    let close = Design.button(Design.tr("閉じる", "Close"), primary: true)
+    close.addAction(UIAction { [weak self] _ in self?.dismiss(animated: true) }, for: .touchUpInside)
+    _ = Design.screen(self, title: Design.tr("単語のでき方", "How it was made"), testnet: SignerBridge.testnet, content: Design.stack(items, spacing: DesignTokens.space3), actions: [close]) { [weak self] in self?.dismiss(animated: true) }
+  }
+
+  deinit {
+    for i in entropy.indices { entropy[i] = 0 }
+  }
+}
+
+private final class RollSheetView: UIView {
+  var rolls: [UInt8] = [] { didSet { setNeedsDisplay() } }
+  private let need: Int
+  private let p = Design.palette
+  private let row: CGFloat = 11
+  private let gap: CGFloat = 10
+
+  init(need: Int) {
+    self.need = need
+    super.init(frame: .zero)
+    backgroundColor = .clear
+    contentMode = .redraw
+    let bands = CGFloat((need + 49) / 50)
+    heightAnchor.constraint(equalToConstant: bands * 6 * row + (bands - 1) * gap).isActive = true
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  override func draw(_ rect: CGRect) {
+    let label: CGFloat = 12, bars: CGFloat = 56
+    let column = (bounds.width - label - bars - 8) / 50
+    let font = UIFont.monospacedSystemFont(ofSize: 8, weight: .medium)
+    for band in 0..<((need + 49) / 50) {
+      let top = CGFloat(band) * (6 * row + gap)
+      // Columns already rolled are filled in, so the sheet doubles as the progress bar
+      let done = min(max(rolls.count - band * 50, 0), 50)
+      if done > 0 {
+        p.primary.setFill()
+        UIBezierPath(roundedRect: CGRect(x: label, y: top, width: CGFloat(done) * column, height: 6 * row), cornerRadius: 3).fill()
+      }
+      for face in 0..<6 {
+        let y = top + CGFloat(face) * row + row / 2
+        NSString(string: "\(face + 1)").draw(at: CGPoint(x: 0, y: y - 5), withAttributes: [.font: font, .foregroundColor: p.inkMuted])
+        for i in band * 50..<min(need, band * 50 + 50) {
+          let x = label + CGFloat(i - band * 50) * column + column / 2
+          if i < rolls.count && Int(rolls[i]) - 49 != face { continue }
+          let hit = i < rolls.count
+          let r = hit ? min(column, row) * 0.42 : 1
+          (hit ? (i == rolls.count - 1 ? p.accent : p.onPrimary) : p.lineStrong).setFill()
+          UIBezierPath(ovalIn: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)).fill()
+        }
+      }
+      for tens in stride(from: 10, to: min(50, need - band * 50), by: 10) {
+        p.line.setFill()
+        UIRectFill(CGRect(x: label + CGFloat(tens) * column - 0.5, y: top, width: 1, height: 6 * row))
+      }
+    }
+    // Counts as bars, against the dotted line an even die would reach
+    let left = bounds.width - bars + 4, span = bars - 22
+    let counts = (0..<6).map { face in rolls.filter { Int($0) - 49 == face }.count }
+    let scale = span / CGFloat(max(counts.max() ?? 0, need / 3))
+    for face in 0..<6 {
+      let y = CGFloat(face) * row
+      p.iconWell.setFill()
+      UIBezierPath(roundedRect: CGRect(x: left, y: y + 1.5, width: max(CGFloat(counts[face]) * scale, 1), height: row - 3), cornerRadius: 2).fill()
+      NSString(string: "\(counts[face])").draw(at: CGPoint(x: left + span + 3, y: y - 1), withAttributes: [.font: font, .foregroundColor: p.inkMuted])
+    }
+    let even = UIBezierPath()
+    even.move(to: CGPoint(x: left + CGFloat(need) / 6 * scale, y: 0))
+    even.addLine(to: CGPoint(x: left + CGFloat(need) / 6 * scale, y: 6 * row))
+    even.setLineDash([2, 2], count: 2, phase: 0)
+    even.lineWidth = 1
+    p.inkMuted.setStroke()
+    even.stroke()
+  }
+}
+
+private final class PageWatcher: NSObject, UIScrollViewDelegate {
+  let changed: () -> Void
+  init(_ changed: @escaping () -> Void) { self.changed = changed }
+  func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { changed() }
+}
+
+// The walkthrough's pictures, drawn on a 240 x 160 grid in the theme's colors so they follow light and dark
+private final class IllustrationView: UIView {
+  private let scene: Int
+  private let p = Design.palette
+
+  init(scene: Int) {
+    self.scene = scene
+    super.init(frame: .zero)
+    backgroundColor = .clear
+    contentMode = .redraw
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  override func draw(_ rect: CGRect) {
+    guard let c = UIGraphicsGetCurrentContext() else { return }
+    let k = min(bounds.width / 240, bounds.height / 160)
+    rounded(bounds, 16 * k, fill: p.surfaceSunken)
+    c.translateBy(x: (bounds.width - 240 * k) / 2, y: (bounds.height - 160 * k) / 2)
+    c.scaleBy(x: k, y: k)
+    switch scene {
+    case 0:
+      die(c, 34, 48, 64, -12); arrow(112, 80); for y in [46, 72, 98] as [CGFloat] { word(140, y, 72) }
+    case 1:
+      sheet(64, 22, 104, 120); pencil(c)
+    case 2:
+      rounded(CGRect(x: 48, y: 22, width: 144, height: 116), 12, fill: p.surfaceRaised, stroke: p.line, width: 2)
+      rounded(CGRect(x: 62, y: 34, width: 70, height: 8), 4, fill: p.lineStrong)
+      for i in 0..<4 {
+        let x = 62 + CGFloat(i % 2) * 62, y = 56 + CGFloat(i / 2) * 36
+        rounded(CGRect(x: x, y: y, width: 54, height: 26), 13, fill: i == 2 ? p.primary : p.surfaceSunken)
+        if i == 2 { check(x + 27, y + 13, p.onPrimary) } else { rounded(CGRect(x: x + 12, y: y + 11, width: 30, height: 4), 2, fill: p.lineStrong) }
+      }
+    default:
+      sheet(26, 40, 64, 80)
+      die(c, 104, 56, 44, 8)
+      circle(196, 80, 26, fill: p.surfaceRaised, stroke: p.danger, width: 3)
+      let eye = UIBezierPath(ovalIn: CGRect(x: 180, y: 72, width: 32, height: 16))
+      p.ink.setStroke(); eye.lineWidth = 2.5; eye.stroke()
+      circle(196, 80, 4, fill: p.ink)
+      line(178, 98, 214, 62, p.danger, 3)
+    }
+  }
+
+  private func rounded(_ r: CGRect, _ radius: CGFloat, fill: UIColor, stroke: UIColor? = nil, width: CGFloat = 0) {
+    let path = UIBezierPath(roundedRect: r, cornerRadius: radius)
+    fill.setFill(); path.fill()
+    if let stroke { stroke.setStroke(); path.lineWidth = width; path.stroke() }
+  }
+
+  private func circle(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat, fill: UIColor, stroke: UIColor? = nil, width: CGFloat = 0) {
+    rounded(CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r), r, fill: fill, stroke: stroke, width: width)
+  }
+
+  private func line(_ x1: CGFloat, _ y1: CGFloat, _ x2: CGFloat, _ y2: CGFloat, _ color: UIColor, _ width: CGFloat) {
+    let path = UIBezierPath()
+    path.move(to: CGPoint(x: x1, y: y1)); path.addLine(to: CGPoint(x: x2, y: y2))
+    path.lineWidth = width; path.lineCapStyle = .round
+    color.setStroke(); path.stroke()
+  }
+
+  private func die(_ c: CGContext, _ x: CGFloat, _ y: CGFloat, _ side: CGFloat, _ angle: CGFloat) {
+    c.saveGState()
+    c.translateBy(x: x + side / 2, y: y + side / 2); c.rotate(by: angle * .pi / 180); c.translateBy(x: -(x + side / 2), y: -(y + side / 2))
+    rounded(CGRect(x: x, y: y, width: side, height: side), side / 6, fill: p.surfaceRaised, stroke: p.ink, width: 2.5)
+    for (i, j) in [(0, 0), (2, 0), (1, 1), (0, 2), (2, 2)] { circle(x + side * CGFloat(i + 1) / 4, y + side * CGFloat(j + 1) / 4, side / 14, fill: p.ink) }
+    c.restoreGState()
+  }
+
+  private func arrow(_ x: CGFloat, _ y: CGFloat) {
+    line(x, y, x + 18, y, p.accent, 3); line(x + 12, y - 6, x + 18, y, p.accent, 3); line(x + 12, y + 6, x + 18, y, p.accent, 3)
+  }
+
+  private func word(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat) {
+    rounded(CGRect(x: x, y: y, width: w, height: 18), 9, fill: p.surfaceRaised, stroke: p.line, width: 1.5)
+    rounded(CGRect(x: x + 10, y: y + 7, width: w - 28, height: 4), 2, fill: p.inkMuted)
+  }
+
+  private func sheet(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) {
+    rounded(CGRect(x: x, y: y, width: w, height: h), 6, fill: p.surfaceRaised, stroke: p.lineStrong, width: 2)
+    for r in 0..<(Int(h / 20) - 1) {
+      let ly = y + 16 + CGFloat(r) * 18
+      circle(x + 12, ly, 3, fill: p.iconWell)
+      rounded(CGRect(x: x + 20, y: ly - 2, width: w - 32 - CGFloat(r % 3) * 10, height: 4), 2, fill: p.inkMuted)
+    }
+  }
+
+  private func pencil(_ c: CGContext) {
+    c.saveGState()
+    c.translateBy(x: 176, y: 112); c.rotate(by: -40 * .pi / 180); c.translateBy(x: -176, y: -112)
+    rounded(CGRect(x: 150, y: 104, width: 56, height: 16), 3, fill: p.accent)
+    let collar = UIBezierPath(rect: CGRect(x: 144, y: 104, width: 8, height: 16))
+    p.surfaceRaised.setFill(); collar.fill(); p.ink.setStroke(); collar.lineWidth = 1.5; collar.stroke()
+    line(136, 112, 144, 104, p.ink, 2); line(136, 112, 144, 120, p.ink, 2)
+    c.restoreGState()
+  }
+
+  private func check(_ x: CGFloat, _ y: CGFloat, _ color: UIColor) {
+    line(x - 7, y, x - 2, y + 5, color, 3); line(x - 2, y + 5, x + 8, y - 5, color, 3)
   }
 }
 

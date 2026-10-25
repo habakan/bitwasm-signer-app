@@ -12,7 +12,7 @@ use wasmi::{Engine as WasmiEngine, Instance, Linker, Memory, Module, Store, Val,
 use zeroize::{Zeroize, Zeroizing};
 
 const PARSER_SHA256: &str = "9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab";
-const SIGNER_SHA256: &str = "f1ec4d091292d83f44cd479219914e1b2f080c930867e8086d731bf76deb979c";
+const SIGNER_SHA256: &str = "d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508";
 const CHECKER_SHA256: &str = "7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37";
 const PLAN_SIZE: usize = 6712;
 const PLAN_N_INPUTS: usize = 16;
@@ -402,6 +402,12 @@ impl SignerEngine {
         signer.read_and_clear("signer_mnemonic_output", length as usize)
     }
 
+    fn dice_check(&self, rolls: &[u8], words: usize) -> Result<i32, String> {
+        let mut signer = self.new_signer()?;
+        signer.write_input(rolls)?;
+        Ok(signer.call("signer_dice_check", &[rolls.len() as i64, words as i64])? as i32)
+    }
+
     fn seedqr_from_mnemonic(
         &self,
         mnemonic: &mut [u8],
@@ -714,7 +720,10 @@ impl SignerEngine {
         let review = self.read_review()?;
         if !self.checker_agrees(&plan, &prev_txs).unwrap_or(false) {
             self.cancel_review()?;
-            return Err("checker.wasm's review disagrees with signer.wasm, so this transaction is refused".to_owned());
+            return Err(
+                "checker.wasm's review disagrees with signer.wasm, so this transaction is refused"
+                    .to_owned(),
+            );
         }
         Ok(json!({"complete": true, "progress": 100, "review": review}))
     }
@@ -817,7 +826,9 @@ impl SignerEngine {
         let at = usize::try_from(self.checker.call("checker_input", &[])?)
             .map_err(|error| error.to_string())?;
         self.checker.write(at, &input)?;
-        let length = self.checker.call("checker_run_plan", &[input.len() as i64])?;
+        let length = self
+            .checker
+            .call("checker_run_plan", &[input.len() as i64])?;
         if length <= 0 {
             return Ok(false);
         }
@@ -1331,6 +1342,19 @@ pub unsafe extern "C" fn bitwasm_ios_engine_mnemonic_from_dice(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn bitwasm_ios_engine_dice_check(
+    rolls: *const u8,
+    length: i32,
+    words: i32,
+) -> *mut c_char {
+    ffi_reply(|| {
+        let words = usize::try_from(words).map_err(|error| error.to_string())?;
+        let rolls = Zeroizing::new(unsafe { copy_bytes(rolls, length) }?);
+        with_engine(|engine| Ok(json!({"flags": engine.dice_check(&rolls, words)?})))
+    })
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn bitwasm_ios_engine_seedqr_from_mnemonic(
     mnemonic: *const u8,
     length: i32,
@@ -1519,6 +1543,7 @@ pub fn keep_exports_linked() {
         bitwasm_ios_engine_word_entry_end as *const (),
         bitwasm_ios_engine_mnemonic_from_entropy as *const (),
         bitwasm_ios_engine_mnemonic_from_dice as *const (),
+        bitwasm_ios_engine_dice_check as *const (),
         bitwasm_ios_engine_seedqr_from_mnemonic as *const (),
         bitwasm_ios_engine_bip85_mnemonic as *const (),
         bitwasm_ios_engine_find_address as *const (),

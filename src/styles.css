@@ -110,6 +110,41 @@ button:disabled { opacity: .45; cursor: default; }
 .check { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); font-weight: 600; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--primary); }
 
+/* The browser demo's new wallet flow, laid out like the native screens */
+.steps { display: flex; flex-direction: column; gap: 6px; }
+.steps-bars { display: flex; gap: 4px; }
+.steps-bars span { height: 4px; flex: 1; border-radius: var(--radius-full); background: var(--line); }
+.steps-bars .done { background: var(--primary); }
+.walk { display: flex; flex-direction: column; gap: var(--space-3); touch-action: pan-y; }
+.walk-art { width: 100%; height: 200px; border-radius: var(--radius-lg); background: var(--surface-sunken); }
+.dots { display: flex; justify-content: center; gap: 6px; }
+.dots span { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--line-strong); }
+.dots .on { width: 20px; background: var(--primary); }
+.roll-well { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-sunken); }
+.roll-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font: var(--text-data); }
+.roll-head strong { color: var(--primary); font-size: 1.4em; }
+.roll-count { color: var(--ink-muted); font: var(--text-label); font-variant-numeric: tabular-nums; }
+.roll-count.full { color: var(--primary); }
+.mark-sheet { width: 100%; height: auto; }
+.mark-label { fill: var(--ink-muted); font: 8px var(--font-mono); }
+.die-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.die-key { display: grid; height: 60px; place-items: center; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .08s; }
+.die-key svg { width: 36px; height: 36px; }
+.die-key:active:not(:disabled) { transform: scale(.92); border-color: var(--primary); background: var(--primary-soft); }
+.die-key:disabled { opacity: .4; }
+.die-edits { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.word-grid { display: grid; grid-template-columns: 1fr 1fr; padding: var(--space-3); }
+.word-grid ol { list-style: none; }
+.word-grid li { display: flex; gap: var(--space-3); padding: 8px 0; font: 700 17px var(--font-mono); }
+.word-grid li span { width: 24px; color: var(--ink-muted); font: var(--text-caption); text-align: right; }
+.well { overflow-x: auto; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-sunken); font: var(--text-data); white-space: pre; }
+.checksum { color: var(--accent-ink); }
+.arrow { color: var(--accent-ink); font: var(--text-caption); }
+.link { align-self: flex-start; padding: var(--space-3) 0; border: 0; background: none; color: var(--primary); font: var(--text-label); cursor: pointer; }
+.quiz-options { display: flex; flex-direction: column; gap: var(--space-3); }
+/* The words are real BIP39 words made in a connected browser: every screen showing them says so */
+.demo-stamp { position: sticky; top: calc(-1 * var(--space-6)); z-index: 1; margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; padding: var(--space-2) var(--space-4); background: var(--danger); color: #fff; font: var(--text-label); text-align: center; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

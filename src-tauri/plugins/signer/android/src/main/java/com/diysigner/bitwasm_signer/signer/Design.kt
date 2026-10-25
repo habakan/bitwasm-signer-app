@@ -119,8 +119,8 @@ internal object Design {
             setBackgroundColor(p.surface)
             addView(topBar(activity, p, title, testnet) { dialog.cancel() })
             addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-            addView(divider(activity, p), LinearLayout.LayoutParams(-1, dp(activity, 1)))
-            addView(LinearLayout(activity).apply {
+            if (actions.isNotEmpty()) addView(divider(activity, p), LinearLayout.LayoutParams(-1, dp(activity, 1)))
+            if (actions.isNotEmpty()) addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(activity, 16), dp(activity, 12), dp(activity, 16), dp(activity, 12))
                 actions.forEachIndexed { i, view -> addView(view, LinearLayout.LayoutParams(-1, -2).apply { if (i > 0) topMargin = dp(activity, DesignTokens.SPACE_3) }) }
@@ -205,6 +205,19 @@ internal object Design {
             background = shape(context, p.surfaceSunken, radius = DesignTokens.RADIUS_SM)
             setTextIsSelectable(true)
         }
+
+    // Where a new wallet is among its three steps: one bar a step, filled up to this one, and its name
+    private val STEPS = listOf("単語を作る" to "Make the words", "書き写す" to "Write them down", "確かめる" to "Check them")
+
+    fun steps(context: Context, p: Palette, current: Int) = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        addView(LinearLayout(context).apply {
+            for (i in 1..STEPS.size) addView(View(context).apply { background = shape(context, if (i <= current) p.primary else p.line, radius = DesignTokens.RADIUS_FULL) },
+                LinearLayout.LayoutParams(0, dp(context, 4), 1f).apply { if (i > 1) marginStart = dp(context, 4) })
+        })
+        val (ja, en) = STEPS[current - 1]
+        addView(text(context, tr("$current / ${STEPS.size}  $ja", "$current of ${STEPS.size}  $en"), Style.OVERLINE, p.inkMuted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(context, 6) })
+    }
 
     fun divider(context: Context, p: Palette) = View(context).apply { setBackgroundColor(p.line) }
 

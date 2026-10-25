@@ -21,7 +21,7 @@ Android (A80, Android 10) and the iOS Simulator, on testnet with the public BIP3
 
 - Loads a SeedQR / CompactSeedQR, with an optional BIP39 passphrase, or a 64 byte seed, and derives keys on the device
 - Loads BIP39 English words (12 to 24) typed one at a time on an in-app keypad, with an optional passphrase. Letters that lead to no word cannot be pressed, and the last word only offers candidates that fit the checksum
-- Creates a mnemonic from SecureRandom or dice and shows it as a Standard / Compact SeedQR
+- Creates a 12 or 24 word mnemonic from SecureRandom or from exactly 50 / 99 dice rolls (hashed as SeedSigner and Krux do), warns when the rolls look uneven or patterned, shows how the words came from the entropy, and shows them as a Standard / Compact SeedQR
 - A new mnemonic can be loaded as the signing key once it passes a five-question, four-choice backup check
 - Derives BIP85 child mnemonics
 - Receives an animated UR `crypto-psbt` with the camera
@@ -57,7 +57,7 @@ The WASM modules ship in `src-tauri/plugins/signer/android/src/main/assets/` and
 | Module | SHA-256 |
 | --- | --- |
 | parser.wasm | `9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab` |
-| signer.wasm | `f1ec4d091292d83f44cd479219914e1b2f080c930867e8086d731bf76deb979c` |
+| signer.wasm | `d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508` |
 | checker.wasm | `7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37` |
 
 checker.wasm is a separate model of the review, written independently of signer.wasm. After signer.wasm's review passes, checker.wasm decides the same plan from the previous transactions and signer.wasm's `signer_facts()`. The review screen is shown only when both agree on the totals, the fee, the inputs to sign, the owner of each output, and each output's amount and address (or OP_RETURN / script hex) as shown on screen. Otherwise nothing is signed.
@@ -110,7 +110,7 @@ With a different release key the app cannot be installed over the old one, and u
 
 Try it at https://habakan.github.io/bitwasm-signer-app/ (deployed from `main` by GitHub Actions).
 
-The same engine as iOS (`wasmi_host.rs`) is built for wasm32 and runs inside the page. It is testnet only, and the key is limited to the BIP39 test words (`abandon` eleven times and `about`). Words and SeedQRs cannot be entered. It runs on a device that is online, so never use it with real keys or funds.
+The same engine as iOS (`wasmi_host.rs`) is built for wasm32 and runs inside the page. It is testnet only, and the key is limited to the BIP39 test words (`abandon` eleven times and `about`). Words and SeedQRs cannot be entered. The new wallet flow (walkthrough, dice, write-down and quiz) can be tried too; the words it makes are real BIP39 words made in a connected browser, so every screen showing them is stamped as a demo. It runs on a device that is online, so never use it with real keys or funds.
 
 ```sh
 pnpm dev:web     # open http://localhost:1420

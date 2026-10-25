@@ -139,6 +139,8 @@ enum Design {
     }
     let name = label(title, .heading, p.ink)
     name.numberOfLines = 1
+    // The title takes the spare width; a pill has no width of its own and would stretch instead
+    name.setContentHuggingPriority(.defaultLow - 1, for: .horizontal)
     row.addArrangedSubview(name)
     row.addArrangedSubview(testnet ? pill(tr("テストネット", "Testnet"), fill: p.surfaceSunken, color: p.ink)
                                    : pill(tr("メインネット", "Mainnet"), fill: p.accent, color: p.onAccent))
@@ -170,6 +172,7 @@ enum Design {
     footer.spacing = DesignTokens.space3
     let line = UIView()
     line.backgroundColor = p.line
+    line.isHidden = actions.isEmpty
     for item in [bar, scroll, line, footer, content] as [UIView] { item.translatesAutoresizingMaskIntoConstraints = false }
     scroll.addSubview(content)
     for item in [bar, scroll, line, footer] { view.addSubview(item) }
@@ -194,6 +197,23 @@ enum Design {
       footer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -DesignTokens.space3),
     ])
     return scroll
+  }
+
+  // Where a new wallet is among its three steps: one bar a step, filled up to this one, and its name
+  private static let steps = [("単語を作る", "MAKE THE WORDS"), ("書き写す", "WRITE THEM DOWN"), ("確かめる", "CHECK THEM")]
+
+  static func steps(_ current: Int) -> UIView {
+    let bars = UIStackView(arrangedSubviews: (1...steps.count).map { i -> UIView in
+      let bar = UIView()
+      bar.backgroundColor = i <= current ? palette.primary : palette.line
+      bar.layer.cornerRadius = 2
+      bar.heightAnchor.constraint(equalToConstant: 4).isActive = true
+      return bar
+    })
+    bars.distribution = .fillEqually
+    bars.spacing = 4
+    let (ja, en) = steps[current - 1]
+    return stack([bars, label(tr("\(current) / \(steps.count)  \(ja)", "\(current) OF \(steps.count)  \(en)"), .overline, palette.inkMuted)], spacing: 6)
   }
 
   static func stack(_ views: [UIView], spacing: CGFloat = DesignTokens.space6) -> UIStackView {
