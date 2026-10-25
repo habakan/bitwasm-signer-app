@@ -82,7 +82,9 @@ function homeView({ signer, busy }: View) {
   if (webDemo) return {
     body: `${question(tr("テスト用の鍵で試す", "Try it with a test key"), tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"),
-      tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy, true))}`,
+      tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy, true))}
+    ${group(tr("新しいウォレット", "NEW WALLET"),
+      tile("create-mnemonic", "plus", tr("新しいウォレットを作る(デモ)", "Create a new wallet (demo)"), tr("作った単語は本物の資金に使わないでください。", "Never use the words it makes for real funds."), busy, true))}`,
     actions: button("settings", tr("設定", "Settings"), "secondary", { icon: "shield" }),
   };
   const saved = signer.saved ?? 0;

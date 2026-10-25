@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import { icon } from "../design/icons";
 import type { SignerState } from "../signer";
 import { tr } from "../views";
+import { createWallet } from "./create";
 import { call, startEngine } from "./engine";
 
 // Published BIP39 test words and a testnet PSBT that spends from them (samples/psbt-ur-test-only.png)
@@ -15,11 +16,11 @@ type Review = { spend: number; fee: number; totalIn: number; signatures: number;
 const ready = startEngine().then(() => call("set_network", 1));
 const state = () => ({ ...call<SignerState>("state"), testnet: true, storage: false, deviceSecure: false, restrictions: [] });
 const btc = (sats: number) => `${Math.floor(sats / 1e8)}.${String(sats % 1e8).padStart(8, "0")}`;
-const button = (id: string, label: string, variant: string) => `<button class="button button-${variant}" id="${id}"><span>${label}</span></button>`;
-const escape = (text: string) => text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+export const button = (id: string, label: string, variant: string) => `<button class="button button-${variant}" id="${id}"><span>${label}</span></button>`;
+export const escape = (text: string) => text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // A full-screen step over the app, laid out like the native ones
-function sheet(title: string, body: string, actions: string) {
+export function sheet(title: string, body: string, actions: string) {
   const element = document.createElement("div");
   element.className = "sheet";
   element.innerHTML = `<div class="app-shell">
@@ -188,6 +189,9 @@ export async function webInvoke<T>(command: string): Promise<T> {
       await showFrames(tr("署名済み", "Signed"), "crypto-psbt", frames, tr("読み取りが終わったら、ウォレットアプリから送金してください。", "When it has scanned, send the payment from your wallet app."));
       return { ...state(), signed: true, shown: true } as T;
     }
+    case "create_mnemonic":
+      await createWallet();
+      return { ...state(), shown: true } as T;
     case "export_account": {
       const { frames } = call<{ frames: string[] }>("account_ur", 0);
       await showFrames(tr("ウォレットアプリと接続する", "Connect your wallet app"), "crypto-account", frames, tr("秘密鍵は含まれていません。", "No private keys are included."));
