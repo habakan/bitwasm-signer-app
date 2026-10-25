@@ -12,13 +12,13 @@ The app asks the keyboard not to learn. On Android this is a request to the keyb
 | --- | --- | --- |
 | Mnemonic | Typed on an in-app keypad, never the system keyboard | Same |
 | Passphrase | Password input, no suggestions, `IME_FLAG_NO_PERSONALIZED_LEARNING` | Secure text entry (`isSecureTextEntry`), no autocorrection |
-| Dice rolls | Number keyboard, `IME_FLAG_NO_PERSONALIZED_LEARNING` | Number keyboard, no autocorrection |
+| Dice rolls | Tapped on die-face buttons in the app, never the system keyboard | Same |
 
-With Gboard on an A80 (Android 10), all three inputs pass these flags to the keyboard and Gboard switches to incognito mode. iOS has not been checked on a device.
+With Gboard on an A80 (Android 10), the passphrase input passes these flags to the keyboard and Gboard switches to incognito mode. iOS has not been checked on a device.
 
 ### Are they saved by a password manager or autofill?
 
-On Android the three inputs are `IMPORTANT_FOR_AUTOFILL_NO`, so Google autofill and autofill services such as 1Password skip them, and no save prompt appears.
+On Android the passphrase input is `IMPORTANT_FOR_AUTOFILL_NO`, so Google autofill and autofill services such as 1Password skip them, and no save prompt appears.
 
 On iOS the password save prompt appears when an app has Associated Domains. This app has none, so it should not appear (not checked on a device).
 

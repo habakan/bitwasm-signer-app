@@ -266,6 +266,18 @@ fn ios_ffi_exposes_seed_generation_and_review_operations() {
         data(&dice)["mnemonic"],
         "diet glad hat rural panther lawsuit act drop gallery urge where fit"
     );
+    let check = |rolls: &[u8]| {
+        let reply = take_reply(unsafe {
+            bitwasm_ios_engine_dice_check(rolls.as_ptr(), rolls.len() as i32, 12)
+        });
+        data(&reply)["flags"].as_i64().unwrap()
+    };
+    assert_eq!(
+        check(b"32461151351521144121541512665155412152342515356215"),
+        1
+    );
+    assert_eq!(check(&rolls), 7);
+    assert_eq!(check(&rolls[..49]), 0);
 
     let words = MNEMONIC.as_bytes().to_vec();
     let seedqr = take_reply(unsafe {

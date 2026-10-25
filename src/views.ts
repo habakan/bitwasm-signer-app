@@ -5,7 +5,7 @@ import type { Restriction, Screen, SignerState } from "./signer";
 
 export const moduleHashes = {
   parser: "9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab",
-  signer: "f1ec4d091292d83f44cd479219914e1b2f080c930867e8086d731bf76deb979c",
+  signer: "d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508",
   checker: "7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37",
 };
 

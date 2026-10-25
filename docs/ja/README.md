@@ -21,7 +21,7 @@ Android（A80、Android 10）とiOSシミュレーターの画面です。テス
 
 - SeedQR / CompactSeedQRは任意のBIP39パスフレーズ付きで、または64バイトのseedを読み込み、端末内で鍵を導出
 - BIP39英単語（12〜24語）をアプリ内のキーボードで1語ずつ入力し、任意のパスフレーズ付きで読み込み。続く語がない文字は押せず、最後の語はチェックサムに合う候補だけになる
-- SecureRandomまたはサイコロからニーモニックを作成し、Standard / Compact SeedQRを表示
+- SecureRandom、またはちょうど50 / 99回のサイコロの目（SeedSignerやKruxと同じハッシュの取り方）から12 / 24語のニーモニックを作成。目に偏りや規則性があれば警告し、単語がどう計算されたかを表示し、Standard / Compact SeedQRを表示
 - 作成したニーモニックは4択5問の書き写し確認に通ったあと、そのまま署名鍵として読み込める
 - BIP85の子ニーモニックを導出
 - カメラでアニメーションUR `crypto-psbt` を受信
@@ -57,7 +57,7 @@ WASMは`src-tauri/plugins/signer/android/src/main/assets/`に同梱し、ロー�
 | Module | SHA-256 |
 | --- | --- |
 | parser.wasm | `9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab` |
-| signer.wasm | `f1ec4d091292d83f44cd479219914e1b2f080c930867e8086d731bf76deb979c` |
+| signer.wasm | `d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508` |
 | checker.wasm | `7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37` |
 
 checker.wasmはsigner.wasmとは別に書いたレビューのモデルです。signer.wasmのレビューが通ったあと、同じplanと前のトランザクション、signer.wasmの`signer_facts()`から同じ判断をさせ、合計・手数料・署名する入力・出力の持ち主、画面に出す各出力の金額とアドレス（またはOP_RETURNやスクリプトの16進）が一致したときだけ確認画面を出します。一致しなければ署名しません。

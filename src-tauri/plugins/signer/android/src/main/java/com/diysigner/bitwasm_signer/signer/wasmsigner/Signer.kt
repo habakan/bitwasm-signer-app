@@ -205,6 +205,12 @@ class Signer(signerWasm: ByteArray, sha256: String? = null) {
     }
 
 
+    fun diceCheck(rolls: ByteArray, words: Int): Int {
+        require(rolls.size <= inputCapacity) { "${rolls.size} bytes of rolls does not fit in $inputCapacity" }
+        instance.write(call("signer_input"), rolls)
+        return call("signer_dice_check", rolls.size.toLong(), words.toLong())
+    }
+
     fun seedQrFromMnemonic(mnemonic: CharArray, compact: Boolean = false): ByteArray {
         try {
             val encoded = utf8(mnemonic)

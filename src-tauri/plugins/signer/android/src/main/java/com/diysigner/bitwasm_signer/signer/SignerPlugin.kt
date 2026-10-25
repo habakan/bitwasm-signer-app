@@ -64,12 +64,17 @@ class SetRestrictionArgs {
 }
 
 @TauriPlugin(permissions = [Permission(strings = [Manifest.permission.CAMERA], alias = "camera")])
-class SignerPlugin(private val activity: Activity) : Plugin(activity) {
+class SignerPlugin(launched: Activity) : Plugin(launched) {
+    // Tauri keeps this plugin when the activity is recreated (a language change, say), so dialogs follow the new one
+    private var activity: Activity = launched
     private val worker = Executors.newSingleThreadExecutor()
     private val engine by lazy { SignerEngine(activity) }
     private val vault by lazy { KeyVault(activity) }
     private val restrictions by lazy { DeviceRestrictions(activity) { worker.execute { engine.lock() } } }
     private var pendingScanMode = "seed"
+    // How the new wallet being written down was made: its rolls, kept until the flow ends or the user clears them
+    private class Origin(val dice: Boolean, val rolls: ByteArray?)
+    private var origin: Origin? = null
     private var started = 0
     @Volatile private var authenticating = false
 
@@ -82,7 +87,10 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
                 started = maxOf(0, started - 1)
                 if (started == 0 && !authenticating) worker.execute { engine.lock() }
             }
-            override fun onActivityCreated(a: Activity, state: Bundle?) = protect(a.window)
+            override fun onActivityCreated(a: Activity, state: Bundle?) {
+                if (a.javaClass == activity.javaClass) activity = a
+                protect(a.window)
+            }
             override fun onActivityResumed(a: Activity) = Unit
             override fun onActivityPaused(a: Activity) = Unit
             override fun onActivitySaveInstanceState(a: Activity, state: Bundle) = Unit
@@ -282,15 +290,42 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun createMnemonic(invoke: Invoke) {
         restrictions.blockedBy()?.let { invoke.fail(restrictedMessage(it)); return }
-        Design.alert(activity)
-            .setTitle(Design.tr("新しいウォレットを作る", "Create a new wallet"))
-            .setMessage(Design.tr("リカバリーワードの作り方を選んでください。", "Choose how to make the recovery words."))
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Mnemonic creation was cancelled") }
-            .setOnCancelListener { invoke.fail("Mnemonic creation was cancelled") }
-            .setNeutralButton(Design.tr("サイコロ", "Dice rolls")) { _, _ -> chooseDiceWords(invoke) }
-            .setPositiveButton(Design.tr("安全な乱数", "Secure random")) { _, _ -> chooseEntropyWords(invoke) }
-            .create().also { dialog -> dialog.setOnShowListener { Design.styleDialog(dialog) } }
-            .show()
+        lateinit var flow: NewWallet
+        fun show(mnemonic: CharArray) = activity.runOnUiThread {
+            flow.close()
+            showMnemonic(invoke, mnemonic, Design.tr("新しいウォレット", "New wallet"), true, verify = true)
+        }
+        fun failed(e: Exception, fallback: String) = activity.runOnUiThread { flow.close(); invoke.fail(e.message ?: fallback) }
+        fun fromDice(rolls: ByteArray, words: Int) = worker.execute {
+            origin = Origin(true, rolls.copyOf())
+            try { show(engine.mnemonicFromDice(rolls, words)) } catch (e: Exception) { forget(null); failed(e, "Invalid dice rolls") }
+        }
+        flow = NewWallet(activity, engine.testnet,
+            onRandom = { words ->
+                worker.execute {
+                    origin = Origin(false, null)
+                    try { show(engine.mnemonicFromEntropy(ByteArray(words / 3 * 4).also(SecureRandom()::nextBytes))) }
+                    catch (e: Exception) { failed(e, "Could not create a mnemonic") }
+                }
+            },
+            onDice = { rolls, words, reset ->
+                worker.execute {
+                    val flags = try { engine.diceCheck(rolls, words) } catch (e: Exception) { 0 }
+                    activity.runOnUiThread {
+                        if ((flags and (DICE_BIASED or DICE_PATTERN)) == 0) fromDice(rolls, words)
+                        else Design.alert(activity)
+                            .setTitle(if ((flags and DICE_BIASED) != 0) Design.tr("出た目に偏りがあります", "The rolls are uneven") else Design.tr("出た目に規則性があります", "The rolls follow a pattern"))
+                            .setMessage(Design.tr("公平なサイコロなら、ほとんど起きない並びです。目の押し間違いや、偏ったサイコロでないか確かめてください。振り直すことをおすすめします。",
+                                "A fair die almost never gives rolls like these. Check for mistyped rolls or a weighted die. Rolling again is recommended."))
+                            .setNegativeButton(Design.tr("このまま作る", "Use them anyway")) { _, _ -> fromDice(rolls, words) }
+                            .setPositiveButton(Design.tr("振り直す", "Roll again")) { _, _ -> rolls.fill(0); reset() }
+                            .setCancelable(false)
+                            .create().also { d -> d.setOnShowListener { Design.styleDialog(d) } }.show()
+                    }
+                }
+            },
+            onCancel = { invoke.fail("Mnemonic creation was cancelled") })
+        flow.show()
     }
 
     @Command
@@ -448,63 +483,6 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
         dialog.show()
     }
 
-    private fun chooseEntropyWords(invoke: Invoke) {
-        Design.alert(activity).setTitle(Design.tr("単語の数", "Number of words"))
-            .setItems(Array(5) { Design.tr("${12 + it * 3}個の単語", "${12 + it * 3} words") }) { _, which ->
-                val words = 12 + which * 3
-                val entropyLength = 16 + which * 4
-                worker.execute {
-                    try {
-                        val entropy = ByteArray(entropyLength).also(SecureRandom()::nextBytes)
-                        val mnemonic = engine.mnemonicFromEntropy(entropy)
-                        activity.runOnUiThread { showMnemonic(invoke, mnemonic, Design.tr("新しいウォレット", "New wallet"), words in listOf(12, 24), verify = true) }
-                    } catch (e: Exception) {
-                        activity.runOnUiThread { invoke.fail(e.message ?: "Could not create a mnemonic") }
-                    }
-                }
-            }
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Mnemonic creation was cancelled") }
-            .setOnCancelListener { invoke.fail("Mnemonic creation was cancelled") }
-            .show()
-    }
-
-    private fun chooseDiceWords(invoke: Invoke) {
-        Design.alert(activity).setTitle(Design.tr("単語の数", "Number of words"))
-            .setItems(arrayOf(Design.tr("12個の単語・50回以上振る", "12 words · at least 50 rolls"), Design.tr("24個の単語・99回以上振る", "24 words · at least 99 rolls"))) { _, which ->
-                val words = if (which == 0) 12 else 24
-                val rolls = EditText(activity).apply {
-                    hint = if (words == 12) Design.tr("出た目(1〜6)を50回分以上", "Enter at least 50 rolls (1–6)") else Design.tr("出た目(1〜6)を99回分以上", "Enter at least 99 rolls (1–6)")
-                    inputType = InputType.TYPE_CLASS_NUMBER
-                    keepFromKeyboard()
-                }
-                val dialog = Design.alert(activity).setTitle(Design.tr("サイコロの目", "Dice rolls"))
-                    .setView(rolls)
-                    .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Dice entry was cancelled") }
-                    .setOnCancelListener { invoke.fail("Dice entry was cancelled") }
-                    .setPositiveButton(Design.tr("作る", "Create"), null)
-                    .create()
-                dialog.setOnShowListener {
-                    Design.styleDialog(dialog)
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val bytes = rolls.text.toString().trim().toByteArray(Charsets.US_ASCII)
-                        dialog.dismiss()
-                        worker.execute {
-                            try {
-                                val mnemonic = engine.mnemonicFromDice(bytes, words)
-                                activity.runOnUiThread { showMnemonic(invoke, mnemonic, Design.tr("新しいウォレット", "New wallet"), true, verify = true) }
-                            } catch (e: Exception) {
-                                activity.runOnUiThread { invoke.fail(e.message ?: "Invalid dice rolls") }
-                            }
-                        }
-                    }
-                }
-                dialog.show()
-            }
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Mnemonic creation was cancelled") }
-            .setOnCancelListener { invoke.fail("Mnemonic creation was cancelled") }
-            .show()
-    }
-
     // The write-down step of a new wallet, and the result of BIP85; screenshots of it come out blank
     private fun showMnemonic(invoke: Invoke, phrase: CharArray, heading: String, seedQrAvailable: Boolean, verify: Boolean = false) {
         val p = Design.palette(activity)
@@ -531,18 +509,31 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(24), dp(16), dp(24))
-            if (verify) addView(Design.text(activity, tr("ステップ 2 / 3", "Step 2 of 3"), Design.Style.OVERLINE, p.inkMuted), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            if (verify) addView(Design.steps(activity, p, 2), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             addView(Design.text(activity, tr("${words.size}個の単語を書き写す", "Write down your ${words.size} words"), Design.Style.DISPLAY, p.ink))
             addView(Design.text(activity, tr("紙に、この順番で書いてください。この単語を見た人は、ビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees these words can take your bitcoin."),
                 Design.Style.BODY, p.inkMuted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
             addView(Design.card(activity, p).apply { addView(list) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(24) })
             addView(Design.text(activity, tr("この画面はスクリーンショットに写りません。", "Screenshots of this screen come out blank."), Design.Style.CAPTION, p.inkMuted),
                 LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            origin?.takeIf { verify }?.let { made ->
+                addView(Design.text(activity, tr("この単語のでき方を見る", "See how these words were made"), Design.Style.LABEL, p.primary).apply {
+                    setPadding(0, dp(12), 0, dp(12))
+                    setOnClickListener {
+                        worker.execute {
+                            val entropy = engine.mnemonicEntropy(phrase) ?: return@execute
+                            activity.runOnUiThread {
+                                showDerivation(activity, engine.testnet, words, engine.words, entropy, made.dice, origin?.rolls) { origin?.rolls?.fill(0); origin = Origin(made.dice, null) }
+                            }
+                        }
+                    }
+                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+            }
         }
         fun blank() = wordViews.forEach { it.text = "" }
         fun clearAndResolve(shown: Boolean) {
             blank()
-            phrase.fill('\u0000')
+            forget(phrase)
             invoke.resolve(JSObject().apply { put("shown", shown) })
         }
         val wrote = Design.button(activity, if (verify) tr("書き写しました", "I wrote them down") else tr("完了", "Done"), true, p)
@@ -575,7 +566,7 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
                                 payload.fill(0)
                             }
                         } catch (e: Exception) {
-                            phrase.fill('\u0000')
+                            forget(phrase)
                             activity.runOnUiThread { invoke.fail(e.message ?: "Could not encode the SeedQR") }
                         }
                     }
@@ -592,7 +583,7 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
         val words = String(phrase).split(' ')
         val positions = words.indices.shuffled(random).take(5)
         fun cancel() {
-            phrase.fill('\u0000')
+            forget(phrase)
             invoke.resolve(JSObject().apply { put("shown", false) })
         }
         fun ask(step: Int) {
@@ -617,9 +608,16 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
         ask(0)
     }
 
+    // Ends a new wallet's flow: the words, and the rolls they came from, leave memory
+    private fun forget(phrase: CharArray?) {
+        phrase?.fill('\u0000')
+        origin?.rolls?.fill(0)
+        origin = null
+    }
+
     private fun backupChecked(invoke: Invoke, phrase: CharArray) {
         fun done() {
-            phrase.fill('\u0000')
+            forget(phrase)
             invoke.resolve(stateObject().apply { put("shown", true) })
         }
         val dialog = Design.alert(activity).setTitle(Design.tr("バックアップを確かめました", "Backup checked"))
@@ -633,7 +631,7 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
                             try { engine.loadMnemonic(phrase.copyOf(), passphrase) } catch (e: Exception) { entropy?.fill(0); throw e }
                             activity.runOnUiThread { offerSave(entropy) { done() } }
                         } catch (e: Exception) {
-                            phrase.fill('\u0000')
+                            forget(phrase)
                             activity.runOnUiThread { invoke.fail(e.message ?: "Could not load the mnemonic") }
                         }
                     }
@@ -1208,8 +1206,8 @@ class SignerPlugin(private val activity: Activity) : Plugin(activity) {
 
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
+    // The worker outlives the activity for the same reason; only the key goes
     override fun onDestroy(activity: androidx.appcompat.app.AppCompatActivity) {
-        engine.close()
-        worker.shutdownNow()
+        worker.execute { engine.lock() }
     }
 }
