@@ -489,36 +489,40 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         val tr = Design::tr
         val words = String(phrase).split(' ')
         val wordViews = mutableListOf<TextView>()
-        val half = (words.size + 1) / 2
+        // 24 words go in three columns so they fit a small phone without scrolling
+        val columns = if (words.size > 12) 3 else 2
+        val per = (words.size + columns - 1) / columns
         val list = LinearLayout(activity).apply {
-            setPadding(dp(16), dp(8), dp(16), dp(8))
-            for (column in 0..1) addView(LinearLayout(activity).apply {
+            setPadding(dp(if (columns == 3) 8 else 16), dp(8), dp(8), dp(8))
+            for (column in 0 until columns) addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
-                for (i in column * half until minOf(words.size, column * half + half)) addView(LinearLayout(activity).apply {
+                for (i in column * per until minOf(words.size, column * per + per)) addView(LinearLayout(activity).apply {
                     gravity = Gravity.CENTER_VERTICAL
-                    minimumHeight = dp(40)
-                    addView(Design.text(activity, "${i + 1}", Design.Style.CAPTION, p.inkMuted).apply { gravity = Gravity.END }, LinearLayout.LayoutParams(dp(24), -2))
+                    minimumHeight = dp(if (columns == 3) 32 else 40)
+                    addView(Design.text(activity, "${i + 1}", Design.Style.CAPTION, p.inkMuted).apply { gravity = Gravity.END }, LinearLayout.LayoutParams(dp(20), -2))
                     addView(Design.text(activity, words[i], Design.Style.DATA, p.ink).apply {
-                        textSize = 17f
+                        textSize = if (columns == 3) 14f else 17f
                         setTypeface(typeface, Typeface.BOLD)
                         wordViews.add(this)
-                    }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(12) })
+                    }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(if (columns == 3) 6 else 12) })
                 })
             }, LinearLayout.LayoutParams(0, -2, 1f))
         }
+        fun link(label: String) = Design.text(activity, label, Design.Style.LABEL, p.primary).apply { setPadding(0, dp(10), dp(20), dp(10)) }
+        val seedQr = link(tr("SeedQRを表示", "Show SeedQR"))
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(24), dp(16), dp(24))
+            setPadding(dp(16), dp(16), dp(16), dp(16))
             if (verify) addView(Design.steps(activity, p, 2), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             addView(Design.text(activity, tr("${words.size}個の単語を書き写す", "Write down your ${words.size} words"), Design.Style.DISPLAY, p.ink))
-            addView(Design.text(activity, tr("紙に、この順番で書いてください。この単語を見た人は、ビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees these words can take your bitcoin."),
+            addView(Design.text(activity, tr("紙に、この順番で書いてください。見た人はビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees them can take your bitcoin."),
                 Design.Style.BODY, p.inkMuted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-            addView(Design.card(activity, p).apply { addView(list) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(24) })
-            addView(Design.text(activity, tr("この画面はスクリーンショットに写りません。", "Screenshots of this screen come out blank."), Design.Style.CAPTION, p.inkMuted),
-                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            addView(Design.card(activity, p).apply { addView(list) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+            // SeedQR and the derivation are links, so the footer keeps one button and the words fit without scrolling
+            val links = LinearLayout(activity).apply { if (seedQrAvailable) addView(seedQr) }
+            addView(links, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
             origin?.takeIf { verify }?.let { made ->
-                addView(Design.text(activity, tr("この単語のでき方を見る", "See how these words were made"), Design.Style.LABEL, p.primary).apply {
-                    setPadding(0, dp(12), 0, dp(12))
+                links.addView(link(tr("この単語のでき方", "How they were made")).apply {
                     setOnClickListener {
                         worker.execute {
                             val entropy = engine.mnemonicEntropy(phrase) ?: return@execute
@@ -527,7 +531,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                             }
                         }
                     }
-                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+                })
             }
         }
         fun blank() = wordViews.forEach { it.text = "" }
@@ -537,9 +541,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             invoke.resolve(JSObject().apply { put("shown", shown) })
         }
         val wrote = Design.button(activity, if (verify) tr("書き写しました", "I wrote them down") else tr("完了", "Done"), true, p)
-        val seedQr = Design.button(activity, tr("SeedQRを表示", "Show SeedQR"), false, p)
-        val dialog = Design.screen(activity, heading, engine.testnet, ScrollView(activity).apply { addView(content) },
-            if (seedQrAvailable) listOf(seedQr, wrote) else listOf(wrote)) { clearAndResolve(false) }
+        val dialog = Design.screen(activity, heading, engine.testnet, ScrollView(activity).apply { addView(content) }, listOf(wrote)) { clearAndResolve(false) }
         dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         wrote.setOnClickListener {
             dialog.dismiss()

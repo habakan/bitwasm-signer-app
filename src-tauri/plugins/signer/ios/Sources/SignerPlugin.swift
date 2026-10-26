@@ -1975,18 +1975,20 @@ private final class WriteDownViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     let p = Design.palette
-    let half = (words.count + 1) / 2
-    let columns = (0..<2).map { column -> UIStackView in
-      Design.stack((column * half..<min(words.count, column * half + half)).map { i -> UIView in
+    // 24 words go in three columns so they fit a small phone without scrolling
+    let count = words.count > 12 ? 3 : 2
+    let per = (words.count + count - 1) / count
+    let columns = (0..<count).map { column -> UIStackView in
+      Design.stack((column * per..<min(words.count, column * per + per)).map { i -> UIView in
         let number = Design.label("\(i + 1)", .caption, p.inkMuted)
         number.textAlignment = .right
-        number.widthAnchor.constraint(equalToConstant: 24).isActive = true
+        number.widthAnchor.constraint(equalToConstant: 20).isActive = true
         let word = Design.label(words[i], .data, p.ink)
-        word.font = .monospacedSystemFont(ofSize: 17, weight: .bold)
+        word.font = .monospacedSystemFont(ofSize: count == 3 ? 14 : 17, weight: .bold)
         wordLabels.append(word)
         let row = UIStackView(arrangedSubviews: [number, word])
-        row.spacing = DesignTokens.space3
-        row.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        row.spacing = count == 3 ? 6 : DesignTokens.space3
+        row.heightAnchor.constraint(equalToConstant: count == 3 ? 32 : 36).isActive = true
         return row
       }, spacing: 0)
     }
@@ -1999,29 +2001,28 @@ private final class WriteDownViewController: UIViewController {
     if verify { items.append(Design.steps(2)) }
     items += [
       Design.label(Design.tr("\(words.count)個の単語を書き写す", "Write down your \(words.count) words"), .display, p.ink),
-      Design.label(Design.tr("紙に、この順番で書いてください。この単語を見た人は、ビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees these words can take your bitcoin."), .body, p.inkMuted),
+      Design.label(Design.tr("紙に、この順番で書いてください。見た人はビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees them can take your bitcoin."), .body, p.inkMuted),
       card,
-      Design.label(Design.tr("画面の録画やミラーリング中は、この画面を隠します。", "The screen is covered while it is recorded or mirrored."), .caption, p.inkMuted),
     ]
-    if onExplain != nil {
-      let explain = UIButton(type: .system)
-      explain.setTitle(Design.tr("この単語のでき方を見る", "See how these words were made"), for: .normal)
-      explain.titleLabel?.font = Design.font(.label)
-      explain.contentHorizontalAlignment = .leading
-      explain.addAction(UIAction { [weak self] _ in self?.onExplain?() }, for: .touchUpInside)
-      items.append(explain)
+    // SeedQR and the derivation are links, so the footer keeps one button and the words fit without scrolling
+    func link(_ title: String, _ action: @escaping () -> Void) -> UIButton {
+      let button = UIButton(type: .system)
+      button.setTitle(title, for: .normal)
+      button.titleLabel?.font = Design.font(.label)
+      button.addAction(UIAction { _ in action() }, for: .touchUpInside)
+      return button
     }
+    var links: [UIView] = []
+    if seedQrAvailable { links.append(link(Design.tr("SeedQRを表示", "Show SeedQR")) { [weak self] in self?.close { self?.onSeedQr?() } }) }
+    if onExplain != nil { links.append(link(Design.tr("この単語のでき方", "How they were made")) { [weak self] in self?.onExplain?() }) }
+    let row = UIStackView(arrangedSubviews: links + [UIView()])
+    row.spacing = DesignTokens.space6
+    items.append(row)
     let content = Design.stack(items, spacing: DesignTokens.space4)
 
     let wrote = Design.button(verify ? Design.tr("書き写しました", "I wrote them down") : Design.tr("完了", "Done"), primary: true)
     wrote.addAction(UIAction { [weak self] _ in self?.close { self?.onWrote?() } }, for: .touchUpInside)
-    var actions: [UIView] = [wrote]
-    if seedQrAvailable {
-      let seedQr = Design.button(Design.tr("SeedQRを表示", "Show SeedQR"), primary: false)
-      seedQr.addAction(UIAction { [weak self] _ in self?.close { self?.onSeedQr?() } }, for: .touchUpInside)
-      actions.insert(seedQr, at: 0)
-    }
-    _ = Design.screen(self, title: titleText, testnet: SignerBridge.testnet, content: content, actions: actions)
+    _ = Design.screen(self, title: titleText, testnet: SignerBridge.testnet, content: content, actions: [wrote])
   }
 
   private func close(_ then: @escaping () -> Void) {
@@ -2182,11 +2183,12 @@ private final class NewWalletController: UINavigationController {
       key.setImage(UIImage(systemName: "die.face.\(face)", withConfiguration: UIImage.SymbolConfiguration(pointSize: 40)), for: .normal)
       key.tintColor = p.ink
       key.accessibilityLabel = "\(face)"
-      key.heightAnchor.constraint(equalToConstant: 72).isActive = true
+      key.heightAnchor.constraint(equalToConstant: 56).isActive = true
       return key
     }
-    let undo = Design.button(Design.tr("1つ消す", "Undo"), primary: false)
-    let clear = Design.button(Design.tr("全部消す", "Clear all"), primary: false)
+    let undo = Design.button("⌫", primary: false)
+    undo.accessibilityLabel = Design.tr("1つ消す", "Undo")
+    let clear = Design.button(Design.tr("全消去", "Clear"), primary: false)
     let make = Design.button(Design.tr("単語を作る", "Make the words"), primary: true)
     func update() {
       sheet.rolls = rolls
@@ -2201,6 +2203,8 @@ private final class NewWalletController: UINavigationController {
         history.attributedText = text
       }
       faces.forEach { $0.isEnabled = rolls.count < need; $0.alpha = rolls.count < need ? 1 : 0.4 }
+      undo.alpha = rolls.isEmpty ? 0.4 : 1
+      clear.alpha = undo.alpha
       undo.isEnabled = !rolls.isEmpty
       clear.isEnabled = !rolls.isEmpty
       make.isEnabled = rolls.count == need
@@ -2231,34 +2235,20 @@ private final class NewWalletController: UINavigationController {
       self?.present(alert, animated: true)
     }, for: .touchUpInside)
     make.addAction(UIAction { [weak self] _ in self?.onDice?(Data(rolls), words) { reset() } }, for: .touchUpInside)
+    // Three faces a row, with Undo and Clear as a fourth column so the keys keep one block
     let grid = Design.stack([0, 1].map { row -> UIView in
-      let line = UIStackView(arrangedSubviews: Array(faces[row * 3..<row * 3 + 3]))
-      line.distribution = .fillEqually
+      let line = UIStackView(arrangedSubviews: Array(faces[row * 3..<row * 3 + 3]) + [row == 0 ? undo : clear])
       line.spacing = DesignTokens.space2
       return line
     }, spacing: DesignTokens.space2)
-    let edits = UIStackView(arrangedSubviews: [undo, clear])
-    edits.distribution = .fillEqually
-    edits.spacing = DesignTokens.space2
-    let verify = UIButton(type: .system)
-    verify.setTitle(Design.tr("別の道具で確かめるには", "Checking with another tool"), for: .normal)
-    verify.titleLabel?.font = Design.font(.label)
-    verify.contentHorizontalAlignment = .leading
-    verify.addAction(UIAction { [weak self] _ in
-      let alert = UIAlertController(title: Design.tr("別の道具で確かめる", "Check with another tool"),
-                                    message: Design.tr("出た目をそのまま文字として並べ、SHA-256 を取って単語にしています。SeedSigner や Krux、bitcoiner.guide/seed と同じ方法なので、同じ目を入れれば同じ単語になります。確かめるのは、ネットにつながっていない端末だけにしてください。",
-                                                       "The rolls are hashed as text with SHA-256 and turned into words, the same way SeedSigner, Krux and bitcoiner.guide/seed do it, so the same rolls give the same words there. Only check on a device that is offline."),
-                                    preferredStyle: .alert)
-      alert.addAction(UIAlertAction(title: Design.tr("閉じる", "Close"), style: .cancel))
-      Design.style(alert)
-      self?.present(alert, animated: true)
-    }, for: .touchUpInside)
+    // Widths tie keys in both rows together, so they go on once the grid holds them all
+    NSLayoutConstraint.activate(faces.dropFirst().map { $0.widthAnchor.constraint(equalTo: faces[0].widthAnchor) }
+      + [undo, clear].map { $0.widthAnchor.constraint(equalTo: faces[0].widthAnchor, multiplier: 0.8) })
     update()
     return screen(Design.tr("サイコロ", "Dice"), [
       Design.steps(1),
-      Design.label(Design.tr("サイコロを振る", "Roll the die"), .display, p.ink),
-      Design.label(Design.tr("1回振るごとに、出た目を押してください。ちょうど\(need)回で単語を作れます。", "After each roll, tap the face that came up. Exactly \(need) rolls make the words."), .body, p.inkMuted),
-      well, grid, edits, verify,
+      Design.label(Design.tr("1回振るごとに、出た目を押してください。ちょうど\(need)回で単語になります。", "After each roll, tap the face that came up. Exactly \(need) rolls make the words."), .body, p.inkMuted),
+      well, grid,
     ], actions: [make]) { [weak self] in reset(); self?.popViewController(animated: true) }
   }
 }
@@ -2319,7 +2309,7 @@ private final class DerivationViewController: UIViewController {
         forget.isEnabled = false
       }, for: .touchUpInside)
       items += [step("1", Design.tr("サイコロの目(\(count)回)", "The rolls (\(count))")), rollsWell, forget,
-                arrow(Design.tr("目を文字として並べて SHA-256 を取り、先頭\(bits)ビットを使う", "SHA-256 of the rolls as text; the first \(bits) bits are kept"))]
+                arrow(Design.tr("目を文字として並べて SHA-256 を取り、先頭\(bits)ビットを使う。SeedSigner、Krux、bitcoiner.guide/seed と同じ方法です", "SHA-256 of the rolls as text; the first \(bits) bits are kept. SeedSigner, Krux and bitcoiner.guide/seed do the same"))]
     } else {
       items += [step("1", Design.tr("安全な乱数", "Secure random")),
                 Design.label(Design.tr("スマホの OS の安全な乱数から\(bits)ビットを取りました。", "\(bits) bits from the phone's secure random number generator."), .body, p.inkMuted),
@@ -2370,7 +2360,7 @@ private final class RollSheetView: UIView {
   var rolls: [UInt8] = [] { didSet { setNeedsDisplay() } }
   private let need: Int
   private let p = Design.palette
-  private let row: CGFloat = 11
+  private var row: CGFloat { need > 50 ? 9 : 11 }
   private let gap: CGFloat = 10
 
   init(need: Int) {

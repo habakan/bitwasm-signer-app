@@ -55,8 +55,8 @@ function button(id: string, label: string, variant: "primary" | "secondary" | "d
   return `<button class="button button-${variant}" id="${id}" ${disabledIf(opts.disabled)}>${opts.icon ? icon(opts.icon, 20) : ""}<span>${label}</span></button>`;
 }
 
-function tile(id: string, iconName: string, title: string, detail: string, disabled: boolean, wide = false) {
-  return `<button class="tile${wide ? " tile-wide" : ""}" id="${id}" ${disabledIf(disabled)}>
+function tile(id: string, iconName: string, title: string, detail: string, disabled: boolean) {
+  return `<button class="tile tile-wide" id="${id}" ${disabledIf(disabled)}>
     <span class="tile-icon">${icon(iconName)}</span>
     <span class="tile-copy"><span class="tile-title">${title}</span><span class="tile-detail">${detail}</span></span>
   </button>`;
@@ -82,10 +82,9 @@ function homeView({ signer, busy }: View) {
   if (webDemo) return {
     body: `${question(tr("テスト用の鍵で試す", "Try it with a test key"), tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"),
-      tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy, true))}
+      tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy))}
     ${group(tr("新しいウォレット", "NEW WALLET"),
-      tile("create-mnemonic", "plus", tr("新しいウォレットを作る(デモ)", "Create a new wallet (demo)"), tr("作った単語は本物の資金に使わないでください。", "Never use the words it makes for real funds."), busy, true))}`,
-    actions: button("settings", tr("設定", "Settings"), "secondary", { icon: "shield" }),
+      tile("create-mnemonic", "plus", tr("新しいウォレットを作る(デモ)", "Create a new wallet (demo)"), tr("作った単語は本物の資金に使わないでください。", "Never use the words it makes for real funds."), busy))}`,
   };
   const saved = signer.saved ?? 0;
   const blocked = busy || restrictionBlocks(signer);
@@ -94,42 +93,38 @@ function homeView({ signer, busy }: View) {
       ? tr("保存した鍵は暗号化され、開くには画面ロックが必要です。ロックするかアプリを離れると、メモリから消去されます。", "Saved keys are encrypted on this phone and need your screen lock to open. Locking or leaving the app wipes the key from memory.")
       : tr("鍵はこのスマホのメモリにだけあり、ロックするかアプリを離れると消去されます。", "Your key stays in this phone's memory and is wiped when you lock it or leave the app."))}
     ${saved ? group(tr("この端末に保存した鍵", "SAVED ON THIS DEVICE"),
-      tile("unlock-saved", "lock", tr("保存した鍵を開く", "Open a saved key"), tr(`${saved}件・画面ロックか生体認証`, `${saved} saved · screen lock or biometrics`), blocked, true)) : ""}
-    ${group(tr("ウォレットを読み込む", "IMPORT WALLET"), `<div class="tile-grid">
-      ${tile("scan", "qr", tr("バックアップのQRを読み取る", "Scan your backup QR"), tr("SeedQR・CompactSeedQR", "SeedQR or CompactSeedQR"), blocked)}
-      ${tile("import-mnemonic", "words", tr("リカバリーワードを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), blocked)}
+      `<div class="card">${row("unlock-saved", "lock", tr("保存した鍵を開く", "Open a saved key"), tr(`${saved}件・画面ロックか生体認証`, `${saved} saved · screen lock or biometrics`), { disabled: blocked })}</div>`) : ""}
+    ${group(tr("ウォレットを読み込む", "IMPORT WALLET"), `<div class="card">
+      ${row("scan", "qr", tr("バックアップのQRを読み取る", "Scan your backup QR"), tr("SeedQR・CompactSeedQR", "SeedQR or CompactSeedQR"), { disabled: blocked })}
+      ${row("import-mnemonic", "words", tr("リカバリーワードを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), { disabled: blocked })}
     </div>`)}
-    ${group(tr("新しいウォレット", "NEW WALLET"),
-      tile("create-mnemonic", "plus", tr("新しいウォレットを作る", "Create a new wallet"), tr("安全な乱数かサイコロで、新しいリカバリーワードを作ります。", "Make new recovery words with secure random or dice rolls."), blocked, true))}`,
-    actions: button("settings", tr("設定", "Settings"), "secondary", { icon: "shield" }),
+    ${group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
+      ${row("create-mnemonic", "plus", tr("新しいウォレットを作る", "Create a new wallet"), tr("安全な乱数かサイコロで作ります。", "From secure random or dice rolls."), { disabled: blocked })}
+    </div>`)}`,
   };
 }
 
 function readyView({ signer, busy }: View) {
   const rows = webDemo ? [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
-    row("settings", "shield", tr("設定", "Settings"), ""),
   ] : [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
     signer.multisig
-      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}`, `Multisig ${signer.multisig}`), tr("設定をQRで渡す", "Share the setup as a QR"), { disabled: busy })
+      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}をQRで渡す`, `Share multisig ${signer.multisig} as a QR`), "", { disabled: busy })
       : row("multisig", "shield", tr("マルチシグを登録する", "Register a multisig"), tr("コーディネーターの設定を読み取る", "Scan the setup from your coordinator"), { disabled: busy }),
     signer.multisig ? row("forget-multisig", "alert", tr("マルチシグの登録を解除する", "Forget the multisig"), "", { disabled: busy }) : "",
-    row("find-address", "qr", tr("アドレスを確認する", "Check an address"), tr("このウォレットのアドレスか調べる", "See if an address belongs to this wallet"), { disabled: busy }),
-    row("sign-message", "signature", tr("メッセージに署名する", "Sign a message"), "BIP137", { disabled: busy }),
-    row("bip85", "words", tr("子ニーモニックを作る", "Derive a child mnemonic"), "BIP85", { disabled: busy }),
-    row("settings", "shield", tr("設定", "Settings"), ""),
+    row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
+    row("sign-message", "signature", tr("メッセージに署名する", "Sign a message"), "", { value: "BIP137", disabled: busy }),
+    row("bip85", "words", tr("子ニーモニックを作る", "Derive a child mnemonic"), "", { value: "BIP85", disabled: busy }),
   ];
   return {
-    body: `${question(tr("署名の準備ができました", "Ready to sign"))}
-    <div class="card"><div class="field">
-      <span class="field-label">${tr("フィンガープリント", "Fingerprint")}</span>
-      <span class="data" id="fingerprint"></span>
-      <span class="field-note">${tr("ウォレットアプリに表示される値と同じか確かめてください。", "Check it matches the one your wallet app shows.")} m/84h/${signer.testnet ? 1 : 0}h/0h</span>
+    body: `<div class="card"><div class="field">
+      <span class="fingerprint"><span class="field-label">${tr("フィンガープリント", "Fingerprint")} · m/84h/${signer.testnet ? 1 : 0}h/0h</span><span class="data" id="fingerprint"></span></span>
+      <span class="field-note">${tr("ウォレットアプリの表示と比べてください。", "Compare it with your wallet app.")}</span>
     </div></div>
     ${group(tr("そのほかの操作", "MORE"), `<div class="card">${rows.join("")}</div>`)}`,
-    actions: `${button("lock", tr("鍵を消去してロック", "Lock and wipe key"), "danger", { icon: "lock", disabled: busy })}
-      ${button("psbt", tr("取引に署名する", "Sign a transaction"), "primary", { icon: "signature", disabled: busy })}`,
+    actions: `<div class="action-pair">${button("lock", tr("ロック", "Lock"), "danger", { icon: "lock", disabled: busy })}
+      ${button("psbt", tr("取引に署名する", "Sign a transaction"), "primary", { icon: "signature", disabled: busy })}</div>`,
   };
 }
 
@@ -227,6 +222,7 @@ export function appView(view: View) {
       ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>` : ""}
       <span class="topbar-title">${title ?? "bitwasm-signer"}</span>
       <span class="topbar-status">${status}</span>
+      ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("shield")}</button>` : ""}
     </header>
     <div class="screen-banner">${banner(view.signer)}<div id="app-status" class="banner" role="status" aria-live="polite" hidden></div></div>
     <main class="screen-body">${body}</main>
