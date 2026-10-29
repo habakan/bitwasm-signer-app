@@ -8,12 +8,35 @@ declare const __BUILD__: string;
 const LOCKDOWN = "com.habakan.signer_lockdown";
 const ADMIN = `${LOCKDOWN}/.AdminReceiver`;
 
+// The browser's language first; the choice in the top bar is kept in this browser
+const langKey = "lockdown-installer-lang";
+let saved: string | null = null;
+try { saved = localStorage.getItem(langKey); } catch {}
+let lang = saved === "ja" || saved === "en" ? saved : navigator.language.toLowerCase().startsWith("ja") ? "ja" : "en";
+const t = (ja: string, en: string) => (lang === "ja" ? ja : en);
+
+const langButton = document.getElementById("lang")!;
 const apkInput = document.getElementById("apk") as HTMLInputElement;
 const hash = document.getElementById("hash")!;
 const matches = document.getElementById("matches") as HTMLInputElement;
 const installButton = document.getElementById("install") as HTMLButtonElement;
 const logArea = document.getElementById("log")!;
 const done = document.getElementById("done")!;
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll<HTMLElement>("[data-ja]").forEach((el) => {
+    el.dataset.en ??= el.innerHTML;
+    el.innerHTML = lang === "ja" ? el.dataset.ja! : el.dataset.en;
+  });
+  langButton.textContent = lang === "ja" ? "English" : "日本語";
+}
+langButton.addEventListener("click", () => {
+  lang = lang === "ja" ? "en" : "ja";
+  try { localStorage.setItem(langKey, lang); } catch {}
+  applyLang();
+});
+applyLang();
 
 // Same light and dark palettes as the signer app, following the system
 const dark = matchMedia("(prefers-color-scheme: dark)");
@@ -51,7 +74,7 @@ installButton.addEventListener("click", async () => {
   } catch (e) {
     log(
       e instanceof AdbDaemonWebUsbDevice.DeviceBusyError
-        ? "The phone is busy. Stop adb on this PC (adb kill-server) and try again"
+        ? t("端末が使用中です。この PC の adb を止めて（adb kill-server）やり直してください", "The phone is busy. Stop adb on this PC (adb kill-server) and try again")
         : String(e),
     );
     installButton.disabled = false;
@@ -60,11 +83,11 @@ installButton.addEventListener("click", async () => {
 
 async function install(apk: File) {
   const manager = AdbDaemonWebUsbDeviceManager.BROWSER;
-  if (!manager) throw new Error("This browser has no WebUSB. Open the page in Chrome or Edge");
+  if (!manager) throw new Error(t("このブラウザは WebUSB を使えません。Chrome か Edge で開いてください", "This browser has no WebUSB. Open the page in Chrome or Edge"));
   const device = await manager.requestDevice();
-  if (!device) throw new Error("No phone chosen");
+  if (!device) throw new Error(t("端末が選ばれませんでした", "No phone chosen"));
 
-  log("Allow USB debugging on the phone");
+  log(t("端末で USB デバッグを許可してください", "Allow USB debugging on the phone"));
   // The key stays in this browser's IndexedDB, so the phone asks only once per browser
   const transport = await AdbDaemonTransport.authenticate({
     serial: device.serial,
@@ -80,17 +103,17 @@ async function install(apk: File) {
     const owner = /Device Owner:[\s\S]*?package=(\S+)/.exec(await shell("dumpsys device_policy"))?.[1];
     const accounts = Number(/Accounts: (\d+)/.exec(await shell("dumpsys account"))?.[1] ?? 0);
     if (owner !== LOCKDOWN && accounts > 0) {
-      throw new Error(`The phone has ${accounts} account(s). Remove them all in Settings > Accounts and try again`);
+      throw new Error(t(`端末にアカウントが ${accounts} 件あります。設定 > アカウント からすべて削除してやり直してください`, `The phone has ${accounts} account(s). Remove them all in Settings > Accounts and try again`));
     }
 
-    log("Installing Lockdown…");
+    log(t("Lockdown を入れています…", "Installing Lockdown…"));
     // stream-extra types the browser's ReadableStream a little differently; the object is the same
     await new PackageManager(adb).installStream(apk.size, apk.stream() as never);
 
-    if (owner === LOCKDOWN) return log("Lockdown is already the device owner");
+    if (owner === LOCKDOWN) return log(t("Lockdown はすでに Device Owner です", "Lockdown is already the device owner"));
     const result = await shell(`dpm set-device-owner ${ADMIN}`);
     log(result);
-    if (!result.startsWith("Success")) throw new Error("Could not set the device owner");
+    if (!result.startsWith("Success")) throw new Error(t("Device Owner にできませんでした", "Could not set the device owner"));
   } finally {
     await adb.close();
   }

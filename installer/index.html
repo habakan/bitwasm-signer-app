@@ -13,32 +13,33 @@
   </head>
   <body>
     <header class="topbar">
-      <span class="topbar-title">Signer Lockdown installer</span>
-      <span class="pill">Build <code id="build"></code></span>
+      <span class="topbar-title" data-ja="Signer Lockdown 導入ページ">Signer Lockdown installer</span>
+      <span class="pill"><span data-ja="ビルド">Build</span> <code id="build"></code></span>
+      <button id="lang" class="pill pill-button" type="button"></button>
     </header>
     <main>
       <div class="question">
-        <h1>Install Signer Lockdown over USB</h1>
-        <p class="lead">
+        <h1 data-ja="Signer Lockdown を USB で入れる">Install Signer Lockdown over USB</h1>
+        <p class="lead" data-ja="端末は一度もネットワークにつながりません。このページが WebUSB で端末とやり取りし、Lockdown を入れて Device Owner にします。Chrome か Edge で開いてください。">
           The phone never joins a network. This page talks to it over WebUSB, installs Lockdown and makes it the device
           owner. It works in Chrome or Edge.
         </p>
       </div>
 
       <section class="card">
-        <span class="overline">Step 1</span>
-        <h2 class="heading">Prepare the phone</h2>
+        <span class="overline" data-ja="手順 1">Step 1</span>
+        <h2 class="heading" data-ja="端末を準備する">Prepare the phone</h2>
         <ul>
-          <li>Factory reset it. Do not add a Google account, and set a screen lock</li>
-          <li>Tap Build number seven times in About phone, then turn on USB debugging in Developer options</li>
-          <li>If adb runs on this PC, stop it (<code>adb kill-server</code>) so the browser can claim the phone</li>
+          <li data-ja="工場出荷時の状態にリセットします。Google アカウントは追加せず、画面ロックを設定してください">Factory reset it. Do not add a Google account, and set a screen lock</li>
+          <li data-ja="端末情報のビルド番号を7回タップし、開発者向けオプションで USB デバッグをオンにします">Tap Build number seven times in About phone, then turn on USB debugging in Developer options</li>
+          <li data-ja="この PC で adb が動いていれば止めてください（&lt;code&gt;adb kill-server&lt;/code&gt;）。動いているとブラウザが端末を使えません">If adb runs on this PC, stop it (<code>adb kill-server</code>) so the browser can claim the phone</li>
         </ul>
       </section>
 
       <section class="card">
-        <span class="overline">Step 2</span>
-        <h2 class="heading">Choose the APK</h2>
-        <p>
+        <span class="overline" data-ja="手順 2">Step 2</span>
+        <h2 class="heading" data-ja="APK を選ぶ">Choose the APK</h2>
+        <p data-ja="&lt;a href=&quot;https://github.com/habakan/bitwasm-signer-app/releases&quot;&gt;リリース&lt;/a&gt;から &lt;code&gt;signer-lockdown-&amp;lt;version&amp;gt;.apk&lt;/code&gt; をダウンロードして、ここで選んでください。">
           Download <code>signer-lockdown-&lt;version&gt;.apk</code> from the
           <a href="https://github.com/habakan/bitwasm-signer-app/releases">releases</a> and choose it here.
         </p>
@@ -49,24 +50,24 @@
         </div>
         <label class="check">
           <input id="matches" type="checkbox" disabled />
-          It matches SHA256SUMS on the release page
+          <span data-ja="リリースページの SHA256SUMS と一致した">It matches SHA256SUMS on the release page</span>
         </label>
       </section>
 
       <section class="card">
-        <span class="overline">Step 3</span>
-        <h2 class="heading">Install</h2>
-        <button id="install" class="button button-primary" disabled>Connect the phone and install</button>
+        <span class="overline" data-ja="手順 3">Step 3</span>
+        <h2 class="heading" data-ja="入れる">Install</h2>
+        <button id="install" class="button button-primary" disabled data-ja="端末をつないで入れる">Connect the phone and install</button>
         <pre id="log" class="data"></pre>
       </section>
 
       <section id="done" class="card" hidden>
-        <span class="overline">Step 4</span>
-        <h2 class="heading">Finish on the phone</h2>
+        <span class="overline" data-ja="手順 4">Step 4</span>
+        <h2 class="heading" data-ja="端末で仕上げる">Finish on the phone</h2>
         <ol>
-          <li>Close this page and unplug the phone</li>
-          <li>Open Signer Lockdown and tap Install the signer</li>
-          <li>Turn on airplane mode and tap Apply restrictions. This also turns USB debugging off</li>
+          <li data-ja="このページを閉じ、端末を外します">Close this page and unplug the phone</li>
+          <li data-ja="Signer Lockdown を開き「署名アプリを入れる」をタップします">Open Signer Lockdown and tap Install the signer</li>
+          <li data-ja="機内モードをオンにして「制限を適用」をタップします。USB デバッグもここでオフになります">Turn on airplane mode and tap Apply restrictions. This also turns USB debugging off</li>
         </ol>
       </section>
     </main>

@@ -25,8 +25,8 @@ Android 10 の端末で確認しています。
 2. ようこそ画面の同じ場所を6回タップする。QR の読み取り画面が開く
 3. Wi-Fi につなぎ、`provisioning-<version>.png` を読む。端末はリリースから Lockdown をダウンロードし、QR に入っている SHA-256 と照合する。「This device belongs to your organization」の organization は Lockdown のこと。Next で進む
 4. 画面ロックを設定する。Google アカウントは追加せず、Google Services の画面のスイッチはすべてオフにする
-5. Signer Lockdown を開き「Install the signer」
-6. 機内モードをオンにして「Apply restrictions」。手順3の Wi-Fi は、チェックを外さなければ消える
+5. Signer Lockdown を開き「署名アプリを入れる」
+6. 機内モードをオンにして「制限を適用」。手順3の Wi-Fi は、チェックを外さなければ消える
 
 Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING_MODE` / `ADMIN_POLICY_COMPLIANCE`）が要ります。
 
@@ -54,8 +54,8 @@ Android の platform-tools が入っていれば、`lockdown/install.sh <bitwasm
 制限を掛けたまま、microSD か USB メモリに置いた APK で署名アプリと Lockdown を更新できます。
 
 1. リリースの APK をカードに写す
-2. Lockdown の「Update an app from an SD card」で APK を選ぶ
-3. 表示された版と SHA-256 をリリースページの `SHA256SUMS` と照合して「Update」
+2. Lockdown の「SD カードからアプリを更新」で APK を選ぶ
+3. 表示された版と SHA-256 をリリースページの `SHA256SUMS` と照合して「更新」
 
 受け付けるのは署名アプリと Lockdown のパッケージだけです。署名鍵が違う APK と古い版は Android が拒みます（別の鍵で署名し直した APK が拒まれることを確認済み）。Lockdown は期待するハッシュを持たないので、署名アプリのリリースのたびに Lockdown を更新する必要はありません。
 

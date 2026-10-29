@@ -31,3 +31,4 @@ main { display: flex; flex-direction: column; gap: var(--space-6); width: min(10
 .check { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--primary); }
 input[type="file"] { font: var(--text-small); }
+.pill-button { border: 1px solid var(--line-strong); background: var(--surface-raised); color: inherit; cursor: pointer; }

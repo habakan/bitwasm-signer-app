@@ -42,7 +42,7 @@ class MainActivity : Activity() {
         override fun onReceive(context: Context, intent: Intent) {
             val ok = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, -1) == PackageInstaller.STATUS_SUCCESS
             val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-            toast(if (ok) "Installed" else "Not installed: $message")
+            toast(if (ok) tr("インストールしました。", "Installed") else tr("インストールできませんでした: ", "Not installed: ") + message)
             render()
         }
     }
@@ -62,7 +62,7 @@ class MainActivity : Activity() {
         }
         note = text("", 13f, color = p.inkMuted)
         forgetWifi = CheckBox(this).apply {
-            text = "Forget saved Wi-Fi networks when applying"
+            text = tr("制限を適用するときに保存済みの Wi-Fi を消す", "Forget saved Wi-Fi networks when applying")
             textSize = 15f
             setTextColor(p.ink)
             buttonTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(p.primary, p.lineStrong))
@@ -70,22 +70,22 @@ class MainActivity : Activity() {
             isChecked = true
         }
         buttons = listOf(
-            button("Install the signer", Kind.SECONDARY) { run(policy::installSigner) },
-            button("Update an app from an SD card", Kind.SECONDARY) { pickUpdate() },
-            button("Apply restrictions", Kind.PRIMARY) { run { policy.apply(forgetWifi.isChecked) } },
+            button(tr("署名アプリを入れる", "Install the signer"), Kind.SECONDARY) { run(policy::installSigner) },
+            button(tr("SD カードからアプリを更新", "Update an app from an SD card"), Kind.SECONDARY) { pickUpdate() },
+            button(tr("制限を適用", "Apply restrictions"), Kind.PRIMARY) { run { policy.apply(forgetWifi.isChecked) } },
             // Loosening needs the screen lock
-            button("Lift restrictions", Kind.SECONDARY) { confirm { run(policy::release) } },
-            button("Remove device owner", Kind.DANGER) { confirm { run(policy::removeOwner) } },
+            button(tr("制限を一時解除", "Lift restrictions"), Kind.SECONDARY) { confirm { run(policy::release) } },
+            button(tr("Device Owner を外す", "Remove device owner"), Kind.DANGER) { confirm { run(policy::removeOwner) } },
         )
 
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(24), dp(16), dp(24))
-            addView(text("Status", 12f, bold = true, color = p.inkMuted).apply { letterSpacing = 0.06f })
+            addView(text(tr("状態", "Status"), 12f, bold = true, color = p.inkMuted).apply { letterSpacing = 0.06f })
             addView(card().apply { addView(statusRows) }, gap(8))
             addView(restrictions, gap(12))
             addView(note, gap(12))
-            addView(text("Lock", 12f, bold = true, color = p.inkMuted).apply { letterSpacing = 0.06f }, gap(24))
+            addView(text(tr("ロック", "Lock"), 12f, bold = true, color = p.inkMuted).apply { letterSpacing = 0.06f }, gap(24))
             addView(forgetWifi)
             buttons.forEach { addView(it, gap(12)) }
         }
@@ -204,7 +204,7 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     private fun confirm(action: () -> Unit) {
         val intent = getSystemService(KeyguardManager::class.java)
-            .createConfirmDeviceCredentialIntent("Signer Lockdown", "Loosen the restrictions")
+            .createConfirmDeviceCredentialIntent("Signer Lockdown", tr("制限を緩めます", "Loosen the restrictions"))
         if (intent == null) return action()
         afterConfirm = action
         startActivityForResult(intent, CONFIRM)
@@ -227,9 +227,9 @@ class MainActivity : Activity() {
         val theme = if (p === DesignTokens.light) android.R.style.Theme_DeviceDefault_Light_Dialog_Alert else android.R.style.Theme_DeviceDefault_Dialog_Alert
         AlertDialog.Builder(this, theme)
             .setTitle(info.packageName)
-            .setMessage("${policy.versionOf(info.packageName)} → ${info.versionName}\n\nSHA-256:\n$sha256\n\nCheck it matches SHA256SUMS on the release page")
-            .setPositiveButton("Update") { _, _ -> run { policy.installUpdate(apk) } }
-            .setNegativeButton("Cancel") { _, _ -> apk.delete() }
+            .setMessage("${policy.versionOf(info.packageName)} → ${info.versionName}\n\nSHA-256:\n$sha256\n\n" + tr("リリースページの SHA256SUMS と同じか確かめてください。", "Check it matches SHA256SUMS on the release page"))
+            .setPositiveButton(tr("更新", "Update")) { _, _ -> run { policy.installUpdate(apk) } }
+            .setNegativeButton(tr("やめる", "Cancel")) { _, _ -> apk.delete() }
             .show()
             .getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(p.primary)
     }
@@ -242,8 +242,11 @@ class MainActivity : Activity() {
         statusRows.removeAllViews()
         restrictions.visibility = View.GONE
         if (!policy.isDeviceOwner) {
-            badge("Not set up", p.dangerBg, p.danger)
-            note.text = "Not the device owner. Set it up with the QR code, the installer page or install.sh."
+            badge(tr("未設定", "Not set up"), p.dangerBg, p.danger)
+            note.text = tr(
+                "Device Owner ではありません。QR、導入ページ、install.sh のどれかで設定してください。",
+                "Not the device owner. Set it up with the QR code, the installer page or install.sh.",
+            )
             buttons.forEach { it.alpha = 0.45f }
             return
         }
@@ -253,21 +256,21 @@ class MainActivity : Activity() {
 
         val active = policy.activeRestrictions()
         val locked = active.size == Policy.RESTRICTIONS.size
-        if (locked) badge("Locked", p.positiveBg, p.positive)
-        else badge("Not locked", p.warningBg, p.warning)
+        if (locked) badge(tr("ロック中", "Locked"), p.positiveBg, p.positive)
+        else badge(tr("未ロック", "Not locked"), p.warningBg, p.warning)
         listOf(
-            "Signer" to (policy.signerVersion ?: "Not installed"),
-            "Airplane mode" to if (policy.isAirplaneModeOn) "On" else "Off",
-            "Saved Wi-Fi networks" to "${policy.savedWifiCount}",
-            "Hidden apps" to "${policy.hiddenCount()} of ${policy.hiddenPackages.size}",
-            "Restrictions" to "${active.size} of ${Policy.RESTRICTIONS.size}",
+            tr("署名アプリ", "Signer") to (policy.signerVersion ?: tr("未インストール", "Not installed")),
+            tr("機内モード", "Airplane mode") to if (policy.isAirplaneModeOn) tr("オン", "On") else tr("オフ", "Off"),
+            tr("保存済みの Wi-Fi", "Saved Wi-Fi networks") to "${policy.savedWifiCount}",
+            tr("非表示のアプリ", "Hidden apps") to "${policy.hiddenCount()} / ${policy.hiddenPackages.size}",
+            tr("制限", "Restrictions") to "${active.size} / ${Policy.RESTRICTIONS.size}",
         ).forEachIndexed { i, (label, value) ->
             if (i > 0) statusRows.addView(View(this).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)))
             statusRows.addView(row(label, value))
         }
         restrictions.visibility = View.VISIBLE
         restrictions.text = Policy.RESTRICTIONS.joinToString("\n") { "${if (it in active) "on " else "off"}  $it" }
-        note.text = if (active.isEmpty()) "Turn USB debugging back on yourself in Settings > Developer options." else ""
+        note.text = tr("USB デバッグは 設定 > 開発者向けオプション で手でオンに戻してください。", "Turn USB debugging back on yourself in Settings > Developer options.")
         note.visibility = if (active.isEmpty()) View.VISIBLE else View.GONE
     }
 
