@@ -7,9 +7,12 @@ import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.Window
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
@@ -117,6 +120,12 @@ internal object Design {
         dialog.setContentView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(p.surface)
+            // From Android 15 a full-screen window draws behind the status and navigation bars
+            if (Build.VERSION.SDK_INT >= 35) setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                insets
+            }
             addView(topBar(activity, p, title, testnet) { dialog.cancel() })
             addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
             if (actions.isNotEmpty()) addView(divider(activity, p), LinearLayout.LayoutParams(-1, dp(activity, 1)))
@@ -217,6 +226,22 @@ internal object Design {
         })
         val (ja, en) = STEPS[current - 1]
         addView(text(context, tr("$current / ${STEPS.size}  $ja", "$current of ${STEPS.size}  $en"), Style.OVERLINE, p.inkMuted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(context, 6) })
+    }
+
+    // A tappable row of a card, like the web view's: a title, a detail line and a chevron
+    fun row(context: Context, p: Palette, title: String, detail: String?, onTap: () -> Unit) = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(context, DesignTokens.CONTROL_HEIGHT)
+        setPadding(dp(context, 16), dp(context, 12), dp(context, 16), dp(context, 12))
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(text(context, title, Style.LABEL, p.ink))
+            if (detail != null) addView(text(context, detail, Style.CAPTION, p.inkMuted))
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        addView(text(context, "›", Style.DISPLAY, p.inkMuted))
+        foreground = RippleDrawable(ColorStateList.valueOf(p.primarySoft), null, null)
+        isClickable = true
+        setOnClickListener { onTap() }
     }
 
     fun divider(context: Context, p: Palette) = View(context).apply { setBackgroundColor(p.line) }

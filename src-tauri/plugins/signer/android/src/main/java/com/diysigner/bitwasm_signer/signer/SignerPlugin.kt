@@ -592,19 +592,32 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             if (step == positions.size) { backupChecked(invoke, phrase); return }
             val answer = words[positions[step]]
             val options = (engine.words.filter { it != answer }.shuffled(random).take(3) + answer).shuffled(random)
-            val dialog = Design.alert(activity).setTitle(Design.tr("${positions[step] + 1}番目の単語はどれですか(${step + 1}/${positions.size})", "Which is word ${positions[step] + 1}? · ${step + 1}/${positions.size}"))
-                .setItems(options.toTypedArray()) { _, which ->
-                    if (options[which] == answer) ask(step + 1)
-                    else Design.alert(activity).setTitle(Design.tr("${positions[step] + 1}番目の単語ではありません", "That is not word ${positions[step] + 1}"))
-                        .setMessage(Design.tr("紙に書いた単語と見比べて、もう一度試してください。", "Compare your backup with the words and try again."))
-                        .setPositiveButton(Design.tr("単語をもう一度見る", "Show the words")) { _, _ -> showMnemonic(invoke, phrase, heading, seedQrAvailable, verify = true) }
-                        .setOnCancelListener { cancel() }
-                        .show()
+            val p = Design.palette(activity)
+            lateinit var dialog: android.app.Dialog
+            val choices = options.map { option ->
+                Design.button(activity, option, false, p).apply {
+                    typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                    textSize = 17f
+                    setOnClickListener {
+                        if (option == answer) { dialog.dismiss(); ask(step + 1); return@setOnClickListener }
+                        val wrong = Design.alert(activity).setTitle(Design.tr("${positions[step] + 1}番目の単語ではありません", "That is not word ${positions[step] + 1}"))
+                            .setMessage(Design.tr("紙に書いた単語と見比べて、もう一度試してください。", "Compare your backup with the words and try again."))
+                            .setPositiveButton(Design.tr("単語をもう一度見る", "Show the words")) { _, _ -> dialog.dismiss(); showMnemonic(invoke, phrase, heading, seedQrAvailable, verify = true) }
+                            .setNegativeButton(Design.tr("選び直す", "Choose again"), null)
+                            .create()
+                        wrong.setOnShowListener { Design.styleDialog(wrong) }
+                        wrong.show()
+                    }
                 }
-                .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> cancel() }
-                .create()
-            dialog.setOnCancelListener { cancel() }
-            dialog.setOnShowListener { dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE); Design.styleDialog(dialog) }
+            }
+            val content = page(
+                Design.text(activity, Design.tr("確認 ${step + 1} / ${positions.size}", "Check ${step + 1} of ${positions.size}"), Design.Style.OVERLINE, p.inkMuted),
+                Design.text(activity, Design.tr("${positions[step] + 1}番目の単語はどれですか", "Which is word ${positions[step] + 1}?"), Design.Style.DISPLAY, p.ink),
+                Design.text(activity, Design.tr("紙に書いた単語を見て選んでください。", "Look at your paper and choose it."), Design.Style.BODY, p.inkMuted),
+                *choices.toTypedArray(),
+            )
+            dialog = Design.screen(activity, Design.tr("バックアップの確認", "Check your backup"), engine.testnet, content, emptyList()) { cancel() }
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             dialog.show()
         }
         ask(0)
@@ -721,11 +734,32 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     fun unlockSaved(invoke: Invoke) {
         val entries = vault.entries()
         if (entries.isEmpty()) { invoke.fail("No seeds are saved on this device"); return }
-        Design.alert(activity).setTitle(Design.tr("保存した鍵", "Saved seeds"))
-            .setItems(entries.map { "${it.name} · ${it.fingerprint}" }.toTypedArray()) { _, which -> chooseSaved(invoke, entries[which]) }
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Unlock was cancelled") }
-            .setOnCancelListener { invoke.fail("Unlock was cancelled") }
-            .show()
+        val p = Design.palette(activity)
+        val list = Design.card(activity, p)
+        lateinit var dialog: android.app.Dialog
+        entries.forEachIndexed { i, entry ->
+            if (i > 0) list.addView(Design.divider(activity, p), LinearLayout.LayoutParams(-1, dp(1)))
+            list.addView(Design.row(activity, p, entry.name, Design.tr("フィンガープリント ${entry.fingerprint}", "Fingerprint ${entry.fingerprint}")) {
+                dialog.dismiss()
+                chooseSaved(invoke, entry)
+            })
+        }
+        val content = page(
+            Design.text(activity, Design.tr("開く鍵を選んでください", "Choose a seed to unlock"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, Design.tr("開くときに、画面ロックか生体認証と、付けていればパスフレーズを入力します。", "Unlocking asks for your screen lock or biometrics, then the passphrase if the seed has one."), Design.Style.BODY, p.inkMuted),
+            list,
+        )
+        dialog = Design.screen(activity, Design.tr("保存した鍵", "Saved seeds"), engine.testnet, content, emptyList()) { invoke.fail("Unlock was cancelled") }
+        dialog.show()
+    }
+
+    // A screen's body: views stacked with the app's gap, scrolling when they do not fit
+    private fun page(vararg views: View) = ScrollView(activity).apply {
+        addView(LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(24), dp(16), dp(24))
+            views.forEachIndexed { i, view -> addView(view, LinearLayout.LayoutParams(-1, -2).apply { if (i > 0) topMargin = dp(DesignTokens.SPACE_4) }) }
+        })
     }
 
     @Command
@@ -751,29 +785,44 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             .show()
     }
 
+    // Back returns to the list, so a wrong choice is not a cancelled unlock
     private fun chooseSaved(invoke: Invoke, entry: KeyVault.Entry) {
-        Design.alert(activity).setTitle(entry.name).setMessage(Design.tr("フィンガープリント ${entry.fingerprint}", "Fingerprint ${entry.fingerprint}"))
-            .setPositiveButton(Design.tr("開く", "Unlock")) { _, _ ->
-                authenticate(Design.tr("${entry.name}を開く", "Unlock ${entry.name}"), { vault.decryptCipher(entry) }, { invoke.fail(it) }) { cipher ->
-                    unlockWithPassphrase(invoke, entry, cipher!!.doFinal(entry.data))
-                }
+        val p = Design.palette(activity)
+        val unlock = Design.button(activity, Design.tr("開く", "Unlock"), true, p)
+        val delete = Design.button(activity, Design.tr("この鍵を削除", "Delete this seed"), false, p).apply {
+            setTextColor(p.danger)
+            background = Design.shape(activity, p.surface, p.danger, DesignTokens.RADIUS_MD)
+        }
+        val content = page(
+            Design.text(activity, entry.name, Design.Style.DISPLAY, p.ink),
+            Design.card(activity, p).apply {
+                addView(Design.field(activity, p, Design.tr("フィンガープリント", "FINGERPRINT"), Design.well(activity, p, entry.fingerprint, grouped = false),
+                    Design.tr("ウォレットアプリに表示されるものと同じか確かめてください。", "Check it matches the one your wallet app shows.")))
+            },
+        )
+        val dialog = Design.screen(activity, Design.tr("保存した鍵", "Saved seeds"), engine.testnet, content, listOf(unlock, delete)) { unlockSaved(invoke) }
+        unlock.setOnClickListener {
+            dialog.dismiss()
+            authenticate(Design.tr("${entry.name}を開く", "Unlock ${entry.name}"), { vault.decryptCipher(entry) }, { invoke.fail(it) }) { cipher ->
+                unlockWithPassphrase(invoke, entry, cipher!!.doFinal(entry.data))
             }
-            .setNeutralButton(Design.tr("削除", "Delete")) { _, _ ->
-                Design.alert(activity).setTitle(Design.tr("${entry.name}を削除しますか", "Delete ${entry.name}?"))
-                    .setMessage(Design.tr("この端末にある写しだけを削除します。元に戻すには、バックアップが必要です。", "Only the copy on this device is deleted. You need your backup to restore it."))
-                    .setPositiveButton(Design.tr("削除する", "Delete")) { _, _ ->
-                        authenticate(Design.tr("${entry.name}を削除", "Delete ${entry.name}"), null, { invoke.fail(it) }) {
-                            vault.delete(entry)
-                            invoke.resolve(stateObject())
-                        }
+        }
+        delete.setOnClickListener {
+            val confirm = Design.alert(activity).setTitle(Design.tr("${entry.name}を削除しますか", "Delete ${entry.name}?"))
+                .setMessage(Design.tr("この端末にある写しだけを削除します。元に戻すには、バックアップが必要です。", "Only the copy on this device is deleted. You need your backup to restore it."))
+                .setPositiveButton(Design.tr("削除する", "Delete")) { _, _ ->
+                    dialog.dismiss()
+                    authenticate(Design.tr("${entry.name}を削除", "Delete ${entry.name}"), null, { invoke.fail(it) }) {
+                        vault.delete(entry)
+                        invoke.resolve(stateObject())
                     }
-                    .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Deletion was cancelled") }
-                    .setOnCancelListener { invoke.fail("Deletion was cancelled") }
-                    .show()
-            }
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Unlock was cancelled") }
-            .setOnCancelListener { invoke.fail("Unlock was cancelled") }
-            .show()
+                }
+                .setNegativeButton(Design.tr("キャンセル", "Cancel"), null)
+                .create()
+            confirm.setOnShowListener { Design.styleDialog(confirm) }
+            confirm.show()
+        }
+        dialog.show()
     }
 
     private fun unlockWithPassphrase(invoke: Invoke, entry: KeyVault.Entry, entropy: ByteArray) {
