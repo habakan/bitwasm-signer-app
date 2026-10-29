@@ -3,6 +3,8 @@ import AdbWebCredentialStore from "@yume-chan/adb-credential-web";
 import { AdbDaemonWebUsbDevice, AdbDaemonWebUsbDeviceManager } from "@yume-chan/adb-daemon-webusb";
 import { PackageManager } from "@yume-chan/android-bin";
 
+declare const __BUILD__: string;
+
 const LOCKDOWN = "com.habakan.signer_lockdown";
 const ADMIN = `${LOCKDOWN}/.AdminReceiver`;
 const ja = navigator.language.startsWith("ja");
@@ -19,6 +21,10 @@ if (!ja) {
   document.documentElement.lang = "en";
   document.querySelectorAll<HTMLElement>("[data-en]").forEach((el) => (el.textContent = el.dataset.en!));
 }
+
+document.getElementById("build")!.textContent = __BUILD__;
+// Installed as an app, the page opens on a PC that stays offline
+if (import.meta.env.PROD && "serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
 
 const log = (line: string) => (logArea.textContent += line + "\n");
 

@@ -1,0 +1,9 @@
+{
+  "name": "Signer Lockdown installer",
+  "short_name": "Lockdown",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png" }]
+}
