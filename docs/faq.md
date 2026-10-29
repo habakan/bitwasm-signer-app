@@ -14,7 +14,7 @@ The app asks the keyboard not to learn. On Android this is a request to the keyb
 | Passphrase | Password input, no suggestions, `IME_FLAG_NO_PERSONALIZED_LEARNING` | Secure text entry (`isSecureTextEntry`), no autocorrection |
 | Dice rolls | Tapped on die-face buttons in the app, never the system keyboard | Same |
 
-With Gboard on an A80 (Android 10), the passphrase input passes these flags to the keyboard and Gboard switches to incognito mode. iOS has not been checked on a device.
+With Gboard on Android 10, the passphrase input passes these flags to the keyboard and Gboard switches to incognito mode. iOS has not been checked on a device.
 
 ### Are they saved by a password manager or autofill?
 
