@@ -32,3 +32,8 @@ main { display: flex; flex-direction: column; gap: var(--space-6); width: min(10
 .check input { width: 22px; height: 22px; accent-color: var(--primary); }
 input[type="file"] { font: var(--text-small); }
 .pill-button { border: 1px solid var(--line-strong); background: var(--surface-raised); color: inherit; cursor: pointer; }
+
+.segments { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.segment { min-height: 44px; padding: 0 var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--ink-muted); font: var(--text-label); cursor: pointer; }
+.segment[aria-checked="true"] { border-color: var(--line-strong); background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-raised); }
+.app-mode-lockdown [data-mode="apk"], .app-mode-apk [data-mode="lockdown"] { display: none !important; }

@@ -22,6 +22,24 @@ const matches = document.getElementById("matches") as HTMLInputElement;
 const installButton = document.getElementById("install") as HTMLButtonElement;
 const logArea = document.getElementById("log")!;
 const done = document.getElementById("done")!;
+const installed = document.getElementById("installed")!;
+
+// "#apk" in the URL opens the plain install, which skips the device owner
+let mode: "lockdown" | "apk" = location.hash === "#apk" ? "apk" : "lockdown";
+function applyMode() {
+  document.body.className = `app-mode-${mode}`;
+  document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.setMode === mode)));
+  done.hidden = installed.hidden = true;
+  logArea.textContent = "";
+}
+document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) =>
+  b.addEventListener("click", () => {
+    mode = b.dataset.setMode as typeof mode;
+    history.replaceState(null, "", mode === "apk" ? "#apk" : location.pathname);
+    applyMode();
+  }),
+);
+applyMode();
 
 function applyLang() {
   document.documentElement.lang = lang;
@@ -70,7 +88,7 @@ installButton.addEventListener("click", async () => {
   logArea.textContent = "";
   try {
     await install(apkInput.files![0]);
-    done.hidden = false;
+    (mode === "apk" ? installed : done).hidden = false;
   } catch (e) {
     log(
       e instanceof AdbDaemonWebUsbDevice.DeviceBusyError
@@ -98,6 +116,12 @@ async function install(apk: File) {
   try {
     const shell = async (command: string) => (await adb.subprocess.noneProtocol.spawnWaitText(command)).trim();
     log(`${await shell("getprop ro.product.brand")} ${await shell("getprop ro.product.model")} / Android ${await shell("getprop ro.build.version.release")}`);
+
+    if (mode === "apk") {
+      log(t(`${apk.name} を入れています…`, `Installing ${apk.name}…`));
+      await new PackageManager(adb).installStream(apk.size, apk.stream() as never);
+      return log(t("入りました", "Installed"));
+    }
 
     // Run again on a phone already set up, this only replaces Lockdown
     const owner = /Device Owner:[\s\S]*?package=(\S+)/.exec(await shell("dumpsys device_policy"))?.[1];

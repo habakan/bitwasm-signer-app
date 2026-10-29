@@ -45,7 +45,9 @@ Then, in Chrome or Edge on the PC:
 
 The page (`installer/`) is built from this repository with [ya-webadb](https://github.com/yume-chan/ya-webadb) (MIT), pinned to exact versions, and talks to the phone over WebUSB. While connected it has full adb access to the phone, so close it once Lockdown is set up.
 
-To use it on a PC that stays offline, open the page once while online and install it from the browser's address bar (Chrome or Edge). The installed app then opens without a network. The build ID at the bottom of the page shows which version is cached.
+To use it on a PC that stays offline, open the page once while online and install it from the browser's address bar (Chrome or Edge). The installed app then opens without a network. The build ID in the top bar shows which version is cached.
+
+To install an APK without Lockdown, such as the signer on its own, choose Install an APK only at the top of the page (or open it with `#apk`). It only installs the APK and does not set a device owner.
 
 With the Android platform tools installed, `lockdown/install.sh <bitwasm-signer.apk> <signer-lockdown.apk>` does the same from a terminal and asks before each step.
 

@@ -45,7 +45,9 @@ Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING
 
 このページ（`installer/`）はこのリポジトリから、版を固定した [ya-webadb](https://github.com/yume-chan/ya-webadb)（MIT）でビルドしていて、WebUSB で端末と話します。つないでいる間は端末に対して adb のすべての操作ができるので、Lockdown の設定が済んだら閉じてください。
 
-オフラインの PC で使うときは、一度オンラインでページを開き、ブラウザのアドレスバーからアプリとしてインストールしてください（Chrome か Edge）。インストールしたアプリはネットワークなしで開けます。どの版がキャッシュされているかは、ページ下部のビルド ID で確認できます。
+オフラインの PC で使うときは、一度オンラインでページを開き、ブラウザのアドレスバーからアプリとしてインストールしてください（Chrome か Edge）。インストールしたアプリはネットワークなしで開けます。どの版がキャッシュされているかは、上部のバーのビルド ID で確認できます。
+
+Lockdown なしで APK だけを入れるとき（署名アプリだけを使う場合など）は、ページ上部で「APK だけ入れる」を選んでください（URL の末尾に `#apk` を付けて開いても同じです）。APK を入れるだけで、Device Owner は設定しません。
 
 Android の platform-tools が入っていれば、`lockdown/install.sh <bitwasm-signer.apk> <signer-lockdown.apk>` でも同じことができます。各手順の前に確認を求めます。
 
