@@ -17,6 +17,7 @@ import java.io.File
 import java.io.InputStream
 import java.util.Locale
 
+// Japanese on a Japanese phone, English otherwise, like the signer app
 fun tr(ja: String, en: String) = if (Locale.getDefault().language == "ja") ja else en
 
 // What a dedicated signer phone is locked to. release lifts the restrictions, but settings the OS turned
@@ -51,9 +52,7 @@ class Policy(private val context: Context) {
     // Android refuses an APK signed with another key or an older version, so only the package is checked here
     fun readUpdate(apk: File): PackageInfo {
         val info = context.packageManager.getPackageArchiveInfo(apk.path, 0)
-        check(info?.packageName in setOf(SIGNER, context.packageName)) {
-            tr("署名アプリか Lockdown の APK ではない", "Not an APK of the signer or of Lockdown")
-        }
+        check(info?.packageName in setOf(SIGNER, context.packageName)) { tr("署名アプリか Lockdown の APK ではありません。", "Not an APK of the signer or of Lockdown") }
         return info!!
     }
 
@@ -99,7 +98,7 @@ class Policy(private val context: Context) {
 
     fun apply(forgetWifi: Boolean) {
         // DISALLOW_AIRPLANE_MODE freezes the current state, so applying it with airplane mode off keeps the radios on
-        check(isAirplaneModeOn) { tr("先に機内モードをオンにする", "Turn on airplane mode first") }
+        check(isAirplaneModeOn) { tr("先に機内モードをオンにしてください。", "Turn on airplane mode first") }
         if (forgetWifi) {
             val wifi = context.getSystemService(WifiManager::class.java)
             savedNetworks().forEach { wifi.removeNetwork(it.networkId) }
