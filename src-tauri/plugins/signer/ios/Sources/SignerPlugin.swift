@@ -2883,11 +2883,16 @@ private final class AnimatedQRViewController: UIViewController {
     image.contentMode = .scaleAspectFit
     image.translatesAutoresizingMaskIntoConstraints = false
     qrArea.addSubview(image)
+    // The area can end up taller than wide, so the square fits the shorter side instead of overflowing the sides
+    let fill = image.heightAnchor.constraint(equalTo: qrArea.heightAnchor, constant: -24)
+    fill.priority = .defaultHigh
     NSLayoutConstraint.activate([
       image.centerXAnchor.constraint(equalTo: qrArea.centerXAnchor),
       image.centerYAnchor.constraint(equalTo: qrArea.centerYAnchor),
       image.widthAnchor.constraint(equalTo: image.heightAnchor),
-      image.heightAnchor.constraint(equalTo: qrArea.heightAnchor, constant: -24),
+      image.heightAnchor.constraint(lessThanOrEqualTo: qrArea.heightAnchor, constant: -24),
+      image.widthAnchor.constraint(lessThanOrEqualTo: qrArea.widthAnchor, constant: -24),
+      fill,
     ])
 
     for index in 0..<min(frames.count, 6) {
