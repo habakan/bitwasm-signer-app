@@ -39,7 +39,6 @@ enum Design {
     "Could not get secure random bytes": "安全な乱数を用意できませんでした。",
     "Enter dice rolls": "サイコロの目を入れてください。",
     "The signing key is locked": "鍵はロックされています。",
-    "Use purpose 48, 49, 84, or 86 and a nonnegative account index": "種類は48、49、84、86、アカウントは0以上にしてください。",
     "Use 12, 18, or 24 words and a valid index": "単語の数は12、18、24、番号は0以上にしてください。",
     "Enter an address, account, and search range": "アドレス、アカウント、調べる数を入れてください。",
     "Enter a message and valid signing path": "メッセージと、正しい番号を入れてください。",
@@ -107,6 +106,24 @@ enum Design {
       view.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -inset),
       view.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -inset),
     ])
+  }
+
+  // A tappable row inside a card: title, optional detail and a chevron
+  static func row(_ title: String, detail: String?, onTap: @escaping () -> Void) -> UIControl {
+    let p = palette
+    let row = UIControl()
+    let text = stack([label(title, .label, p.ink)] + (detail.map { [label($0, .caption, p.inkMuted)] } ?? []), spacing: 2)
+    let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
+    chevron.tintColor = p.inkMuted
+    chevron.setContentHuggingPriority(.required, for: .horizontal)
+    let line = UIStackView(arrangedSubviews: [text, chevron])
+    line.alignment = .center
+    line.spacing = DesignTokens.space3
+    line.isUserInteractionEnabled = false
+    pad(line, in: row)
+    row.heightAnchor.constraint(greaterThanOrEqualToConstant: DesignTokens.controlHeight).isActive = true
+    row.addAction(UIAction { _ in onTap() }, for: .touchUpInside)
+    return row
   }
 
   static func pill(_ text: String, fill: UIColor, color: UIColor) -> UIView {
