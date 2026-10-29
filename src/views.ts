@@ -222,7 +222,7 @@ export function appView(view: View) {
       ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>` : ""}
       <span class="topbar-title">${title ?? "bitwasm-signer"}</span>
       <span class="topbar-status">${status}</span>
-      ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("shield")}</button>` : ""}
+      ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("settings")}</button>` : ""}
     </header>
     <div class="screen-banner">${banner(view.signer)}<div id="app-status" class="banner" role="status" aria-live="polite" hidden></div></div>
     <main class="screen-body">${body}</main>
