@@ -16,7 +16,7 @@ export const lang = navigator.language.toLowerCase().startsWith("ja") ? "ja" : "
 export const tr = (ja: string, en: string) => (lang === "ja" ? ja : en);
 
 const androidKeyboardNotes = [
-  tr("パスフレーズとリカバリーワードの欄は、キーボードに学習しないよう求めますが、サードパーティ製キーボードは無視できます。Gboardなど、スマホに入っていたキーボードを使ってください。",
+  tr("パスフレーズとシードフレーズの欄は、キーボードに学習しないよう求めますが、サードパーティ製キーボードは無視できます。Gboardなど、スマホに入っていたキーボードを使ってください。",
     "Passphrase and recovery word fields ask the keyboard not to learn, but third-party keyboards can ignore it. Use the keyboard that came with the phone, such as Gboard."),
   tr("Gboardでは、設定 › プライバシー › Gboardをカスタマイズ をオフにし、学習した単語とデータを削除します。",
     "In Gboard: Settings › Privacy › turn off Personalize Gboard, then Delete learned words and data."),
@@ -96,7 +96,7 @@ function homeView({ signer, busy }: View) {
       `<div class="card">${row("unlock-saved", "lock", tr("保存した鍵を開く", "Open a saved key"), tr(`${saved}件・画面ロックか生体認証`, `${saved} saved · screen lock or biometrics`), { disabled: blocked })}</div>`) : ""}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"), `<div class="card">
       ${row("scan", "qr", tr("バックアップのQRを読み取る", "Scan your backup QR"), tr("SeedQR・CompactSeedQR", "SeedQR or CompactSeedQR"), { disabled: blocked })}
-      ${row("import-mnemonic", "words", tr("リカバリーワードを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), { disabled: blocked })}
+      ${row("import-mnemonic", "words", tr("シードフレーズを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), { disabled: blocked })}
     </div>`)}
     ${group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
       ${row("create-mnemonic", "plus", tr("新しいウォレットを作る", "Create a new wallet"), tr("安全な乱数かサイコロで作ります。", "From secure random or dice rolls."), { disabled: blocked })}

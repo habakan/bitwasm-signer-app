@@ -59,7 +59,7 @@ function art(scene: number) {
 
 function walkthrough(): Promise<"random" | "dice"> {
   const pages: [string, string][] = [
-    [tr("単語を作る", "Make the words"), tr("安全な乱数か、自分で振ったサイコロの目から、12個か24個のリカバリーワードを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself.")],
+    [tr("単語を作る", "Make the words"), tr("安全な乱数か、自分で振ったサイコロの目から、12語か24語のシードフレーズを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself.")],
     [tr("紙に書き写す", "Write them down"), tr("単語を順番どおりに紙に書きます。この紙があれば、スマホをなくしてもビットコインを取り戻せます。", "Write the words on paper, in order. With that paper you can get your bitcoin back even if the phone is lost.")],
     [tr("確かめる", "Check them"), tr("書いた単語を5問のクイズで確かめます。書き間違いがあれば、ここで気づけます。", "A five-question quiz checks what you wrote, so a slip of the pen shows up now.")],
     [tr("始める前に", "Before you start"), tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes.")],
