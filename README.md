@@ -10,7 +10,7 @@ An Android / iOS signing app built on the `bitwasm-signer` parser and signer WAS
 
 ## Screenshots
 
-Android (A80, Android 10) and the iOS Simulator, on testnet with the public BIP39 test mnemonic.
+Android (Android 10) and the iOS Simulator, on testnet with the public BIP39 test mnemonic.
 
 <p align="center">
 <img src="docs/images/android.png" width="260" alt="Android: reviewing a transaction">&nbsp;&nbsp;
@@ -78,7 +78,7 @@ The output is `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-u
 
 ### Use release builds on devices
 
-A debug build compiles the Rust side that runs the WASM (Wasmi) without optimization, so it is extremely slow on a device. On an A80 (ARMv7), loading a mnemonic (PBKDF2) took about 90 seconds in a debug build and about 3 seconds in a release build. Test with release builds.
+A debug build compiles the Rust side that runs the WASM (Wasmi) without optimization, so it is extremely slow on a device. On an ARMv7 phone, loading a mnemonic (PBKDF2) took about 90 seconds in a debug build and about 3 seconds in a release build. Test with release builds.
 
 If `src-tauri/gen/android/keystore.properties` exists (`storeFile` / `storePassword` / `keyAlias` / `keyPassword`; never commit it), release builds are signed with that key. Otherwise build an unsigned APK and sign it afterwards. The example below signs with the debug key, the same key as debug builds, so it installs over them and keeps the app's data. Do not use it for distribution.
 
@@ -121,6 +121,6 @@ To try signing, scan a QR from a wallet app with the camera, or use the test tra
 
 ## Current scope
 
-Building the Android ARMv7 APK, launching on an A80, reading SeedQRs and reviewing PSBTs have been checked. A full round trip of a signed PSBT has not. The Swift plugin and the Wasmi host are implemented for iOS. Native hosts for Windows / macOS / Linux are not.
+Building the Android ARMv7 APK, launching on an Android 10 phone, reading SeedQRs and reviewing PSBTs have been checked. A full round trip of a signed PSBT has not. The Swift plugin and the Wasmi host are implemented for iOS. Native hosts for Windows / macOS / Linux are not.
 
 Plans are in [docs/roadmap.md](docs/roadmap.md).

@@ -10,7 +10,7 @@
 
 ## 画面
 
-Android（A80、Android 10）とiOSシミュレーターの画面です。テストネットで、公開されているBIP39のテスト用ニーモニックを使っています。
+Android（Android 10）とiOSシミュレーターの画面です。テストネットで、公開されているBIP39のテスト用ニーモニックを使っています。
 
 <p align="center">
 <img src="../images/android.png" width="260" alt="Android: reviewing a transaction">&nbsp;&nbsp;
@@ -78,7 +78,7 @@ JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/android-sdk NDK_HOME=/path/to/ndk p
 
 ### 実機ではreleaseビルドを使う
 
-debugビルドはWASMを動かすRust側（Wasmi）が最適化なしでコンパイルされるため、実機では極端に遅くなります。A80（ARMv7）ではニーモニックの読み込み（PBKDF2）に約90秒かかり、releaseビルドでは約3秒でした。動作確認はreleaseビルドで行います。
+debugビルドはWASMを動かすRust側（Wasmi）が最適化なしでコンパイルされるため、実機では極端に遅くなります。ARMv7の端末ではニーモニックの読み込み（PBKDF2）に約90秒かかり、releaseビルドでは約3秒でした。動作確認はreleaseビルドで行います。
 
 `src-tauri/gen/android/keystore.properties`（`storeFile` / `storePassword` / `keyAlias` / `keyPassword`、コミットしない）があればreleaseビルドはその鍵で署名されます。ない場合は未署名のAPKを作ってから署名します。下の例はdebug用の鍵での署名で、debugビルドと同じ鍵なので端末のデータを残したまま上書きできます。配布には使わないでください。
 
@@ -121,6 +121,6 @@ pnpm build:web   # dist-web に出力
 
 ## 現在の範囲
 
-Android ARMv7 APKのビルド、A80での起動、SeedQR読み取り、PSBTレビューまで確認しています。署名済みPSBTの往復確認は未完了です。iOSにはSwiftプラグインとWasmiホストを実装済みです。Windows / macOS / Linuxのネイティブホストは未実装です。
+Android ARMv7 APKのビルド、Android 10の端末での起動、SeedQR読み取り、PSBTレビューまで確認しています。署名済みPSBTの往復確認は未完了です。iOSにはSwiftプラグインとWasmiホストを実装済みです。Windows / macOS / Linuxのネイティブホストは未実装です。
 
 今後の予定は[roadmap.md](roadmap.md)にまとめています。
