@@ -26,8 +26,12 @@ ${vars(Object.entries(dark))}
 `);
 
 const kotlinPalette = (p) => names.map((n) => `        ${camel(n)} = 0xff${p[n].slice(1)}.toInt(),`).join("\n");
-writeFileSync("src-tauri/plugins/signer/android/src/main/java/com/diysigner/bitwasm_signer/signer/DesignTokens.kt", `// ${header}
-package com.diysigner.bitwasm_signer.signer
+// Signer Lockdown draws its screen from the same palette
+for (const [file, pkg] of [
+  ["src-tauri/plugins/signer/android/src/main/java/com/diysigner/bitwasm_signer/signer/DesignTokens.kt", "com.diysigner.bitwasm_signer.signer"],
+  ["lockdown/src/main/java/com/habakan/signer_lockdown/DesignTokens.kt", "com.habakan.signer_lockdown"],
+]) writeFileSync(file, `// ${header}
+package ${pkg}
 
 internal class Palette(
 ${names.map((n) => `    val ${camel(n)}: Int,`).join("\n")}
