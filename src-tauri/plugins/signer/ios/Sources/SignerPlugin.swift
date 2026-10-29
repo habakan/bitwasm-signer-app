@@ -1135,7 +1135,7 @@ final class SignerPlugin: Plugin {
       Design.fail(invoke, "Load a seed first")
       return
     }
-    let alert = UIAlertController(title: Design.tr("子ニーモニックを作る", "Derive a child mnemonic"), message: Design.tr("この鍵から、別のリカバリーワードを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."), preferredStyle: .alert)
+    let alert = UIAlertController(title: Design.tr("子ニーモニックを作る", "Derive a child mnemonic"), message: Design.tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."), preferredStyle: .alert)
     alert.addTextField { field in field.text = "24"; field.keyboardType = .numberPad; field.placeholder = Design.tr("単語の数(12、18、24)", "12, 18, or 24 words") }
     alert.addTextField { field in field.text = "0"; field.keyboardType = .numberPad; field.placeholder = Design.tr("番号(BIP85のインデックス)", "BIP85 index") }
     alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "BIP85 derivation was cancelled") })
@@ -1274,7 +1274,7 @@ final class SignerPlugin: Plugin {
   }
 
   private func backupChecked(_ phrase: String, invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("バックアップを確かめました", "Backup checked"), message: Design.tr("このリカバリーワードを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"), preferredStyle: .alert)
+    let alert = UIAlertController(title: Design.tr("バックアップを確かめました", "Backup checked"), message: Design.tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"), preferredStyle: .alert)
     forgetOrigin()
     alert.addAction(UIAlertAction(title: Design.tr("完了", "Done"), style: .cancel) { _ in invoke.resolve(["shown": true]) })
     alert.addAction(UIAlertAction(title: Design.tr("読み込む", "Load it"), style: .default) { [weak self] _ in
@@ -1722,7 +1722,7 @@ private final class MnemonicEntryViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = p.surface
-    let bar = Design.topBar(Design.tr("リカバリーワード", "Recovery words"), testnet: SignerBridge.testnet) { [weak self] in
+    let bar = Design.topBar(Design.tr("シードフレーズ", "Recovery words"), testnet: SignerBridge.testnet) { [weak self] in
       self?.clear()
       self?.dismiss(animated: true) { self?.onCancel?() }
     }
@@ -1862,16 +1862,22 @@ private final class MnemonicEntryViewController: UIViewController {
   private func render() {
     let done = cur >= size
 
+    // Down each column, like the write-down screen of a new wallet: 24 words as three columns of eight
     slotGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
-    for row in 0..<(size / 3) {
-      let cells = (row * 3..<row * 3 + 3).map { i -> UIButton in
+    let columns = size > 12 ? 3 : 2
+    let per = (size + columns - 1) / columns
+    for row in 0..<per {
+      let cells = (0..<columns).map { row + $0 * per }.map { i -> UIButton in
         let button = UIButton(type: .custom)
         let word = i == cur ? typed : (slots[i] >= 0 ? words[slots[i]] : "")
         button.setTitle(String(format: "%2d  ", i + 1) + word, for: .normal)
         button.setTitleColor(i == cur ? p.primary : p.ink, for: .normal)
         button.backgroundColor = p.surfaceRaised
         button.titleLabel?.font = .monospacedSystemFont(ofSize: 14, weight: .medium)
-        button.titleLabel?.lineBreakMode = .byClipping
+        // An eight letter word does not fit a third of a small phone at 14pt, so it shrinks instead of being cut off
+        button.titleLabel?.adjustsFontSizeToFitWidth = true
+        button.titleLabel?.minimumScaleFactor = 0.6
+        button.titleLabel?.lineBreakMode = .byTruncatingTail
         button.contentHorizontalAlignment = .leading
         button.contentEdgeInsets = UIEdgeInsets(top: 7, left: 8, bottom: 7, right: 6)
         button.layer.borderWidth = 1
@@ -2060,7 +2066,7 @@ private final class NewWalletController: UINavigationController {
   // A walkthrough of the steps ahead, one picture a page; the last page picks how the words are made
   private func intro() -> UIViewController {
     let pages = [
-      (Design.tr("単語を作る", "Make the words"), Design.tr("安全な乱数か、自分で振ったサイコロの目から、12個か24個のリカバリーワードを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself.")),
+      (Design.tr("単語を作る", "Make the words"), Design.tr("安全な乱数か、自分で振ったサイコロの目から、12語か24語のシードフレーズを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself.")),
       (Design.tr("紙に書き写す", "Write them down"), Design.tr("単語を順番どおりに紙に書きます。この紙があれば、スマホをなくしてもビットコインを取り戻せます。", "Write the words on paper, in order. With that paper you can get your bitcoin back even if the phone is lost.")),
       (Design.tr("確かめる", "Check them"), Design.tr("書いた単語を5問のクイズで確かめます。書き間違いがあれば、ここで気づけます。", "A five-question quiz checks what you wrote, so a slip of the pen shows up now.")),
       (Design.tr("始める前に", "Before you start"), Design.tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes.")),

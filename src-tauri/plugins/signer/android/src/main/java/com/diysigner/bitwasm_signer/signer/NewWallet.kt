@@ -42,7 +42,7 @@ internal class NewWallet(
     // A walkthrough of the steps ahead, one picture a page; the last page picks how the words are made
     fun show() {
         val pages = listOf(
-            Triple(tr("単語を作る", "Make the words"), tr("安全な乱数か、自分で振ったサイコロの目から、12個か24個のリカバリーワードを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself."), 0),
+            Triple(tr("単語を作る", "Make the words"), tr("安全な乱数か、自分で振ったサイコロの目から、12語か24語のシードフレーズを作ります。", "Recovery words, 12 or 24 of them, come from secure random numbers or from dice you roll yourself."), 0),
             Triple(tr("紙に書き写す", "Write them down"), tr("単語を順番どおりに紙に書きます。この紙があれば、スマホをなくしてもビットコインを取り戻せます。", "Write the words on paper, in order. With that paper you can get your bitcoin back even if the phone is lost."), 1),
             Triple(tr("確かめる", "Check them"), tr("書いた単語を5問のクイズで確かめます。書き間違いがあれば、ここで気づけます。", "A five-question quiz checks what you wrote, so a slip of the pen shows up now."), 2),
             Triple(tr("始める前に", "Before you start"), tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes."), 3),

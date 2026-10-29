@@ -70,7 +70,7 @@ function setNetwork(testnet: boolean) {
 
 const loadingSeed = {
   scan_seed_qr: tr("バックアップのQRを読み取っています。鍵はこのスマホから出ません。", "Scanning your backup QR. The key stays on this phone."),
-  import_mnemonic: tr("リカバリーワードを入力してください。鍵はこのスマホから出ません。", "Type your recovery words. The key stays on this phone."),
+  import_mnemonic: tr("シードフレーズを入力してください。鍵はこのスマホから出ません。", "Type your recovery words. The key stays on this phone."),
   demo_seed: tr("テスト用の鍵を読み込んでいます…", "Loading the test key…"),
   unlock_saved: tr("保存した鍵を選び、画面ロックで確認してください。", "Choose a saved key and confirm with your screen lock."),
 };

@@ -348,7 +348,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             addView(index)
         }
         val dialog = Design.alert(activity).setTitle(Design.tr("子ニーモニックを作る", "Derive a child mnemonic"))
-            .setMessage(Design.tr("この鍵から、別のリカバリーワードを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."))
+            .setMessage(Design.tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."))
             .setView(form)
             .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("BIP85 derivation was cancelled") }
             .setOnCancelListener { invoke.fail("BIP85 derivation was cancelled") }
@@ -623,7 +623,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             invoke.resolve(stateObject().apply { put("shown", true) })
         }
         val dialog = Design.alert(activity).setTitle(Design.tr("バックアップを確かめました", "Backup checked"))
-            .setMessage(Design.tr("このリカバリーワードを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"))
+            .setMessage(Design.tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"))
             .setNegativeButton(Design.tr("完了", "Done")) { _, _ -> done() }
             .setPositiveButton(Design.tr("読み込む", "Load it")) { _, _ ->
                 askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), ::done) { passphrase ->

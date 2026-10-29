@@ -3,6 +3,7 @@ package com.diysigner.bitwasm_signer.signer
 import android.app.Activity
 import android.app.Dialog
 import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -82,7 +83,7 @@ class MnemonicKeypad(
         body.addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
         continueButton.setOnClickListener { finish() }
-        dialog = Design.screen(activity, tr("リカバリーワード", "Recovery words"), testnet, body, listOf(continueButton)) { clear(); onCancel() }
+        dialog = Design.screen(activity, tr("シードフレーズ", "Recovery words"), testnet, body, listOf(continueButton)) { clear(); onCancel() }
         dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         render()
         dialog.show()
@@ -143,17 +144,12 @@ class MnemonicKeypad(
             background = if (selected) Design.shape(activity, p.surfaceRaised, p.lineStrong, DesignTokens.RADIUS_SM) else null
         }
 
+        // Down each column, like the write-down screen of a new wallet: 24 words as three columns of eight
         slotGrid.removeAllViews()
-        for (row in 0 until size / 3) slotGrid.addView(LinearLayout(activity).apply {
-            for (i in row * 3 until row * 3 + 3) addView(Design.text(activity, "", Design.Style.DATA, p.ink).apply {
-                textSize = 14f
-                maxLines = 1
-                setPadding(dp(8), dp(7), dp(6), dp(7))
-                text = "${i + 1}".padStart(2) + "  " + if (i == cur) typed else slots[i].takeIf { it >= 0 }?.let { words[it] } ?: ""
-                setTextColor(if (i == cur) p.primary else p.ink)
-                background = Design.shape(activity, p.surfaceRaised, if (i == cur) p.primary else p.line, DesignTokens.RADIUS_SM)
-                setOnClickListener { edit(i) }
-            }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginEnd = dp(6) })
+        val columns = if (size > 12) 3 else 2
+        val per = (size + columns - 1) / columns
+        for (row in 0 until per) slotGrid.addView(LinearLayout(activity).apply {
+            for (column in 0 until columns) addView(slot(row + column * per), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginEnd = dp(6) })
         }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(6) })
 
         val hits = when {
@@ -197,6 +193,19 @@ class MnemonicKeypad(
         status.setTextColor(if (valid) p.positive else if (done) p.danger else p.inkMuted)
         continueButton.isEnabled = valid
         continueButton.alpha = if (valid) 1f else 0.45f
+    }
+
+    private fun slot(i: Int) = LinearLayout(activity).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(6), dp(7), dp(6), dp(7))
+        background = Design.shape(activity, p.surfaceRaised, if (i == cur) p.primary else p.line, DesignTokens.RADIUS_SM)
+        setOnClickListener { edit(i) }
+        addView(Design.text(activity, "${i + 1}", Design.Style.CAPTION, p.inkMuted).apply { gravity = Gravity.END }, LinearLayout.LayoutParams(dp(18), WRAP_CONTENT))
+        // An eight letter word does not fit a third of a small phone at 14sp, so it shrinks instead of being cut off
+        addView(Design.text(activity, if (i == cur) typed else slots[i].takeIf { it >= 0 }?.let { words[it] } ?: "", Design.Style.DATA, if (i == cur) p.primary else p.ink).apply {
+            maxLines = 1
+            setAutoSizeTextTypeUniformWithConfiguration(9, 14, 1, TypedValue.COMPLEX_UNIT_SP)
+        }, LinearLayout.LayoutParams(0, dp(22), 1f).apply { marginStart = dp(6) })
     }
 
     private fun finish() {
