@@ -55,14 +55,25 @@ jobs:
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
+          cp src-tauri/gen/android/keystore.properties lockdown/keystore.properties
 
       - run: pnpm tauri android build --target aarch64 armv7 --apk --ci
+
+      # Lockdown with this signer bundled, and the QR code a factory-reset phone scans to download it from this release
+      - name: Build Lockdown and the provisioning QR code
+        run: |
+          sudo apt-get update && sudo apt-get install -y qrencode
+          apk="bitwasm-signer-$GITHUB_REF_NAME.apk"
+          lockdown="signer-lockdown-$GITHUB_REF_NAME.apk"
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk "$apk"
+          lockdown/provision.sh "$apk" "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/$lockdown"
+          cp lockdown/out/lockdown.apk "$lockdown"
+          cp lockdown/out/provisioning.png "provisioning-$GITHUB_REF_NAME.png"
 
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          apk="bitwasm-signer-$GITHUB_REF_NAME.apk"
-          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk "$apk"
-          sha256sum "$apk" > SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" "$apk" SHA256SUMS --draft --title "$GITHUB_REF_NAME"
+          assets="bitwasm-signer-$GITHUB_REF_NAME.apk signer-lockdown-$GITHUB_REF_NAME.apk provisioning-$GITHUB_REF_NAME.png"
+          sha256sum $assets > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" $assets SHA256SUMS --draft --title "$GITHUB_REF_NAME"
