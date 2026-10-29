@@ -39,7 +39,7 @@ Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING
 続けて PC の Chrome か Edge で:
 
 1. リリースから `signer-lockdown-<version>.apk` をダウンロードする
-2. [導入ページ](https://habakan.github.io/bitwasm-signer-app/lockdown/)を開き、APK と同じリリースの `SHA256SUMS` を選ぶ。ページが照合し、一致したときだけ入れられる
+2. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)を開き、APK と同じリリースの `SHA256SUMS` を選ぶ。ページが照合し、一致したときだけ入れられる
 3. 端末をつなぎ、ブラウザのダイアログで端末を選び、端末で USB デバッグを許可する。PC で adb が動いていると USB を取り合うので、先に止める（`adb kill-server`）
 4. ページが Lockdown を入れて Device Owner にする。上の手順5から続ける。制限を適用すると USB デバッグは止まる
 
