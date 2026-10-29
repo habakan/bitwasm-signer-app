@@ -1,0 +1,55 @@
+# Packages a signer does not need: Lockdown hides the ones the phone has, audit.sh warns while they are enabled
+# Common Google, AOSP and MediaTek apps. Add your phone maker's own apps to this list
+
+# Browsers and messaging
+com.android.chrome
+com.opera.browser
+com.opera.preinstall
+com.google.android.apps.messaging
+com.google.android.apps.tachyon
+com.google.android.gm
+com.android.captiveportallogin
+
+# Voice and always-on microphone
+com.google.android.apps.assistant
+com.google.android.apps.searchlite
+com.google.android.apps.speechservices
+com.android.soundrecorder
+com.mediatek.callrecorder
+
+# Apps built around a Google account or sync
+com.android.vending
+com.google.android.apps.docs
+com.google.android.apps.maps
+com.google.android.apps.photosgo
+com.google.android.apps.restore
+com.google.android.apps.translate
+com.google.android.apps.wellbeing
+com.google.android.apps.youtube.music
+com.google.android.youtube
+com.google.android.videos
+com.google.android.calendar
+com.google.android.feedback
+com.google.android.gms.location.history
+com.google.android.partnersetup
+
+# File sharing and install paths
+com.google.android.apps.nbu.files
+com.android.bips
+com.google.android.printservice.recommendation
+
+# MediaTek logging and diagnostics (logs can capture the screen or input)
+com.debug.loggerui
+com.mediatek.engineermode
+com.mediatek.ygps
+com.mediatek.lbs.em2.ui
+com.android.traceur
+
+# Accessibility (can read the screen once enabled)
+com.google.android.marvin.talkback
+
+# Misc
+com.android.fmradio
+com.android.music
+com.mediatek.autodialer
+com.mediatek.duraspeed

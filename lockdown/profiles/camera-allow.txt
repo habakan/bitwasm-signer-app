@@ -1,0 +1,3 @@
+# Packages allowed to hold the camera or microphone permission
+com.habakan.bitwasm_signer
+com.mediatek.camera

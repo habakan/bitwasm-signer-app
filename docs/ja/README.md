@@ -50,6 +50,10 @@ Android（A80、Android 10）とiOSシミュレーターの画面です。テス
 
 キーボードの学習やオートフィルの扱いは[faq.md](faq.md)にまとめています。
 
+## 署名専用機にする
+
+Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに USB で入れます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードからできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
+
 ## WASM
 
 WASMは`src-tauri/plugins/signer/android/src/main/assets/`に同梱し、ロード時にSHA-256を照合します。
@@ -95,7 +99,7 @@ adb install -r bitwasm-signer-release.apk
 
 ### APKの配布
 
-`v<tauri.conf.jsonのversion>`のタグをpushすると、GitHub Actionsがrelease鍵で署名したuniversal APK（aarch64 / armv7）と`SHA256SUMS`をdraft releaseに添付します。リポジトリのSecretsに次を登録しておきます。
+`v<tauri.conf.jsonのversion>`のタグをpushすると、GitHub Actionsがrelease鍵で署名したuniversal APK（aarch64 / armv7）、そのAPKを同梱したSigner Lockdown、導入用のQR、`SHA256SUMS`をdraft releaseに添付します。リポジトリのSecretsに次を登録しておきます。
 
 | Secret | 内容 |
 | --- | --- |

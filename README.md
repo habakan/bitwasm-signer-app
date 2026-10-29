@@ -50,6 +50,10 @@ Save mode cannot be chosen on a device without a screen lock (passcode). Deletin
 
 Keyboard learning and autofill are covered in [docs/faq.md](docs/faq.md).
 
+## A phone that only signs
+
+On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB to keep the phone off every network. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card. See [docs/lockdown.md](docs/lockdown.md).
+
 ## WASM
 
 The WASM modules ship in `src-tauri/plugins/signer/android/src/main/assets/` and their SHA-256 is checked when they load.
@@ -95,7 +99,7 @@ Match `--target` to the device's ABI (`adb shell getprop ro.product.cpu.abilist`
 
 ### Distributing the APK
 
-Pushing a `v<version in tauri.conf.json>` tag makes GitHub Actions attach a universal APK (aarch64 / armv7) signed with the release key and a `SHA256SUMS` file to a draft release. Register these repository secrets first.
+Pushing a `v<version in tauri.conf.json>` tag makes GitHub Actions attach a universal APK (aarch64 / armv7) signed with the release key, Signer Lockdown with that APK inside, its provisioning QR code and a `SHA256SUMS` file to a draft release. Register these repository secrets first.
 
 | Secret | Contents |
 | --- | --- |

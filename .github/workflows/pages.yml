@@ -36,6 +36,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
+      - run: pnpm build:installer
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist-web
