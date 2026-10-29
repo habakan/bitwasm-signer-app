@@ -9,6 +9,7 @@ import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.Window
@@ -139,17 +140,79 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         }
     }
 
+    // The engine packs all four purposes or none, so the choice is all of them (null) or exactly one
     @Command
     fun exportAccount(invoke: Invoke) {
         if (!engine.isLoaded) { invoke.fail("Load a SeedQR first"); return }
-        Design.alert(activity).setTitle(Design.tr("ウォレットアプリと接続する", "Connect your wallet app"))
-            .setItems(arrayOf(Design.tr("まとめて渡す(UR crypto-account)・Sparrow、Nunchuk、Keystone", "UR crypto-account · Sparrow, Nunchuk, Keystone"), Design.tr("1種類だけ渡す(xpubとディスクリプター)", "xpub and descriptor · one purpose"))) { _, which ->
-                if (which == 0) showFrames(invoke, Design.tr("ウォレットアプリと接続する", "Connect your wallet app"), Design.tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで渡します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.")) { engine.accountUr() }
-                else exportAccountKey(invoke)
+        val p = Design.palette(activity)
+        val t = engine.testnet
+        val kinds = listOf(
+            Triple(null, Design.tr("4種類", "All 4"), Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+            Triple(84, if (t) "tb1q…" else "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
+            Triple(86, if (t) "tb1p…" else "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
+            Triple(49, if (t) "2…" else "3…", Design.tr("古いウォレット向け", "For older wallets")),
+            Triple(48, if (t) "tb1q…" else "bc1q…", Design.tr("マルチシグ用・複数の鍵で管理", "Multisig · several keys")),
+        )
+        var chosen: Int? = null
+        val single = Design.text(activity, Design.tr("1種類だけ渡す", "ONLY ONE KIND"), Design.Style.CAPTION, p.inkMuted).apply { setTypeface(typeface, Typeface.BOLD) }
+        val heading = Design.tr("ウォレットアプリと接続する", "Connect your wallet app")
+        val show = Design.button(activity, Design.tr("QRを表示", "Show QR"), true, p)
+        val summary = Design.text(activity, "", Design.Style.BODY, p.ink)
+        val cards = mutableListOf<LinearLayout>()
+        val marks = mutableListOf<View>()
+        fun refresh() {
+            kinds.forEachIndexed { i, (purpose) ->
+                val on = chosen == purpose
+                cards[i].background = Design.shape(activity, if (on) p.primarySoft else p.surfaceRaised, if (on) p.primary else p.line, DesignTokens.RADIUS_MD)
+                marks[i].background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (on) p.primary else p.surfaceRaised)
+                    setStroke(dp(if (on) 6 else 2), if (on) p.primarySoft else p.lineStrong)
+                }
             }
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Account export was cancelled") }
-            .setOnCancelListener { invoke.fail("Account export was cancelled") }
-            .show()
+            summary.text = chosen?.let { Design.tr("BIP${it}のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。", "Shares the BIP$it xpub and descriptor, which wallets that only read an xpub accept too.") }
+                ?: Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+        }
+        val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        kinds.forEachIndexed { i, (purpose, prefix, name) ->
+            val mark = View(activity)
+            val card = LinearLayout(activity).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(12), dp(16), dp(12))
+                addView(Design.text(activity, prefix, Design.Style.DATA, p.ink).apply {
+                    textSize = 20f
+                    setTypeface(typeface, Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    background = Design.shape(activity, p.surface, p.line, DesignTokens.RADIUS_SM)
+                }, LinearLayout.LayoutParams(dp(96), dp(52)))
+                addView(LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(Design.text(activity, name, Design.Style.LABEL, p.ink))
+                    addView(Design.text(activity, purpose?.let { "BIP$it" } ?: "BIP84・86・49・48", Design.Style.CAPTION, p.inkMuted))
+                }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(14) })
+                addView(mark, LinearLayout.LayoutParams(dp(24), dp(24)))
+                setOnClickListener { chosen = purpose; refresh() }
+            }
+            cards.add(card)
+            marks.add(mark)
+            if (i == 1) list.addView(single, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(DesignTokens.SPACE_6) })
+            list.addView(card, LinearLayout.LayoutParams(-1, -2).apply { if (i > 0) topMargin = dp(DesignTokens.SPACE_2) })
+        }
+        val content = page(
+            Design.text(activity, Design.tr("渡す公開鍵を選ぶ", "Choose the keys to share"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, Design.tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys."), Design.Style.BODY, p.inkMuted),
+            list,
+            summary,
+        )
+        lateinit var dialog: android.app.Dialog
+        show.setOnClickListener {
+            dialog.dismiss()
+            chosen?.let { exportAccountKey(invoke, it) }
+                ?: showFrames(invoke, heading, Design.tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで渡します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.")) { engine.accountUr() }
+        }
+        dialog = Design.screen(activity, heading, t, content, listOf(show)) { invoke.fail("Account export was cancelled") }
+        refresh()
+        dialog.show()
     }
 
     private fun showFrames(invoke: Invoke, title: String, description: String, frames: () -> List<String>) {
@@ -232,59 +295,23 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         invoke.resolve(stateObject())
     }
 
-    private fun exportAccountKey(invoke: Invoke) {
-        val purpose = EditText(activity).apply {
-            hint = Design.tr("種類(48、49、84、86)", "Purpose: 48, 49, 84, or 86")
-            setText("84")
-            inputType = InputType.TYPE_CLASS_NUMBER
-        }
-        val account = EditText(activity).apply {
-            hint = Design.tr("アカウントの番号", "Account index")
-            setText("0")
-            inputType = InputType.TYPE_CLASS_NUMBER
-        }
-        val form = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), 0)
-            addView(purpose)
-            addView(account)
-        }
-        val dialog = Design.alert(activity).setTitle(Design.tr("公開鍵を1種類だけ渡す", "Export one account"))
-            .setMessage(Design.tr("BIP48(マルチシグ)・BIP49・BIP84・BIP86", "BIP48 (multisig) · BIP49 · BIP84 · BIP86"))
-            .setView(form)
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Account export was cancelled") }
-            .setOnCancelListener { invoke.fail("Account export was cancelled") }
-            .setPositiveButton(Design.tr("QRを表示", "Show QR"), null)
-            .create()
-        dialog.setOnShowListener {
-            Design.styleDialog(dialog)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val purposeValue = purpose.text.toString().toIntOrNull()
-                val accountValue = account.text.toString().toIntOrNull()
-                if (purposeValue == null || purposeValue !in listOf(48, 49, 84, 86) || accountValue == null || accountValue < 0) {
-                    purpose.error = Design.tr("48、49、84、86のどれかを入れてください", "Use 48, 49, 84, or 86")
-                    return@setOnClickListener
-                }
-                dialog.dismiss()
-                worker.execute {
-                    try {
-                        val contents = engine.accountQrContents(purposeValue!!, accountValue)
-                        val title = Design.tr("BIP$purposeValue・アカウント $accountValue", "BIP$purposeValue · account $accountValue")
-                        val intent = Intent(activity, SignedQrActivity::class.java)
-                            .putStringArrayListExtra(SignedQrActivity.FRAMES, ArrayList(contents))
-                            .putExtra("testnet", engine.testnet)
-                            .putExtra("heading", title)
-                            .putExtra("description", Design.tr("ウォレットアプリで読み取ってください。xpubとディスクリプターが自動で切り替わります。", "Scan with your wallet. The xpub and descriptor alternate automatically."))
-                                                        .putExtra("interval", 1500L)
-                            .putExtra("accountQr", true)
-                        activity.runOnUiThread { startActivityForResult(invoke, intent, "accountQrResult") }
-                    } catch (e: Exception) {
-                        activity.runOnUiThread { invoke.fail(e.message ?: "Could not export account information") }
-                    }
-                }
+    private fun exportAccountKey(invoke: Invoke, purpose: Int) {
+        worker.execute {
+            try {
+                val contents = engine.accountQrContents(purpose)
+                val title = "BIP$purpose"
+                val intent = Intent(activity, SignedQrActivity::class.java)
+                    .putStringArrayListExtra(SignedQrActivity.FRAMES, ArrayList(contents))
+                    .putExtra("testnet", engine.testnet)
+                    .putExtra("heading", title)
+                    .putExtra("description", Design.tr("ウォレットアプリで読み取ってください。xpubとディスクリプターが自動で切り替わります。", "Scan with your wallet. The xpub and descriptor alternate automatically."))
+                    .putExtra("interval", 1500L)
+                    .putExtra("accountQr", true)
+                activity.runOnUiThread { startActivityForResult(invoke, intent, "accountQrResult") }
+            } catch (e: Exception) {
+                activity.runOnUiThread { invoke.fail(e.message ?: "Could not export account information") }
             }
         }
-        dialog.show()
     }
 
     @Command
@@ -550,31 +577,31 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         seedQr.setOnClickListener {
             blank()
             dialog.dismiss()
-            Design.alert(activity).setTitle(Design.tr("SeedQRの形式", "SeedQR format"))
-                .setItems(arrayOf(Design.tr("標準のSeedQR", "Standard SeedQR"), "CompactSeedQR")) { _, which ->
-                    worker.execute {
-                        try {
-                            val payload = engine.seedQrFromMnemonic(phrase, compact = which == 1)
-                            val intent = Intent(activity, SignedQrActivity::class.java)
-                                .putExtra(SignedQrActivity.QR_BYTES, payload.copyOf())
-                                .putExtra("testnet", engine.testnet)
-                                .putExtra("binaryQr", which == 1)
-                                .putExtra("secretQr", true)
-                                .putExtra("heading", if (which == 1) "CompactSeedQR" else Design.tr("標準のSeedQR", "Standard SeedQR"))
-                                .putExtra("description", Design.tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private."))
-                                .putExtra("qrName", "SeedQR")
-                            activity.runOnUiThread {
-                                startActivityForResult(invoke, intent, "secretQrResult")
-                                payload.fill(0)
-                            }
-                        } catch (e: Exception) {
-                            forget(phrase)
-                            activity.runOnUiThread { invoke.fail(e.message ?: "Could not encode the SeedQR") }
+            choose(Design.tr("SeedQRの形式", "SeedQR format"), Design.tr("形式を選んでください", "Choose a format"),
+                Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+                listOf(Design.tr("標準のSeedQR", "Standard SeedQR") to Design.tr("多くのウォレットが対応", "Works with most wallets"), "CompactSeedQR" to Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")),
+                { clearAndResolve(false) }) { which ->
+                worker.execute {
+                    try {
+                        val payload = engine.seedQrFromMnemonic(phrase, compact = which == 1)
+                        val intent = Intent(activity, SignedQrActivity::class.java)
+                            .putExtra(SignedQrActivity.QR_BYTES, payload.copyOf())
+                            .putExtra("testnet", engine.testnet)
+                            .putExtra("binaryQr", which == 1)
+                            .putExtra("secretQr", true)
+                            .putExtra("heading", if (which == 1) "CompactSeedQR" else Design.tr("標準のSeedQR", "Standard SeedQR"))
+                            .putExtra("description", Design.tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private."))
+                            .putExtra("qrName", "SeedQR")
+                        activity.runOnUiThread {
+                            startActivityForResult(invoke, intent, "secretQrResult")
+                            payload.fill(0)
                         }
+                    } catch (e: Exception) {
+                        forget(phrase)
+                        activity.runOnUiThread { invoke.fail(e.message ?: "Could not encode the SeedQR") }
                     }
                 }
-                .setOnCancelListener { clearAndResolve(false) }
-                .show()
+            }
         }
         dialog.show()
     }
@@ -734,22 +761,26 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     fun unlockSaved(invoke: Invoke) {
         val entries = vault.entries()
         if (entries.isEmpty()) { invoke.fail("No seeds are saved on this device"); return }
+        choose(Design.tr("保存した鍵", "Saved seeds"), Design.tr("開く鍵を選んでください", "Choose a seed to unlock"),
+            Design.tr("開くときに、画面ロックか生体認証と、付けていればパスフレーズを入力します。", "Unlocking asks for your screen lock or biometrics, then the passphrase if the seed has one."),
+            entries.map { it.name to Design.tr("フィンガープリント ${it.fingerprint}", "Fingerprint ${it.fingerprint}") },
+            { invoke.fail("Unlock was cancelled") }) { chooseSaved(invoke, entries[it]) }
+    }
+
+    // A full-screen list of choices; back or the close button cancels
+    private fun choose(heading: String, title: String, lead: String, options: List<Pair<String, String?>>, onCancel: () -> Unit, onPick: (Int) -> Unit) {
         val p = Design.palette(activity)
         val list = Design.card(activity, p)
         lateinit var dialog: android.app.Dialog
-        entries.forEachIndexed { i, entry ->
+        options.forEachIndexed { i, (name, detail) ->
             if (i > 0) list.addView(Design.divider(activity, p), LinearLayout.LayoutParams(-1, dp(1)))
-            list.addView(Design.row(activity, p, entry.name, Design.tr("フィンガープリント ${entry.fingerprint}", "Fingerprint ${entry.fingerprint}")) {
+            list.addView(Design.row(activity, p, name, detail) {
                 dialog.dismiss()
-                chooseSaved(invoke, entry)
+                onPick(i)
             })
         }
-        val content = page(
-            Design.text(activity, Design.tr("開く鍵を選んでください", "Choose a seed to unlock"), Design.Style.DISPLAY, p.ink),
-            Design.text(activity, Design.tr("開くときに、画面ロックか生体認証と、付けていればパスフレーズを入力します。", "Unlocking asks for your screen lock or biometrics, then the passphrase if the seed has one."), Design.Style.BODY, p.inkMuted),
-            list,
-        )
-        dialog = Design.screen(activity, Design.tr("保存した鍵", "Saved seeds"), engine.testnet, content, emptyList()) { invoke.fail("Unlock was cancelled") }
+        val content = page(Design.text(activity, title, Design.Style.DISPLAY, p.ink), Design.text(activity, lead, Design.Style.BODY, p.inkMuted), list)
+        dialog = Design.screen(activity, heading, engine.testnet, content, emptyList(), onCancel)
         dialog.show()
     }
 
