@@ -8,9 +8,11 @@ import android.content.res.Configuration
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.Window
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
@@ -118,6 +120,12 @@ internal object Design {
         dialog.setContentView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(p.surface)
+            // From Android 15 a full-screen window draws behind the status and navigation bars
+            if (Build.VERSION.SDK_INT >= 35) setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                insets
+            }
             addView(topBar(activity, p, title, testnet) { dialog.cancel() })
             addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
             if (actions.isNotEmpty()) addView(divider(activity, p), LinearLayout.LayoutParams(-1, dp(activity, 1)))
