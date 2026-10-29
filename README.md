@@ -4,7 +4,7 @@
 
 An Android / iOS signing app built on the `bitwasm-signer` parser and signer WASM modules. By default the app keeps no key: it loads the key for each signing and erases it when you are done.
 
-**[Try the testnet demo in your browser](https://habakan.github.io/bitwasm-signer-app/)**
+**[Try the testnet demo in your browser](https://habakan.github.io/bitwasm-signer-app/)** · **[Install over USB](https://habakan.github.io/bitwasm-signer-app/install/)**
 
 > **Warning:** This is experimental software. It has not been audited and comes with no warranty. The author is not responsible for lost funds or any other damage from using it. Keep amounts small.
 
@@ -19,20 +19,22 @@ Android (Android 10) and the iOS Simulator, on testnet with the public BIP39 tes
 
 ## What it does on Android / iOS
 
-- Loads a SeedQR / CompactSeedQR, with an optional BIP39 passphrase, or a 64 byte seed, and derives keys on the device
-- Loads BIP39 English words (12 to 24) typed one at a time on an in-app keypad, with an optional passphrase. Letters that lead to no word cannot be pressed, and the last word only offers candidates that fit the checksum
-- Creates a 12 or 24 word mnemonic from SecureRandom or from exactly 50 / 99 dice rolls (hashed as SeedSigner and Krux do), warns when the rolls look uneven or patterned, shows how the words came from the entropy, and shows them as a Standard / Compact SeedQR
-- A new mnemonic can be loaded as the signing key once it passes a five-question, four-choice backup check
-- Derives BIP85 child mnemonics
-- Receives an animated UR `crypto-psbt` with the camera
-- Parses it with parser.wasm and shows signer.wasm's review on a native screen
-- Signs after explicit approval and shows the signed PSBT as an animated UR
-- Shows the account public keys as an animated UR `crypto-account` (BIP49 / BIP84 / BIP86 / BIP48), readable by Sparrow / Nunchuk / Keystone style wallets
-- Shows BIP48 / BIP49 / BIP84 / BIP86 account xpubs and descriptors as QR codes
-- Registers a P2WSH multisig (up to 3 keys) from a descriptor / BSMS / Coldcard QR (`ur:bytes` too). The key list and the first receive address are shown before registering. Afterwards change is shown as change, and inputs from other wallets are not signed. It can be exported as `crypto-output`, and in save mode it is restored together with the seed
-- Address ownership checks and BIP137 message signing
-- Erases the signing key on Lock, or when the app goes to the background
-- With "Save on this device" in Settings, 12 / 24 word seeds can be kept on the device (memory only by default)
+Checked means it has been tried on an Android 10 phone (ARMv7). Implemented means the code is in place but has not been tried on a phone yet. iOS has only been run in the Simulator.
+
+| Feature | Details | Android | iOS |
+| --- | --- | --- | --- |
+| Load a SeedQR | SeedQR / CompactSeedQR with an optional BIP39 passphrase, or a 64 byte seed. Keys are derived on the device | Checked | Implemented |
+| Type the words | BIP39 English words (12 to 24) one at a time on an in-app keypad, with an optional passphrase. Letters that lead to no word cannot be pressed, and the last word only offers candidates that fit the checksum | Implemented | Implemented |
+| Create a mnemonic | 12 or 24 words from SecureRandom or from exactly 50 / 99 dice rolls (hashed as SeedSigner and Krux do). Warns when the rolls look uneven or patterned, shows how the words came from the entropy, and shows them as a Standard / Compact SeedQR | Implemented | Implemented |
+| Backup check | A new mnemonic can be loaded as the signing key once it passes a five-question, four-choice check | Implemented | Implemented |
+| BIP85 | Derives child mnemonics | Implemented | Implemented |
+| Review a PSBT | Receives an animated UR `crypto-psbt` with the camera, parses it with parser.wasm and shows signer.wasm's review on a native screen | Checked | Implemented |
+| Sign | Signs after explicit approval and shows the signed PSBT as an animated UR. A full round trip with a wallet has not been checked | Implemented | Implemented |
+| Export the account | Public keys as an animated UR `crypto-account` (BIP49 / BIP84 / BIP86 / BIP48), readable by Sparrow / Nunchuk / Keystone style wallets, and the account xpubs and descriptors as QR codes | Implemented | Implemented |
+| Multisig | Registers a P2WSH multisig (up to 3 keys) from a descriptor / BSMS / Coldcard QR (`ur:bytes` too) after showing the keys and the first receive address. Afterwards change is shown as change and inputs from other wallets are not signed. Exports as `crypto-output`, and in save mode it is restored with the seed | Implemented | Implemented |
+| Addresses and messages | Address ownership checks and BIP137 message signing | Implemented | Implemented |
+| Erase the key | On Lock, or when the app goes to the background | Implemented | Implemented |
+| Save on the device | With "Save on this device" in Settings, 12 / 24 word seeds are kept on the device (memory only by default). See below | Implemented | Implemented |
 
 Mnemonics, SeedQRs, raw seeds and passphrases are never returned to the WebView.
 
@@ -52,7 +54,7 @@ Keyboard learning and autofill are covered in [docs/faq.md](docs/faq.md).
 
 ## A phone that only signs
 
-On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB to keep the phone off every network. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card. See [docs/lockdown.md](docs/lockdown.md).
+On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB from the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) to keep the phone off every network. The same page can also install just the signer, without Lockdown. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card. See [docs/lockdown.md](docs/lockdown.md).
 
 ## WASM
 
@@ -125,6 +127,6 @@ To try signing, scan a QR from a wallet app with the camera, or use the test tra
 
 ## Current scope
 
-Building the Android ARMv7 APK, launching on an Android 10 phone, reading SeedQRs and reviewing PSBTs have been checked. A full round trip of a signed PSBT has not. The Swift plugin and the Wasmi host are implemented for iOS. Native hosts for Windows / macOS / Linux are not.
+What has been checked on each platform is in the table under [What it does on Android / iOS](#what-it-does-on-android--ios). Native hosts for Windows / macOS / Linux are not implemented.
 
 Plans are in [docs/roadmap.md](docs/roadmap.md).

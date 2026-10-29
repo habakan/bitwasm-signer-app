@@ -3,12 +3,12 @@ import { defineConfig } from "vite";
 
 const build = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
 
-// Published next to the browser demo, at <pages>/lockdown/
+// Published next to the browser demo, at <pages>/install/
 export default defineConfig({
   base: "./",
   define: { __BUILD__: JSON.stringify(build) },
   build: {
-    outDir: "../dist-web/lockdown",
+    outDir: "../dist-web/install",
     emptyOutDir: true,
   },
   plugins: [

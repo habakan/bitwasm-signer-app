@@ -20,8 +20,8 @@ android {
         // DISALLOW_AIRPLANE_MODE and DISALLOW_CONFIG_LOCATION need API 28
         minSdk = 28
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
     signingConfigs {
         if (!keystoreProperties.isEmpty) {

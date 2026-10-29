@@ -4,7 +4,7 @@
 
 `bitwasm-signer` の parser / signer WASM を使うAndroid / iOSの署名アプリです。初めの設定ではアプリは鍵を持たず、署名のたびに読み込み、使い終わったら消します。
 
-**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)**
+**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)**
 
 > **注意:** 実験的なソフトウェアです。監査を受けておらず、無保証です。使用によって生じた資金の損失やその他の損害について、作者は責任を負いません。使う場合は少額にとどめてください。
 
@@ -19,20 +19,22 @@ Android（Android 10）とiOSシミュレーターの画面です。テストネ
 
 ## Android / iOSでできること
 
-- SeedQR / CompactSeedQRは任意のBIP39パスフレーズ付きで、または64バイトのseedを読み込み、端末内で鍵を導出
-- BIP39英単語（12〜24語）をアプリ内のキーボードで1語ずつ入力し、任意のパスフレーズ付きで読み込み。続く語がない文字は押せず、最後の語はチェックサムに合う候補だけになる
-- SecureRandom、またはちょうど50 / 99回のサイコロの目（SeedSignerやKruxと同じハッシュの取り方）から12 / 24語のニーモニックを作成。目に偏りや規則性があれば警告し、単語がどう計算されたかを表示し、Standard / Compact SeedQRを表示
-- 作成したニーモニックは4択5問の書き写し確認に通ったあと、そのまま署名鍵として読み込める
-- BIP85の子ニーモニックを導出
-- カメラでアニメーションUR `crypto-psbt` を受信
-- parser.wasmで解析し、signer.wasmのレビュー内容をネイティブ画面で確認
-- 明示承認後に署名し、署名済みPSBTをアニメーションURで表示
-- アカウントの公開鍵をアニメーションUR `crypto-account`（BIP49 / BIP84 / BIP86 / BIP48）で表示。Sparrow / Nunchuk / Keystone形式のウォレットが読める
-- BIP48 / BIP49 / BIP84 / BIP86のアカウントxpubとdescriptorをQR表示
-- P2WSHマルチシグ（3鍵まで）をdescriptor / BSMS / Coldcard形式のQR（`ur:bytes`も可）から登録。鍵の一覧と最初の受取アドレスを確認してから登録し、登録後はお釣りをお釣りと表示、別ウォレットの入力は署名しない。`crypto-output`で書き出せる。保存モードではseedと一緒に復元される
-- アドレスの所有確認とBIP137メッセージ署名
-- Lock、またはアプリがバックグラウンドへ移ったときに署名鍵を消去
-- 設定で「Save on device」を選ぶと、12 / 24語のseedを端末に保存できる（既定はRAMのみ）
+「確認済み」はAndroid 10の端末（ARMv7）で試したもの、「実装済み」はコードはあるものの端末ではまだ試していないものです。iOSはシミュレーターでしか動かしていません。
+
+| 機能 | 内容 | Android | iOS |
+| --- | --- | --- | --- |
+| SeedQRの読み込み | SeedQR / CompactSeedQRを任意のBIP39パスフレーズ付きで、または64バイトのseedを読み込み、端末内で鍵を導出 | 確認済み | 実装済み |
+| 単語の入力 | BIP39英単語（12〜24語）をアプリ内のキーボードで1語ずつ入力し、任意のパスフレーズ付きで読み込み。続く語がない文字は押せず、最後の語はチェックサムに合う候補だけになる | 実装済み | 実装済み |
+| ニーモニックの作成 | SecureRandom、またはちょうど50 / 99回のサイコロの目（SeedSignerやKruxと同じハッシュの取り方）から12 / 24語を作成。目に偏りや規則性があれば警告し、単語がどう計算されたかを表示し、Standard / Compact SeedQRを表示 | 実装済み | 実装済み |
+| 書き写しの確認 | 作成したニーモニックは4択5問の確認に通ったあと、そのまま署名鍵として読み込める | 実装済み | 実装済み |
+| BIP85 | 子ニーモニックを導出 | 実装済み | 実装済み |
+| PSBTのレビュー | カメラでアニメーションUR `crypto-psbt` を受信し、parser.wasmで解析し、signer.wasmのレビュー内容をネイティブ画面で確認 | 確認済み | 実装済み |
+| 署名 | 明示承認後に署名し、署名済みPSBTをアニメーションURで表示。ウォレットとの往復は未確認 | 実装済み | 実装済み |
+| アカウントの書き出し | 公開鍵をアニメーションUR `crypto-account`（BIP49 / BIP84 / BIP86 / BIP48）で表示し、Sparrow / Nunchuk / Keystone形式のウォレットが読める。アカウントxpubとdescriptorもQR表示 | 実装済み | 実装済み |
+| マルチシグ | P2WSHマルチシグ（3鍵まで）をdescriptor / BSMS / Coldcard形式のQR（`ur:bytes`も可）から、鍵の一覧と最初の受取アドレスを確認してから登録。登録後はお釣りをお釣りと表示し、別ウォレットの入力は署名しない。`crypto-output`で書き出せ、保存モードではseedと一緒に復元される | 実装済み | 実装済み |
+| アドレスとメッセージ | アドレスの所有確認とBIP137メッセージ署名 | 実装済み | 実装済み |
+| 鍵の消去 | Lock、またはアプリがバックグラウンドへ移ったときに署名鍵を消去 | 実装済み | 実装済み |
+| 端末への保存 | 設定で「Save on device」を選ぶと、12 / 24語のseedを端末に保存（既定はRAMのみ）。詳しくは下記 | 実装済み | 実装済み |
 
 ニーモニック、SeedQR、生seed、パスフレーズはWebViewへ返しません。
 
@@ -52,7 +54,7 @@ Android（Android 10）とiOSシミュレーターの画面です。テストネ
 
 ## 署名専用機にする
 
-Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに USB で入れます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードからできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
+Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに[導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)から USB で入れます。同じページで、Lockdown なしで署名アプリだけを入れることもできます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードからできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
 
 ## WASM
 
@@ -125,6 +127,6 @@ pnpm build:web   # dist-web に出力
 
 ## 現在の範囲
 
-Android ARMv7 APKのビルド、Android 10の端末での起動、SeedQR読み取り、PSBTレビューまで確認しています。署名済みPSBTの往復確認は未完了です。iOSにはSwiftプラグインとWasmiホストを実装済みです。Windows / macOS / Linuxのネイティブホストは未実装です。
+各プラットフォームで確認したことは、[Android / iOSでできること](#android--iosでできること)の表にまとめています。Windows / macOS / Linuxのネイティブホストは未実装です。
 
 今後の予定は[roadmap.md](roadmap.md)にまとめています。
