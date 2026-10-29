@@ -1,6 +1,6 @@
 {
-  "name": "Signer Lockdown installer",
-  "short_name": "Lockdown",
+  "name": "Signer installer",
+  "short_name": "Signer installer",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
