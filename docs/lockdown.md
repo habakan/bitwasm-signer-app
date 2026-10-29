@@ -39,7 +39,7 @@ Prepare the phone as in steps 1 and 4 above, then enable Developer options (tap 
 Then, in Chrome or Edge on the PC:
 
 1. Download `signer-lockdown-<version>.apk` from the release
-2. Open the [installer page](https://habakan.github.io/bitwasm-signer-app/lockdown/) and choose the APK. Check the SHA-256 it shows against `SHA256SUMS` on the release page
+2. Open the [installer page](https://habakan.github.io/bitwasm-signer-app/lockdown/) and choose the APK and `SHA256SUMS` from the same release. The page checks the APK against it and enables Install only when they match
 3. Connect the phone, pick it in the browser's dialog and allow USB debugging on the phone. If adb runs on the PC, stop it first (`adb kill-server`), or the browser cannot claim the phone
 4. The page installs Lockdown and makes it the device owner. Continue from step 5 above; applying the restrictions turns USB debugging off
 

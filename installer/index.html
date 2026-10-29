@@ -64,6 +64,15 @@
           <span class="overline">SHA-256</span>
           <code id="hash" class="data">-</code>
         </div>
+        <div class="field">
+          <span class="overline">SHA256SUMS</span>
+          <p class="note" data-ja="同じリリースの &lt;code&gt;SHA256SUMS&lt;/code&gt; も選ぶと自動で照合します。選ばないときは、上の値をリリースページの値と見比べてチェックを入れてください。">
+            Choose <code>SHA256SUMS</code> from the same release to check it automatically. Without it, compare the value
+            above with the release page and tick the box yourself.
+          </p>
+          <input id="sums" type="file" />
+          <p id="verdict" class="banner" hidden></p>
+        </div>
         <label class="check">
           <input id="matches" type="checkbox" disabled />
           <span data-ja="リリースページの SHA256SUMS と一致した">It matches SHA256SUMS on the release page</span>

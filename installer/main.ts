@@ -19,6 +19,8 @@ const langButton = document.getElementById("lang")!;
 const apkInput = document.getElementById("apk") as HTMLInputElement;
 const hash = document.getElementById("hash")!;
 const matches = document.getElementById("matches") as HTMLInputElement;
+const sumsInput = document.getElementById("sums") as HTMLInputElement;
+const verdict = document.getElementById("verdict")!;
 const installButton = document.getElementById("install") as HTMLButtonElement;
 const logArea = document.getElementById("log")!;
 const done = document.getElementById("done")!;
@@ -53,6 +55,7 @@ langButton.addEventListener("click", () => {
   lang = lang === "ja" ? "en" : "ja";
   try { localStorage.setItem(langKey, lang); } catch {}
   applyLang();
+  verify();
 });
 applyLang();
 
@@ -71,15 +74,50 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) navigator.serviceWorke
 
 const log = (line: string) => (logArea.textContent += line + "\n");
 
+let apkHash = "";
+let sums = "";
+
 apkInput.addEventListener("change", async () => {
-  matches.checked = false;
-  installButton.disabled = true;
+  apkHash = "";
+  verify();
   const apk = apkInput.files?.[0];
   if (!apk) return;
   const digest = await crypto.subtle.digest("SHA-256", await apk.arrayBuffer());
-  hash.textContent = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  matches.disabled = false;
+  apkHash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  verify();
 });
+
+sumsInput.addEventListener("change", async () => {
+  sums = (await sumsInput.files?.[0]?.text()) ?? "";
+  verify();
+});
+
+// Looks the APK up by its hash, since a browser may rename a second download to "name (1).apk"
+function verify() {
+  hash.textContent = apkHash || "-";
+  const entries = [...sums.matchAll(/^([0-9a-f]{64}) [ *](.+)$/gim)].map(([, h, name]) => ({ hash: h.toLowerCase(), name: name.trim() }));
+  const hit = entries.find((e) => e.hash === apkHash);
+  const show = (kind: string, text: string) => {
+    verdict.className = `banner banner-${kind}`;
+    verdict.textContent = text;
+  };
+  verdict.hidden = !apkHash || !sums;
+  if (!apkHash) matches.checked = false;
+  else if (!sums) {
+    // The box is ticked by hand only when there is no SHA256SUMS to check against
+    if (matches.disabled) matches.checked = false;
+  } else if (hit) {
+    matches.checked = true;
+    show("positive", t(`SHA256SUMS の ${hit.name} と一致しました`, `Matches ${hit.name} in SHA256SUMS`));
+  } else {
+    matches.checked = false;
+    if (entries.length === 0) show("warning", t("SHA256SUMS のファイルではないようです", "This does not look like a SHA256SUMS file"));
+    else if (entries.some((e) => e.name === apkInput.files?.[0]?.name)) show("danger", t("SHA256SUMS の値と一致しません。このファイルは入れないでください", "Does not match SHA256SUMS. Do not install this file"));
+    else show("warning", t("この SHA256SUMS には載っていません。同じリリースのファイルか確かめてください", "Not listed in this SHA256SUMS. Check that both files are from the same release"));
+  }
+  matches.disabled = !apkHash || !!sums;
+  installButton.disabled = !matches.checked;
+}
 
 matches.addEventListener("change", () => (installButton.disabled = !matches.checked));
 
