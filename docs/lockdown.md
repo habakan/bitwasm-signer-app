@@ -54,7 +54,7 @@ With the Android platform tools installed, `lockdown/install.sh <bitwasm-signer.
 The signer and Lockdown can be updated with the restrictions on, from an APK on a microSD card or a USB stick.
 
 1. Copy the release APK to the card
-2. In Lockdown, tap Update an app and choose the APK
+2. In Lockdown, tap Update an app from an SD card and choose the APK
 3. Check the version and SHA-256 shown against `SHA256SUMS` on the release page, then tap Update
 
 Only the signer and Lockdown packages are accepted. Android refuses an APK signed with a different key or an older version (an APK re-signed with another key was refused in testing). Lockdown keeps no expected hash, so a new signer release does not need a new Lockdown.
