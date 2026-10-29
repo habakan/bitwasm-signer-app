@@ -39,13 +39,15 @@ Prepare the phone as in steps 1 and 4 above, then enable Developer options (tap 
 Then, in Chrome or Edge on the PC:
 
 1. Download `signer-lockdown-<version>.apk` from the release
-2. Open the [installer page](https://habakan.github.io/bitwasm-signer-app/lockdown/) and choose the APK. Check the SHA-256 it shows against `SHA256SUMS` on the release page
+2. Open the [installer page](https://habakan.github.io/bitwasm-signer-app/lockdown/) and choose the APK and `SHA256SUMS` from the same release. The page checks the APK against it and enables Install only when they match
 3. Connect the phone, pick it in the browser's dialog and allow USB debugging on the phone. If adb runs on the PC, stop it first (`adb kill-server`), or the browser cannot claim the phone
 4. The page installs Lockdown and makes it the device owner. Continue from step 5 above; applying the restrictions turns USB debugging off
 
 The page (`installer/`) is built from this repository with [ya-webadb](https://github.com/yume-chan/ya-webadb) (MIT), pinned to exact versions, and talks to the phone over WebUSB. While connected it has full adb access to the phone, so close it once Lockdown is set up.
 
-To use it on a PC that stays offline, open the page once while online and install it from the browser's address bar (Chrome or Edge). The installed app then opens without a network. The build ID at the bottom of the page shows which version is cached.
+To use it on a PC that stays offline, open the page once while online and install it from the browser's address bar (Chrome or Edge). The installed app then opens without a network. The build ID in the top bar shows which version is cached.
+
+To install an APK without Lockdown, such as the signer on its own, choose Install an APK only at the top of the page (or open it with `#apk`). It only installs the APK and does not set a device owner.
 
 With the Android platform tools installed, `lockdown/install.sh <bitwasm-signer.apk> <signer-lockdown.apk>` does the same from a terminal and asks before each step.
 
