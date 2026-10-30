@@ -648,14 +648,35 @@ final class SignerPlugin: Plugin {
     guard ready(invoke) else { return }
     let entries = SeedVault.entries()
     guard !entries.isEmpty else { return Design.fail(invoke, "No seeds are saved on this device") }
-    let alert = UIAlertController(title: Design.tr("保存した鍵", "Saved seeds"), message: nil, preferredStyle: .alert)
-    for entry in entries {
-      alert.addAction(UIAlertAction(title: "\(entry.name) · \(entry.fingerprint)", style: .default) { [weak self] _ in
-        self?.chooseSaved(entry, invoke: invoke)
-      })
+    choose(Design.tr("保存した鍵", "Saved seeds"), title: Design.tr("開く鍵を選んでください", "Choose a seed to unlock"),
+           lead: Design.tr("開くときに、Face ID、Touch IDかパスコードと、付けていればパスフレーズを入力します。", "Unlocking asks for Face ID, Touch ID or the passcode, then the passphrase if the seed has one."),
+           options: entries.map { ($0.name, Design.tr("フィンガープリント \($0.fingerprint)", "Fingerprint \($0.fingerprint)")) },
+           onCancel: { Design.fail(invoke, "Unlock was cancelled") }) { [weak self] in self?.chooseSaved(entries[$0], invoke: invoke) }
+  }
+
+  // A full-screen list of choices; Back cancels
+  private func choose(_ heading: String, title: String, lead: String, options: [(String, String?)], onCancel: @escaping () -> Void, onPick: @escaping (Int) -> Void) {
+    let p = Design.palette
+    let controller = UIViewController()
+    controller.modalPresentationStyle = .fullScreen
+    controller.isModalInPresentation = true
+    controller.loadViewIfNeeded()
+    var rows: [UIView] = []
+    for (i, option) in options.enumerated() {
+      if i > 0 {
+        let divider = UIView()
+        divider.backgroundColor = p.line
+        divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        rows.append(divider)
+      }
+      rows.append(Design.row(option.0, detail: option.1) { [weak controller] in controller?.dismiss(animated: true) { onPick(i) } })
     }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Unlock was cancelled") })
-    present(alert)
+    let card = Design.card()
+    card.clipsToBounds = true
+    Design.pad(Design.stack(rows, spacing: 0), in: card, 0)
+    let content = Design.stack([Design.label(title, .display, p.ink), Design.label(lead, .body, p.inkMuted), card], spacing: DesignTokens.space4)
+    _ = Design.screen(controller, title: heading, testnet: SignerBridge.testnet, content: content, actions: []) { [weak controller] in controller?.dismiss(animated: true, completion: onCancel) }
+    present(controller)
   }
 
   @objc public func eraseSaved(_ invoke: Invoke) {
@@ -931,49 +952,125 @@ final class SignerPlugin: Plugin {
     }
   }
 
+  // The engine packs all four purposes or none, so the choice is all of them (nil) or exactly one
   @objc public func exportAccount(_ invoke: Invoke) {
-    // Tauri calls plugins off the main thread, and UIKit aborts when an alert's text field is built there
+    // Tauri calls plugins off the main thread, and UIKit views must be built on it
     guard Thread.isMainThread else { return DispatchQueue.main.async { self.exportAccount(invoke) } }
     guard ready(invoke) else { return }
     guard (try? SignerBridge.state()["loaded"] as? Bool) == true else {
       Design.fail(invoke, "Load a SeedQR first")
       return
     }
-    let choice = UIAlertController(title: Design.tr("ウォレットアプリと接続する", "Connect your wallet app"), message: nil, preferredStyle: .alert)
-    choice.addAction(UIAlertAction(title: Design.tr("まとめて渡す(UR crypto-account)", "UR crypto-account · Sparrow, Nunchuk, Keystone"), style: .default) { [weak self] _ in
-      self?.showPublicFrames(Design.tr("ウォレットアプリと接続する", "Connect your wallet app"), invoke: invoke) { try SignerBridge.accountUr(account: 0) }
-    })
-    choice.addAction(UIAlertAction(title: Design.tr("1種類だけ渡す(xpubとディスクリプター)", "xpub and descriptor · one purpose"), style: .default) { [weak self] _ in self?.exportAccountKey(invoke) })
-    choice.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Account export was cancelled") })
-    present(choice)
+    let p = Design.palette
+    let t = SignerBridge.testnet
+    let kinds: [(Int?, String, String)] = [
+      (nil, "", Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+      (84, t ? "tb1q…" : "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
+      (86, t ? "tb1p…" : "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
+      (49, t ? "2…" : "3…", Design.tr("古いウォレット向け", "For older wallets")),
+      (48, t ? "tb1q…" : "bc1q…", Design.tr("マルチシグ用・複数の鍵で管理", "Multisig · several keys")),
+    ]
+    var chosen: Int? = nil
+    let heading = Design.tr("ウォレットアプリと接続する", "Connect your wallet app")
+    let controller = UIViewController()
+    controller.modalPresentationStyle = .fullScreen
+    controller.isModalInPresentation = true
+    controller.loadViewIfNeeded()
+    let summary = Design.label("", .body, p.ink)
+    var cards: [UIControl] = []
+    var marks: [UIView] = []
+    func refresh() {
+      for (i, kind) in kinds.enumerated() {
+        let on = chosen == kind.0
+        cards[i].backgroundColor = on ? p.primarySoft : p.surfaceRaised
+        cards[i].layer.borderColor = (on ? p.primary : p.line).cgColor
+        marks[i].backgroundColor = on ? p.primary : p.surfaceRaised
+        marks[i].layer.borderWidth = on ? 6 : 2
+        marks[i].layer.borderColor = (on ? p.primarySoft : p.lineStrong).cgColor
+      }
+      summary.text = chosen.map { Design.tr("BIP\($0)のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。", "Shares the BIP\($0) xpub and descriptor, which wallets that only read an xpub accept too.") }
+        ?? Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+    }
+    for (purpose, prefix, name) in kinds {
+      let card = UIControl()
+      card.layer.cornerRadius = DesignTokens.radiusMd
+      card.layer.borderWidth = 1.5
+      // The all-at-once card shows every prefix it carries, two to a row
+      let prefixes = purpose == nil ? kinds.dropFirst().map { $0.1 } : [prefix]
+      let grid = Design.stack(stride(from: 0, to: prefixes.count, by: 2).map { i -> UIView in
+        let row = UIStackView(arrangedSubviews: prefixes[i..<min(i + 2, prefixes.count)].map { text -> UIView in
+          let label = Design.label(text, .data, p.ink)
+          label.font = .monospacedSystemFont(ofSize: prefixes.count > 1 ? 12 : 20, weight: .bold)
+          label.textAlignment = .center
+          return label
+        })
+        row.distribution = .fillEqually
+        return row
+      }, spacing: 2)
+      let well = UIView()
+      grid.translatesAutoresizingMaskIntoConstraints = false
+      well.addSubview(grid)
+      NSLayoutConstraint.activate([
+        grid.centerYAnchor.constraint(equalTo: well.centerYAnchor),
+        grid.leadingAnchor.constraint(equalTo: well.leadingAnchor, constant: 4),
+        grid.trailingAnchor.constraint(equalTo: well.trailingAnchor, constant: -4),
+      ])
+      well.backgroundColor = p.surface
+      well.layer.cornerRadius = DesignTokens.radiusSm
+      well.layer.borderWidth = 1
+      well.layer.borderColor = p.line.cgColor
+      well.clipsToBounds = true
+      well.widthAnchor.constraint(equalToConstant: 88).isActive = true
+      well.heightAnchor.constraint(equalToConstant: 48).isActive = true
+      let text = Design.stack([Design.label(name, .label, p.ink), Design.label(purpose.map { "BIP\($0)" } ?? "BIP84・86・49・48", .caption, p.inkMuted)], spacing: 2)
+      let mark = UIView()
+      mark.layer.cornerRadius = 12
+      mark.widthAnchor.constraint(equalToConstant: 24).isActive = true
+      mark.heightAnchor.constraint(equalToConstant: 24).isActive = true
+      let line = UIStackView(arrangedSubviews: [well, text, mark])
+      line.alignment = .center
+      line.spacing = DesignTokens.space3
+      line.isUserInteractionEnabled = false
+      Design.pad(line, in: card, DesignTokens.space3)
+      card.addAction(UIAction { _ in chosen = purpose; refresh() }, for: .touchUpInside)
+      cards.append(card)
+      marks.append(mark)
+    }
+    let list = Design.stack([cards[0], Design.label(Design.tr("1種類だけ渡す", "ONLY ONE KIND"), .overline, p.inkMuted)] + cards.dropFirst().map { $0 as UIView }, spacing: DesignTokens.space2)
+    list.setCustomSpacing(DesignTokens.space6, after: cards[0])
+    let content = Design.stack([
+      Design.label(Design.tr("渡す公開鍵を選ぶ", "Choose the keys to share"), .display, p.ink),
+      Design.label(Design.tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys."), .body, p.inkMuted),
+      list,
+      summary,
+    ], spacing: DesignTokens.space4)
+    let show = Design.button(Design.tr("QRを表示", "Show QR"), primary: true)
+    show.addAction(UIAction { [weak self, weak controller] _ in
+      controller?.dismiss(animated: true) {
+        if let purpose = chosen { self?.exportAccountKey(invoke, purpose: purpose) }
+        else { self?.showPublicFrames(heading, invoke: invoke) { try SignerBridge.accountUr(account: 0) } }
+      }
+    }, for: .touchUpInside)
+    _ = Design.screen(controller, title: heading, testnet: t, content: content, actions: [show]) { [weak controller] in
+      controller?.dismiss(animated: true) { Design.fail(invoke, "Account export was cancelled") }
+    }
+    refresh()
+    present(controller)
   }
 
-  private func exportAccountKey(_ invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("公開鍵を1種類だけ渡す", "Export one account"), message: Design.tr("BIP48(マルチシグ)・BIP49・BIP84・BIP86", "BIP48 (multisig) · BIP49 · BIP84 · BIP86"), preferredStyle: .alert)
-    alert.addTextField { field in field.text = "84"; field.keyboardType = .numberPad; field.placeholder = Design.tr("種類", "Purpose") }
-    alert.addTextField { field in field.text = "0"; field.keyboardType = .numberPad; field.placeholder = Design.tr("アカウントの番号", "Account index") }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Account export was cancelled") })
-    alert.addAction(UIAlertAction(title: Design.tr("QRを表示", "Show QR"), style: .default) { [weak self] _ in
-      guard let self,
-            let purpose = Int(alert.textFields?[0].text ?? ""), [48, 49, 84, 86].contains(purpose),
-            let account = Int(alert.textFields?[1].text ?? ""), account >= 0 else {
-        Design.fail(invoke, "Use purpose 48, 49, 84, or 86 and a nonnegative account index")
-        return
-      }
-      self.worker.async {
-        do {
-          let frames = try SignerBridge.account(purpose: purpose, account: account)
-          DispatchQueue.main.async {
-            self.showQr(frames, title: Design.tr("BIP\(purpose)・アカウント \(account)", "BIP\(purpose) · account \(account)"), interval: 1.5) {
-              invoke.resolve(["loaded": true, "fingerprint": (try? SignerBridge.state()["fingerprint"]) as? String, "testnet": SignerBridge.testnet, "shown": true])
-            }
+  private func exportAccountKey(_ invoke: Invoke, purpose: Int) {
+    worker.async {
+      do {
+        let frames = try SignerBridge.account(purpose: purpose, account: 0)
+        DispatchQueue.main.async {
+          self.showQr(frames, title: "BIP\(purpose)", interval: 1.5) {
+            invoke.resolve(["loaded": true, "fingerprint": (try? SignerBridge.state()["fingerprint"]) as? String, "testnet": SignerBridge.testnet, "shown": true])
           }
-        } catch {
-          DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
         }
+      } catch {
+        DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
       }
-    })
-    present(alert)
+    }
   }
 
   @objc public func registerMultisig(_ invoke: Invoke) {
@@ -1288,11 +1385,10 @@ final class SignerPlugin: Plugin {
   }
 
   private func chooseSeedQrFormat(_ phrase: String, invoke: Invoke) {
-    let alert = UIAlertController(title: Design.tr("SeedQRの形式", "SeedQR format"), message: nil, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: Design.tr("標準のSeedQR", "Standard SeedQR"), style: .default) { [weak self] _ in self?.displaySeedQr(phrase, compact: false, invoke: invoke) })
-    alert.addAction(UIAlertAction(title: "CompactSeedQR", style: .default) { [weak self] _ in self?.displaySeedQr(phrase, compact: true, invoke: invoke) })
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in invoke.resolve(["shown": false]) })
-    present(alert)
+    choose(Design.tr("SeedQRの形式", "SeedQR format"), title: Design.tr("形式を選んでください", "Choose a format"),
+           lead: Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+           options: [(Design.tr("標準のSeedQR", "Standard SeedQR"), Design.tr("多くのウォレットが対応", "Works with most wallets")), ("CompactSeedQR", Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only"))],
+           onCancel: { invoke.resolve(["shown": false]) }) { [weak self] in self?.displaySeedQr(phrase, compact: $0 == 1, invoke: invoke) }
   }
 
   private func displaySeedQr(_ phrase: String, compact: Bool, invoke: Invoke) {
@@ -2804,11 +2900,16 @@ private final class AnimatedQRViewController: UIViewController {
     image.contentMode = .scaleAspectFit
     image.translatesAutoresizingMaskIntoConstraints = false
     qrArea.addSubview(image)
+    // The area can end up taller than wide, so the square fits the shorter side instead of overflowing the sides
+    let fill = image.heightAnchor.constraint(equalTo: qrArea.heightAnchor, constant: -24)
+    fill.priority = .defaultHigh
     NSLayoutConstraint.activate([
       image.centerXAnchor.constraint(equalTo: qrArea.centerXAnchor),
       image.centerYAnchor.constraint(equalTo: qrArea.centerYAnchor),
       image.widthAnchor.constraint(equalTo: image.heightAnchor),
-      image.heightAnchor.constraint(equalTo: qrArea.heightAnchor, constant: -24),
+      image.heightAnchor.constraint(lessThanOrEqualTo: qrArea.heightAnchor, constant: -24),
+      image.widthAnchor.constraint(lessThanOrEqualTo: qrArea.widthAnchor, constant: -24),
+      fill,
     ])
 
     for index in 0..<min(frames.count, 6) {
