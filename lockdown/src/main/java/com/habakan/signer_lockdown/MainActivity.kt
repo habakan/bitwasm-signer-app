@@ -278,11 +278,12 @@ class MainActivity : Activity() {
         val locked = active.size == Policy.RESTRICTIONS.size
         if (locked) badge(tr("ロック中", "Locked"), p.positiveBg, p.positive)
         else badge(tr("未ロック", "Not locked"), p.warningBg, p.warning)
+        val (hidden, hideable) = policy.hiddenCount()
         listOf(
             tr("署名アプリ", "Signer") to (policy.signerVersion ?: tr("未インストール", "Not installed")),
             tr("機内モード", "Airplane mode") to if (policy.isAirplaneModeOn) tr("オン", "On") else tr("オフ", "Off"),
             tr("保存済みの Wi-Fi", "Saved Wi-Fi networks") to "${policy.savedWifiCount}",
-            tr("非表示のアプリ", "Hidden apps") to "${policy.hiddenCount()} / ${policy.hiddenPackages.size}",
+            tr("非表示のアプリ", "Hidden apps") to "$hidden / $hideable",
             tr("制限", "Restrictions") to "${active.size} / ${Policy.RESTRICTIONS.size}",
         ).forEachIndexed { i, (label, value) ->
             if (i > 0) statusRows.addView(View(this).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)))

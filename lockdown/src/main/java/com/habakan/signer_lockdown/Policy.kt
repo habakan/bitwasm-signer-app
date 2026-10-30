@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -99,7 +100,14 @@ class Policy(private val context: Context) {
         return RESTRICTIONS.filter { active.getBoolean(it) }
     }
 
-    fun hiddenCount() = hiddenPackages.count { dpm.isApplicationHidden(admin, it) }
+    // Android reports a package that is not installed as hidden, so only installed ones are counted.
+    // MATCH_UNINSTALLED_PACKAGES still finds the ones hidden here
+    fun hiddenCount(): Pair<Int, Int> {
+        val installed = hiddenPackages.filter {
+            runCatching { context.packageManager.getPackageInfo(it, PackageManager.MATCH_UNINSTALLED_PACKAGES) }.isSuccess
+        }
+        return installed.count { dpm.isApplicationHidden(admin, it) } to installed.size
+    }
 
     // Only a device owner can see and remove Wi-Fi networks saved by others. Listing them needs location permission
     @Suppress("DEPRECATION")
