@@ -211,9 +211,53 @@ enum Design {
       line.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -DesignTokens.space3),
       footer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: DesignTokens.space4),
       footer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -DesignTokens.space4),
-      footer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -DesignTokens.space3),
+      // Above the keyboard while one is up, otherwise at the safe area's bottom
+      footer.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor, constant: -DesignTokens.space3),
     ])
     return scroll
+  }
+
+  // One labelled value; addresses go in a sunken well in groups of four so they can be read aloud
+  static func field(_ title: String, _ value: UIView, note: String? = nil) -> UIView {
+    var views: [UIView] = [label(title, .overline, palette.inkMuted), value]
+    if let note { views.append(label(note, .caption, palette.inkMuted)) }
+    return stack(views, spacing: DesignTokens.space2)
+  }
+
+  static func well(_ text: String, grouped: Bool) -> UIView {
+    well(label(grouped ? stride(from: 0, to: text.count, by: 4).map { i -> String in
+      let start = text.index(text.startIndex, offsetBy: i)
+      return String(text[start..<(text.index(start, offsetBy: 4, limitedBy: text.endIndex) ?? text.endIndex)])
+    }.joined(separator: " ") : text, .data, palette.ink))
+  }
+
+  // A well around a label the caller keeps, to change its text later
+  static func well(_ value: UILabel) -> UIView {
+    let well = UIView()
+    well.backgroundColor = palette.surfaceSunken
+    well.layer.cornerRadius = DesignTokens.radiusSm
+    value.lineBreakMode = .byCharWrapping
+    pad(value, in: well, DesignTokens.space3)
+    return well
+  }
+
+  static func input(_ placeholder: String) -> UITextField {
+    let p = palette
+    let field = UITextField()
+    field.attributedPlaceholder = NSAttributedString(string: placeholder, attributes: [.foregroundColor: p.inkMuted])
+    field.font = font(.data)
+    field.textColor = p.ink
+    field.backgroundColor = p.surfaceRaised
+    field.layer.cornerRadius = DesignTokens.radiusMd
+    field.layer.borderWidth = 1
+    field.layer.borderColor = p.lineStrong.cgColor
+    field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: DesignTokens.space3, height: 1))
+    field.leftViewMode = .always
+    field.autocorrectionType = .no
+    field.spellCheckingType = .no
+    field.autocapitalizationType = .none
+    field.heightAnchor.constraint(greaterThanOrEqualToConstant: DesignTokens.controlHeight).isActive = true
+    return field
   }
 
   // Where a new wallet is among its three steps: one bar a step, filled up to this one, and its name

@@ -31,6 +31,7 @@ class QrScanActivity : AppCompatActivity() {
     private var parser: Parser? = null
     private val psbtMode get() = intent.getStringExtra("mode") == "psbt"
     private val multisigMode get() = intent.getStringExtra("mode") == "multisig"
+    private val addressMode get() = intent.getStringExtra("mode") == "address"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +41,8 @@ class QrScanActivity : AppCompatActivity() {
         previewView = PreviewView(this)
         val cancel = { setResult(Activity.RESULT_CANCELED); finish() }
         val (title, term, help) = when {
+            addressMode -> Triple(tr("アドレスのQRを読み取る", "Scan an address QR"), tr("アドレス・bitcoin: URI", "Address or bitcoin: URI"),
+                tr("ウォレットアプリの受け取り画面に出るQRを読み取ります。", "Show the QR from your wallet app's receive screen."))
             multisigMode -> Triple(tr("マルチシグの設定を読み取る", "Scan a multisig setup"), tr("BSMS・ディスクリプター", "BSMS or descriptor"),
                 tr("ディスクリプター、BSMS、Coldcardの書き出し、またはアニメーションQR(ur:crypto-output・ur:bytes)を読み取ります。", "Show a descriptor, BSMS or Coldcard export, or an animated ur:crypto-output or legacy ur:bytes QR."))
             psbtMode -> Triple(tr("取引のQRを読み取る", "Scan the transaction QR"), "UR crypto-psbt",
@@ -95,7 +98,8 @@ class QrScanActivity : AppCompatActivity() {
                 scanner.process(InputImage.fromMediaImage(media, imageProxy.imageInfo.rotationDegrees))
                     .addOnSuccessListener { codes ->
                         val barcode = codes.firstOrNull { it.format == Barcode.FORMAT_QR_CODE } ?: return@addOnSuccessListener
-                        if (multisigMode) barcode.rawValue?.let(::acceptMultisig)
+                        if (addressMode) barcode.rawValue?.let { if (accepted.compareAndSet(false, true)) finishWith(it) }
+                        else if (multisigMode) barcode.rawValue?.let(::acceptMultisig)
                         else if (psbtMode) barcode.rawValue?.let(::acceptPsbt)
                         else acceptSeedQr(barcode)
                     }

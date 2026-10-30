@@ -859,7 +859,7 @@ final class SignerPlugin: Plugin {
           if payload.data.count == 64 {
             self.loadSeed(invoke) { try SignerBridge.loadSeedQr(payload.data) }
           } else {
-            self.askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), seed: (payload.data, false), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+            self.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (payload.data, false), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
               self.loadSeed(invoke, saving: self.entropy(seedQr: payload.data)) { try SignerBridge.loadSeedQr(payload.data, passphrase: passphrase) }
             }
           }
@@ -934,7 +934,7 @@ final class SignerPlugin: Plugin {
     let entry = MnemonicEntryViewController(words: SignerBridge.words)
     entry.onCancel = { Design.fail(invoke, "Seed import was cancelled") }
     entry.onPhrase = { [weak self] phrase in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), seed: (Data(phrase.utf8), true), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) { try SignerBridge.loadMnemonic(phrase, passphrase: passphrase) }
       }
     }
@@ -944,58 +944,72 @@ final class SignerPlugin: Plugin {
   // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads.
   // seed is a SeedQR payload or, when the flag is set, mnemonic words
   private func askPassphrase(_ title: String, seed: (Data, Bool), onCancel: @escaping () -> Void, onContinue: @escaping (String) -> Void) {
+    let p = Design.palette
     let working = Design.tr("計算しています…", "Working…")
-    var plain = working
-    var typed: String?
+    let none = Design.tr("入力すると表示します", "Shown as you type")
     var generation = 0
     var pending: DispatchWorkItem?
-    var observer: NSObjectProtocol?
-    let alert = UIAlertController(title: title, message: nil, preferredStyle: .alert)
-    func show() {
-      alert.message = Design.tr("パスフレーズを付けていない場合は、空のまま続けてください。\n\nフィンガープリント\nパスフレーズなし: \(plain)", "Leave blank if this seed has no passphrase.\n\nFingerprint\nNo passphrase: \(plain)")
-        + (typed.map { Design.tr("\n入力したパスフレーズ: \($0)", "\nThis passphrase: \($0)") } ?? "")
-    }
+    let plain = Design.label(working, .data, p.ink)
+    let typed = Design.label(none, .data, p.ink)
     func preview(_ passphrase: String, done: @escaping (String) -> Void) {
       worker.async {
         let value = (try? SignerBridge.previewFingerprint(seed.0, mnemonic: seed.1, passphrase: passphrase)).map { "\($0.prefix(4)) \($0.dropFirst(4))" }
         DispatchQueue.main.async { done(value ?? Design.tr("計算できません", "Unavailable")) }
       }
     }
-    func finish() {
+    func stop() {
       pending?.cancel()
       generation += 1
-      observer.map(NotificationCenter.default.removeObserver)
     }
-    alert.addTextField { field in
-      field.placeholder = Design.tr("パスフレーズ(なくてもかまいません)", "Optional BIP39 passphrase")
-      field.isSecureTextEntry = true
-      field.autocorrectionType = .no
-      field.spellCheckingType = .no
-      field.autocapitalizationType = .none
-      // Waits for typing to pause, since each fingerprint runs the 2048 round BIP39 stretch
-      observer = NotificationCenter.default.addObserver(forName: UITextField.textDidChangeNotification, object: field, queue: .main) { _ in
-        generation += 1
-        let asked = generation
-        pending?.cancel()
-        let text = field.text ?? ""
-        typed = text.isEmpty ? nil : working
-        show()
-        guard !text.isEmpty else { return }
-        let item = DispatchWorkItem { preview(text) { if asked == generation { typed = $0; show() } } }
-        pending = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: item)
-      }
+    let field = Design.input(Design.tr("パスフレーズ", "Passphrase"))
+    field.isSecureTextEntry = true
+    // Waits for typing to pause, since each fingerprint runs the 2048 round BIP39 stretch
+    field.addAction(UIAction { _ in
+      generation += 1
+      let asked = generation
+      pending?.cancel()
+      let text = field.text ?? ""
+      typed.text = text.isEmpty ? none : working
+      guard !text.isEmpty else { return }
+      let item = DispatchWorkItem { preview(text) { if asked == generation { typed.text = $0 } } }
+      pending = item
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: item)
+    }, for: .editingChanged)
+    let divider = UIView()
+    divider.backgroundColor = p.line
+    divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
+    let card = Design.card()
+    Design.pad(Design.stack([
+      Design.field(Design.tr("パスフレーズなし", "WITHOUT A PASSPHRASE"), Design.well(plain)),
+      divider,
+      Design.field(Design.tr("入力したパスフレーズ", "WITH THIS PASSPHRASE"), Design.well(typed),
+                   note: Design.tr("控えておいたフィンガープリントと同じか確かめてください。1文字違うだけで別の鍵になります。", "Check it matches the fingerprint you noted. One wrong character makes a different key.")),
+    ], spacing: DesignTokens.space4), in: card)
+    let controller = UIViewController()
+    controller.modalPresentationStyle = .fullScreen
+    controller.isModalInPresentation = true
+    controller.loadViewIfNeeded()
+    let next = Design.button(Design.tr("続ける", "Continue"), primary: true)
+    next.addAction(UIAction { [weak controller] _ in
+      stop()
+      let passphrase = field.text ?? ""
+      field.text = ""
+      controller?.dismiss(animated: true) { onContinue(passphrase) }
+    }, for: .touchUpInside)
+    let content = Design.stack([
+      Design.label(Design.tr("パスフレーズを入力する", "Enter the passphrase"), .display, p.ink),
+      Design.label(Design.tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue."), .body, p.inkMuted),
+      field,
+      Design.label(Design.tr("フィンガープリント", "FINGERPRINT"), .overline, p.inkMuted),
+      card,
+    ], spacing: DesignTokens.space4)
+    _ = Design.screen(controller, title: title, testnet: SignerBridge.testnet, content: content, actions: [next]) { [weak controller] in
+      stop()
+      field.text = ""
+      controller?.dismiss(animated: true, completion: onCancel)
     }
-    show()
-    preview("") { plain = $0; show() }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in finish(); onCancel() })
-    alert.addAction(UIAlertAction(title: Design.tr("続ける", "Continue"), style: .default) { _ in
-      finish()
-      let passphrase = alert.textFields?.first?.text ?? ""
-      alert.textFields?.first?.text = ""
-      onContinue(passphrase)
-    })
-    present(alert)
+    present(controller)
+    preview("") { plain.text = $0 }
   }
 
   private func loadSeed(_ invoke: Invoke, saving entropy: Data? = nil, _ operation: @escaping () throws -> [String: Any]) {
@@ -1319,33 +1333,116 @@ final class SignerPlugin: Plugin {
       Design.fail(invoke, "Load a seed first")
       return
     }
-    let alert = UIAlertController(title: Design.tr("アドレスを確認する", "Check an address"), message: nil, preferredStyle: .alert)
-    alert.addTextField { field in field.placeholder = Design.tr("ビットコインのアドレスかURI", "Bitcoin address or URI"); field.autocapitalizationType = .none }
-    alert.addTextField { field in field.text = "0"; field.keyboardType = .numberPad; field.placeholder = Design.tr("アカウントの番号", "Account index") }
-    alert.addTextField { field in field.text = "1000"; field.keyboardType = .numberPad; field.placeholder = Design.tr("調べるアドレスの数", "Addresses per chain") }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Address search was cancelled") })
-    alert.addAction(UIAlertAction(title: Design.tr("調べる", "Search"), style: .default) { [weak self] _ in
-      guard let self,
-            let address = alert.textFields?[0].text, !address.isEmpty,
-            let account = Int(alert.textFields?[1].text ?? ""), account >= 0, account <= Int(Int32.max),
-            let count = Int(alert.textFields?[2].text ?? ""), (1...100_000).contains(count) else {
-        Design.fail(invoke, "Enter an address, account, and search range")
+    let p = Design.palette
+    let address = Design.input(Design.tr("アドレスかbitcoin: URI", "Address or bitcoin: URI"))
+    address.keyboardType = .asciiCapable
+    let account = Design.input("")
+    account.text = "0"
+    account.keyboardType = .numberPad
+    let count = Design.input("")
+    count.text = "1000"
+    count.keyboardType = .numberPad
+    let range = UIStackView(arrangedSubviews: [
+      Design.stack([Design.label(Design.tr("アカウント", "Account"), .caption, p.inkMuted), account], spacing: DesignTokens.space1),
+      Design.stack([Design.label(Design.tr("それぞれ探す数", "Addresses per chain"), .caption, p.inkMuted), count], spacing: DesignTokens.space1),
+    ])
+    range.distribution = .fillEqually
+    range.spacing = DesignTokens.space3
+    let problem = Design.label("", .caption, p.danger)
+    problem.isHidden = true
+    let controller = UIViewController()
+    controller.modalPresentationStyle = .fullScreen
+    controller.isModalInPresentation = true
+    controller.loadViewIfNeeded()
+    func search() {
+      let text = (address.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !text.isEmpty, let accountValue = Int(account.text ?? ""), accountValue >= 0, accountValue <= Int(Int32.max),
+            let countValue = Int(count.text ?? ""), (1...100_000).contains(countValue) else {
+        problem.text = Design.tr("アドレスと、0以上のアカウント、1〜100000の探す数を入れてください。", "Enter an address, an account of 0 or more, and 1 to 100000 addresses.")
+        problem.isHidden = false
         return
       }
-      self.worker.async {
-        do {
-          let result = try SignerBridge.findAddress(address, account: account, count: count)
-          let found = result["found"] as? Bool == true
-          let detail = found
-            ? Design.tr("このウォレットのアドレスです。\((result["chain"] as? Int ?? 0) == 0 ? "受け取り" : "おつり")の\(result["index"] as? Int ?? 0)番目(アカウント \(account))。", "Found on the \((result["chain"] as? Int ?? 0) == 0 ? "receive" : "change") chain at index \(result["index"] as? Int ?? 0) (account \(account)).")
-            : Design.tr("受け取りとおつりの最初の\(count)個には見つかりませんでした。", "Address not found in the first \(count) receive and change addresses.")
-          DispatchQueue.main.async { self.showInfo(Design.tr("アドレスの確認", "Address search"), message: detail, invoke: invoke) }
-        } catch {
-          DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
+      let shown = String((text.lowercased().hasPrefix("bitcoin:") ? String(text.dropFirst(8)) : text).split(separator: "?", omittingEmptySubsequences: false).first ?? "")
+      controller.dismiss(animated: true) {
+        self.worker.async {
+          do {
+            let result = try SignerBridge.findAddress(shown, account: accountValue, count: countValue)
+            DispatchQueue.main.async { self.showAddressResult(shown, account: accountValue, count: countValue, result: result, invoke: invoke) }
+          } catch {
+            DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
+          }
         }
       }
-    })
-    present(alert)
+    }
+    let scan = Design.button(Design.tr("QRを読み取る", "Scan a QR"), primary: false)
+    scan.addAction(UIAction { [weak self] _ in
+      // Without the camera the address can still be typed, so a refusal leaves this screen open
+      self?.requestCamera(invoke, denied: {
+        problem.text = Design.tr("カメラを使えません。アドレスを入力してください。", "The camera is not available. Type the address.")
+        problem.isHidden = false
+      }) {
+        let scanner = QRScannerViewController(mode: .address)
+        scanner.onCancel = {}
+        scanner.onError = { _ in scanner.close {} }
+        scanner.onCode = { [weak scanner] payload in
+          guard let scanner, let text = payload.text else { return }
+          scanner.close {
+            address.text = text
+            search()
+          }
+        }
+        self?.present(scanner)
+      }
+    }, for: .touchUpInside)
+    let check = Design.button(Design.tr("調べる", "Check"), primary: true)
+    check.addAction(UIAction { _ in search() }, for: .touchUpInside)
+    let content = Design.stack([
+      Design.label(Design.tr("アドレスを確認する", "Check an address"), .display, p.ink),
+      Design.label(Design.tr("ウォレットアプリに出た受け取りのアドレスが、この鍵のものか確かめます。QRを読み取るか、アドレスを入力してください。",
+                             "Check that a receive address shown in your wallet app belongs to this key. Scan its QR or type it."), .body, p.inkMuted),
+      address,
+      problem,
+      Design.label(Design.tr("探す範囲", "SEARCH RANGE"), .overline, p.inkMuted),
+      range,
+      Design.label(Design.tr("受け取りとおつりのアドレスを、それぞれ最初から探す数だけ調べます。", "The first addresses of the receive and change chains are checked, this many of each."), .caption, p.inkMuted),
+    ], spacing: DesignTokens.space4)
+    _ = Design.screen(controller, title: Design.tr("アドレスの確認", "Address check"), testnet: SignerBridge.testnet, content: content, actions: [scan, check]) { [weak controller] in
+      controller?.dismiss(animated: true) { Design.fail(invoke, "Address search was cancelled") }
+    }
+    present(controller)
+  }
+
+  private func showAddressResult(_ address: String, account: Int, count: Int, result: [String: Any], invoke: Invoke) {
+    let p = Design.palette
+    let found = result["found"] as? Bool == true
+    var rows: [UIView] = [Design.field(Design.tr("アドレス", "ADDRESS"), Design.well(address, grouped: true))]
+    if found {
+      let chain = (result["chain"] as? Int ?? 0) == 0 ? Design.tr("受け取り", "Receive") : Design.tr("おつり", "Change")
+      let index = result["index"] as? Int ?? 0
+      rows.append(Design.field(Design.tr("場所", "WHERE"), Design.label(Design.tr("\(chain)・番号 \(index)", "\(chain) · index \(index)"), .data, p.ink),
+                               note: Design.tr("アカウント \(account)", "Account \(account)")))
+    }
+    let card = Design.card()
+    Design.pad(Design.stack(rows, spacing: DesignTokens.space4), in: card)
+    let content = Design.stack([
+      Design.label(found ? Design.tr("このウォレットのアドレスです", "This address is yours") : Design.tr("見つかりませんでした", "Not found"), .display, p.ink),
+      Design.label(found ? Design.tr("この鍵から作られたアドレスです。", "It was made from this key.")
+                         : Design.tr("アカウント \(account) の受け取りとおつり、それぞれ最初の\(count)個にはありません。別のウォレットのアドレスか、探す範囲の外です。",
+                                     "It is not among the first \(count) receive and change addresses of account \(account). It belongs to another wallet or lies outside the range."), .body, p.inkMuted),
+      card,
+    ], spacing: DesignTokens.space4)
+    let controller = UIViewController()
+    controller.modalPresentationStyle = .fullScreen
+    controller.isModalInPresentation = true
+    controller.loadViewIfNeeded()
+    let again = Design.button(Design.tr("別のアドレスを調べる", "Check another address"), primary: false)
+    again.addAction(UIAction { [weak self, weak controller] _ in controller?.dismiss(animated: true) { self?.findAddress(invoke) } }, for: .touchUpInside)
+    let done = Design.button(Design.tr("完了", "Done"), primary: true)
+    done.addAction(UIAction { [weak controller] _ in controller?.dismiss(animated: true) { invoke.resolve(["shown": true]) } }, for: .touchUpInside)
+    _ = Design.screen(controller, title: Design.tr("アドレスの確認", "Address check"), testnet: SignerBridge.testnet, content: content, actions: [again, done]) { [weak controller] in
+      controller?.dismiss(animated: true) { invoke.resolve(["shown": true]) }
+    }
+    present(controller)
   }
 
   @objc public func signMessage(_ invoke: Invoke) {
@@ -1432,7 +1529,7 @@ final class SignerPlugin: Plugin {
     forgetOrigin()
     alert.addAction(UIAlertAction(title: Design.tr("完了", "Done"), style: .cancel) { _ in invoke.resolve(["shown": true]) })
     alert.addAction(UIAlertAction(title: Design.tr("読み込む", "Load it"), style: .default) { [weak self] _ in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), seed: (Data(phrase.utf8), true), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) {
           try SignerBridge.loadMnemonic(phrase, passphrase: passphrase).merging(["shown": true]) { $1 }
         }
@@ -1498,19 +1595,19 @@ final class SignerPlugin: Plugin {
     return false
   }
 
-  private func requestCamera(_ invoke: Invoke, proceed: @escaping () -> Void) {
+  private func requestCamera(_ invoke: Invoke, denied: (() -> Void)? = nil, proceed: @escaping () -> Void) {
     switch AVCaptureDevice.authorizationStatus(for: .video) {
     case .authorized:
       DispatchQueue.main.async(execute: proceed)
     case .notDetermined:
       AVCaptureDevice.requestAccess(for: .video) { granted in
         DispatchQueue.main.async {
-          granted ? proceed() : Design.fail(invoke, "Camera permission was denied")
+          granted ? proceed() : (denied ?? { Design.fail(invoke, "Camera permission was denied") })()
         }
       }
     default:
       DispatchQueue.main.async {
-        Design.fail(invoke, "Camera permission was denied. Enable it in Settings to scan QR codes.")
+        (denied ?? { Design.fail(invoke, "Camera permission was denied. Enable it in Settings to scan QR codes.") })()
       }
     }
   }
@@ -1578,12 +1675,14 @@ private enum ScanMode: Equatable {
   case seed
   case psbt
   case multisig
+  case address
 
   var title: String {
     switch self {
     case .seed: return Design.tr("バックアップのQRを読み取る", "Scan your backup QR")
     case .psbt: return Design.tr("取引のQRを読み取る", "Scan the transaction QR")
     case .multisig: return Design.tr("マルチシグの設定を読み取る", "Scan a multisig setup")
+    case .address: return Design.tr("アドレスのQRを読み取る", "Scan an address QR")
     }
   }
   var term: String {
@@ -1591,6 +1690,7 @@ private enum ScanMode: Equatable {
     case .seed: return Design.tr("SeedQR・CompactSeedQR・64バイトのシード", "SeedQR, CompactSeedQR or a 64-byte seed")
     case .psbt: return "UR crypto-psbt"
     case .multisig: return Design.tr("BSMS・ディスクリプター", "BSMS or descriptor")
+    case .address: return Design.tr("アドレス・bitcoin: URI", "Address or bitcoin: URI")
     }
   }
   var instruction: String {
@@ -1598,6 +1698,7 @@ private enum ScanMode: Equatable {
     case .seed: return Design.tr("鍵はこのiPhoneの中でだけ用意します。読み取った内容は表示しません。", "The key is prepared on this iPhone only. What is scanned is never shown.")
     case .psbt: return Design.tr("ウォレットアプリのアニメーションQRをカメラに向けてください。読み取りは自動で進みます。", "Point the camera at your wallet app's animated QR. Scanning continues as frames arrive.")
     case .multisig: return Design.tr("ディスクリプター、BSMS、Coldcardの書き出し、またはur:bytesのQRを読み取ります。", "Show a descriptor, BSMS or Coldcard export, or its ur:bytes.")
+    case .address: return Design.tr("ウォレットアプリの受け取り画面に出るQRを読み取ります。", "Show the QR from your wallet app's receive screen.")
     }
   }
 }
@@ -2759,35 +2860,13 @@ private final class TransactionReviewViewController: UIViewController, UIScrollV
     scroll.delegate = self
   }
 
-  // One labelled value; addresses go in a sunken well in groups of four so they can be read aloud
-  private func field(_ label: String, _ value: UIView, note: String? = nil) -> UIView {
-    let p = Design.palette
-    var views: [UIView] = [Design.label(label, .overline, p.inkMuted), value]
-    if let note { views.append(Design.label(note, .caption, p.inkMuted)) }
-    return Design.stack(views, spacing: DesignTokens.space2)
-  }
-
-  private func well(_ text: String, grouped: Bool) -> UIView {
-    let p = Design.palette
-    let well = UIView()
-    well.backgroundColor = p.surfaceSunken
-    well.layer.cornerRadius = DesignTokens.radiusSm
-    let label = Design.label(grouped ? stride(from: 0, to: text.count, by: 4).map { i -> String in
-      let start = text.index(text.startIndex, offsetBy: i)
-      return String(text[start..<(text.index(start, offsetBy: 4, limitedBy: text.endIndex) ?? text.endIndex)])
-    }.joined(separator: " ") : text, .data, p.ink)
-    label.lineBreakMode = .byCharWrapping
-    Design.pad(label, in: well, DesignTokens.space3)
-    return well
-  }
-
   private func summaryCard() -> UIView {
     let p = Design.palette
     let card = Design.card()
     Design.pad(Design.stack([
-      field(Design.tr("送る金額", "Amount sent"), Design.label("\(btc(review.spend)) BTC", .amount, p.accentInk)),
-      field(Design.tr("ネットワーク手数料", "Network fee"), Design.label("\(btc(review.fee)) BTC", .data, p.ink), note: Design.tr("受取人ではなく、マイナーに支払われます。", "Paid to miners, not to the recipient.")),
-      field(Design.tr("署名する入力", "Inputs to sign"), Design.label(Design.tr("\(review.signatures)件", "\(review.signatures)"), .data, p.ink),
+      Design.field(Design.tr("送る金額", "Amount sent"), Design.label("\(btc(review.spend)) BTC", .amount, p.accentInk)),
+      Design.field(Design.tr("ネットワーク手数料", "Network fee"), Design.label("\(btc(review.fee)) BTC", .data, p.ink), note: Design.tr("受取人ではなく、マイナーに支払われます。", "Paid to miners, not to the recipient.")),
+      Design.field(Design.tr("署名する入力", "Inputs to sign"), Design.label(Design.tr("\(review.signatures)件", "\(review.signatures)"), .data, p.ink),
             note: Design.tr("入力の合計 \(btc(review.totalIn)) BTC", "Total input \(btc(review.totalIn)) BTC")),
     ], spacing: DesignTokens.space4), in: card)
     return card
@@ -2805,7 +2884,7 @@ private final class TransactionReviewViewController: UIViewController, UIScrollV
       : !external ? Design.tr("このウォレットのアドレスに送ります。", "Sent to an address of this wallet.")
       : kind == "OP_RETURN" ? Design.tr("OP_RETURNのデータ(16進)", "OP_RETURN data (hex)")
       : kind != "Address" ? Design.tr("スクリプト(16進)", "Script (hex)") : nil
-    var values: [UIView] = [well(text.isEmpty ? Design.tr("(なし)", "(none)") : text, grouped: kind == "Address"),
+    var values: [UIView] = [Design.well(text.isEmpty ? Design.tr("(なし)", "(none)") : text, grouped: kind == "Address"),
                             Design.label("\(btc(amount)) BTC", external ? .amount : .data, external ? p.accentInk : p.ink)]
     if kind == "OP_RETURN" && amount > 0 {
       values.append(Design.label(Design.tr("この金額は失われます。OP_RETURNの出力は使えません。", "This amount is burned: an OP_RETURN output can never be spent."), .caption, p.danger))
@@ -2825,7 +2904,7 @@ private final class TransactionReviewViewController: UIViewController, UIScrollV
     checks.append(check)
 
     let card = Design.card()
-    Design.pad(Design.stack([field("\(name) \(index)/\(review.outputs.count)", Design.stack(values, spacing: DesignTokens.space2), note: note), check],
+    Design.pad(Design.stack([Design.field("\(name) \(index)/\(review.outputs.count)", Design.stack(values, spacing: DesignTokens.space2), note: note), check],
                             spacing: DesignTokens.space2), in: card)
     return card
   }
