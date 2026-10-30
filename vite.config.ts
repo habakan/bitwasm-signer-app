@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
   base: "./",
   // `--mode pwa` builds the installable signer, published at <pages>/app/
   publicDir: mode === "pwa" ? "web/pwa" : "public",
-  plugins: mode === "pwa" ? [offlineSw("signer"), {
+  plugins: mode === "pwa" ? [offlineSw("signer", true), {
     name: "pwa-head",
     transformIndexHtml: () => [
       { tag: "link", attrs: { rel: "manifest", href: "./manifest.webmanifest" }, injectTo: "head" as const },
