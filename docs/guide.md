@@ -22,7 +22,7 @@ demo:
 
 <sup>[日本語](ja/guide.md)</sup>
 
-This page walks through the signer from setting up a phone to sending bitcoin. As you scroll, the phone on the right moves to the screen each section talks about. It runs the browser demo, the same Rust signing engine as the app built to WebAssembly, on testnet with the published BIP39 test words, so you can tap through it yourself. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
+This page walks through the signer from setting up a phone to sending bitcoin. As you scroll, the phone on the right moves to the screen each section talks about. It runs the browser demo, the same Rust signing engine as the app built to WebAssembly, on testnet with the published BIP39 test words, so you can tap through it yourself: switch to **Try it yourself** above the phone, and the text moves to the section for whatever you tap. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
 
 ## The idea {#overview}
 

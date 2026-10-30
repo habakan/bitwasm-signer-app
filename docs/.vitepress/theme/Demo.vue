@@ -18,7 +18,7 @@ const scale = ref(0.8);
 const fit = () => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   const room = figure.value?.parentElement?.clientWidth ?? width;
-  scale.value = Math.min(1, (innerHeight - nav - 150) / height, room / width);
+  scale.value = Math.min(1, (innerHeight - nav - 190) / height, room / width);
 };
 
 // `demo:` maps section ids to steps on a fresh demo: "#id" taps every match, "scroll:<selector>" scrolls it
@@ -104,10 +104,13 @@ const reset = () => {
 
 <template>
   <figure ref="figure" class="demo" :style="{ width: `${width * scale}px` }">
+    <div class="modes" role="group" :aria-label="ja ? 'デモの使い方' : 'Demo mode'">
+      <button type="button" :aria-pressed="!following" @click="following = false">{{ ja ? "スクロールで見る" : "Watch as you scroll" }}</button>
+      <button type="button" :aria-pressed="following" @click="following = true">{{ ja ? "自分で触る" : "Try it yourself" }}</button>
+    </div>
     <div :style="{ height: `${height * scale}px` }">
       <iframe ref="frame" :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
-    <label class="mode"><input v-model="following" type="checkbox" />{{ ja ? "操作に合わせて説明を出す" : "Follow the demo with the text" }}</label>
     <figcaption>
       <button type="button" @click="reset">{{ following ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>
       <a :href="src" target="_blank" rel="noopener">{{ ja ? "別のタブで開く" : "Open in a new tab" }}</a>
@@ -118,10 +121,11 @@ const reset = () => {
 <style scoped>
 .demo { margin: 0 auto 24px; }
 .demo iframe { display: block; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
-.demo .mode { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; }
-.demo .mode input { accent-color: var(--vp-c-brand-1); }
+.demo .modes { display: flex; margin-bottom: 12px; padding: 3px; border-radius: 999px; background: var(--vp-c-default-soft); }
+.demo .modes button { flex: 1; padding: 6px 0; border-radius: 999px; color: var(--vp-c-text-2); font-size: 14px; font-weight: 600; }
+.demo .modes button[aria-pressed="true"] { background: var(--vp-c-brand-1); color: var(--vp-c-white); }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
-.demo :is(button, a) { color: var(--vp-c-brand-1); }
+.demo figcaption :is(button, a) { color: var(--vp-c-brand-1); }
 :global(.aside) .demo { margin: 0; }
 :global(.VPDoc:has(.demo) .aside) { max-width: 442px; }
 :global(.VPDoc:has(.demo) :is(.aside-container, .aside-curtain)) { width: 410px; }
