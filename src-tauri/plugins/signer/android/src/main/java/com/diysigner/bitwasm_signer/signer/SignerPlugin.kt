@@ -147,7 +147,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         val p = Design.palette(activity)
         val t = engine.testnet
         val kinds = listOf(
-            Triple(null, Design.tr("4種類", "All 4"), Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+            Triple(null, "", Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
             Triple(84, if (t) "tb1q…" else "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
             Triple(86, if (t) "tb1p…" else "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
             Triple(49, if (t) "2…" else "3…", Design.tr("古いウォレット向け", "For older wallets")),
@@ -179,11 +179,23 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             val card = LinearLayout(activity).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), dp(12), dp(16), dp(12))
-                addView(Design.text(activity, prefix, Design.Style.DATA, p.ink).apply {
-                    textSize = 20f
-                    setTypeface(typeface, Typeface.BOLD)
+                // The all-at-once card shows every prefix it carries, two to a row
+                val prefixes = if (purpose == null) kinds.drop(1).map { it.second } else listOf(prefix)
+                addView(LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
                     background = Design.shape(activity, p.surface, p.line, DesignTokens.RADIUS_SM)
+                    prefixes.chunked(2).forEach { pair ->
+                        addView(LinearLayout(activity).apply {
+                            pair.forEach {
+                                addView(Design.text(activity, it, Design.Style.DATA, p.ink).apply {
+                                    textSize = if (prefixes.size > 1) 13f else 20f
+                                    setTypeface(typeface, Typeface.BOLD)
+                                    gravity = Gravity.CENTER
+                                }, LinearLayout.LayoutParams(0, -2, 1f))
+                            }
+                        }, LinearLayout.LayoutParams(-1, -2))
+                    }
                 }, LinearLayout.LayoutParams(dp(96), dp(52)))
                 addView(LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL

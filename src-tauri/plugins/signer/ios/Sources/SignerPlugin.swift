@@ -964,7 +964,7 @@ final class SignerPlugin: Plugin {
     let p = Design.palette
     let t = SignerBridge.testnet
     let kinds: [(Int?, String, String)] = [
-      (nil, Design.tr("4種類", "All 4"), Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+      (nil, "", Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
       (84, t ? "tb1q…" : "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
       (86, t ? "tb1p…" : "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
       (49, t ? "2…" : "3…", Design.tr("古いウォレット向け", "For older wallets")),
@@ -995,9 +995,26 @@ final class SignerPlugin: Plugin {
       let card = UIControl()
       card.layer.cornerRadius = DesignTokens.radiusMd
       card.layer.borderWidth = 1.5
-      let well = Design.label(prefix, .data, p.ink)
-      well.font = .monospacedSystemFont(ofSize: 20, weight: .bold)
-      well.textAlignment = .center
+      // The all-at-once card shows every prefix it carries, two to a row
+      let prefixes = purpose == nil ? kinds.dropFirst().map { $0.1 } : [prefix]
+      let grid = Design.stack(stride(from: 0, to: prefixes.count, by: 2).map { i -> UIView in
+        let row = UIStackView(arrangedSubviews: prefixes[i..<min(i + 2, prefixes.count)].map { text -> UIView in
+          let label = Design.label(text, .data, p.ink)
+          label.font = .monospacedSystemFont(ofSize: prefixes.count > 1 ? 12 : 20, weight: .bold)
+          label.textAlignment = .center
+          return label
+        })
+        row.distribution = .fillEqually
+        return row
+      }, spacing: 2)
+      let well = UIView()
+      grid.translatesAutoresizingMaskIntoConstraints = false
+      well.addSubview(grid)
+      NSLayoutConstraint.activate([
+        grid.centerYAnchor.constraint(equalTo: well.centerYAnchor),
+        grid.leadingAnchor.constraint(equalTo: well.leadingAnchor, constant: 4),
+        grid.trailingAnchor.constraint(equalTo: well.trailingAnchor, constant: -4),
+      ])
       well.backgroundColor = p.surface
       well.layer.cornerRadius = DesignTokens.radiusSm
       well.layer.borderWidth = 1
