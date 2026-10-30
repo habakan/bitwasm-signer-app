@@ -25,7 +25,7 @@ demo:
 bitwasm-signer is an app for air-gapped signing. It passes Bitcoin transactions as PSBTs (BIP174) in QR codes, so the private key that signs them stays on a device that never connects to anything.
 bitwasm-signer-app brings what air-gapped signing needs to a phone: loading the private key, signing, and showing the signed PSBT as a QR code.
 
-## Under the hood {#overview}
+## How it works {#overview}
 
 The app runs [bitwasm-signer](https://github.com/habakan/bitwasm-signer), a set of WebAssembly modules made for signing bitcoin.
 ![bitwasm-signer runs the same WebAssembly modules everywhere](https://github.com/habakan/bitwasm-signer/raw/main/docs/everywhere.svg)
