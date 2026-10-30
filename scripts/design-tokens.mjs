@@ -18,7 +18,8 @@ ${vars(Object.entries(tokens.size).map(([k, v]) => [k, `${v}px`]))}
 ${vars(Object.entries(tokens.css))}
 }
 
-:root[data-theme="dark"] {
+/* The docs (VitePress) mark dark mode with .dark on <html> */
+:root[data-theme="dark"], :root.dark {
   color-scheme: dark;
 ${vars(Object.entries(dark))}
   --shadow-raised: none;

@@ -1,0 +1,31 @@
+/* The app's own tokens, so the docs look like the signer in both themes */
+@import "../../../src/design/tokens.css";
+
+:root, .dark {
+  --vp-c-bg: var(--surface);
+  --vp-c-bg-alt: var(--surface-sunken);
+  --vp-c-bg-elv: var(--surface-raised);
+  --vp-c-bg-soft: var(--surface-sunken);
+  --vp-c-text-1: var(--ink);
+  --vp-c-text-2: var(--ink-muted);
+  --vp-c-text-3: var(--ink-muted);
+  --vp-c-divider: var(--line);
+  --vp-c-border: var(--line-strong);
+  --vp-c-gutter: var(--line);
+  --vp-c-default-soft: var(--surface-sunken);
+  --vp-c-brand-1: var(--primary);
+  --vp-c-brand-2: var(--primary);
+  --vp-c-brand-3: var(--primary);
+  --vp-c-brand-soft: var(--primary-soft);
+  --vp-button-brand-text: var(--on-primary);
+  --vp-button-brand-hover-text: var(--on-primary);
+  --vp-button-brand-active-text: var(--on-primary);
+  --vp-c-tip-1: var(--positive);
+  --vp-c-tip-soft: var(--positive-bg);
+  --vp-c-warning-1: var(--warning);
+  --vp-c-warning-soft: var(--warning-bg);
+  --vp-c-danger-1: var(--danger);
+  --vp-c-danger-soft: var(--danger-bg);
+  --vp-font-family-base: var(--font-sans);
+  --vp-font-family-mono: var(--font-mono);
+}

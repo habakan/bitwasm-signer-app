@@ -100,7 +100,7 @@ const reset = () => { key.value++; };
 <style scoped>
 .demo { margin: 0 auto 24px; }
 .demo .screen { position: relative; }
-.demo iframe { position: absolute; top: 0; left: 0; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
+.demo iframe { position: absolute; top: 0; left: 0; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; box-shadow: 0 0 0 1px var(--line); background: #fff; transform-origin: 0 0; }
 .demo iframe.loading { opacity: 0; pointer-events: none; }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
 .demo figcaption :is(button, a) { color: var(--vp-c-brand-1); }
