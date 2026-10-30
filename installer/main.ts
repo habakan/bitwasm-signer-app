@@ -24,6 +24,8 @@ const verdict = document.getElementById("verdict")!;
 const installButton = document.getElementById("install") as HTMLButtonElement;
 const logArea = document.getElementById("log")!;
 const stepList = document.getElementById("steps")!;
+const busyHelp = document.getElementById("busy-help")!;
+const copyKill = document.getElementById("copy-kill")!;
 const done = document.getElementById("done")!;
 const installed = document.getElementById("installed")!;
 
@@ -32,7 +34,7 @@ let mode: "lockdown" | "apk" = location.hash === "#apk" ? "apk" : "lockdown";
 function applyMode() {
   document.body.className = `app-mode-${mode}`;
   document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.setMode === mode)));
-  done.hidden = installed.hidden = true;
+  done.hidden = installed.hidden = busyHelp.hidden = true;
   logArea.textContent = stepList.innerHTML = "";
 }
 document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) =>
@@ -163,7 +165,7 @@ installButton.addEventListener("click", async () => {
     if (failed) failed.dataset.state = "failed";
     log(
       e instanceof AdbDaemonWebUsbDevice.DeviceBusyError
-        ? t("端末が使用中です。この PC の adb を止めて（adb kill-server）やり直してください", "The phone is busy. Stop adb on this PC (adb kill-server) and try again")
+        ? t("2 分待っても端末が空きませんでした。上の案内で端末を使っているものを止めて、やり直してください", "The phone stayed in use for 2 minutes. Stop what is using it, as shown above, and try again")
         : String(e),
     );
     setBusy(false);
@@ -182,6 +184,29 @@ function counted(apk: File, index: number) {
   }));
 }
 
+copyKill.addEventListener("click", async () => {
+  await navigator.clipboard.writeText("adb kill-server");
+  copyKill.textContent = t("コピーしました", "Copied");
+});
+
+// Something else may hold the phone, usually an adb server that Android Studio or other tools restart on their own.
+// A browser cannot stop it, so this keeps trying and takes the phone in the gap after `adb kill-server`
+async function claim(device: AdbDaemonWebUsbDevice) {
+  for (let second = 0; ; second++) {
+    try {
+      const connection = await device.connect();
+      busyHelp.hidden = true;
+      return connection;
+    } catch (e) {
+      if (!(e instanceof AdbDaemonWebUsbDevice.DeviceBusyError) || second >= 120) throw e;
+      if (busyHelp.hidden) copyKill.textContent = t("adb kill-server をコピー", "Copy adb kill-server");
+      busyHelp.hidden = false;
+      step(0, t("端末がほかで使われています。空くのを待っています…", "Something else is using the phone. Waiting for it…"));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 async function install(apk: File) {
   const manager = AdbDaemonWebUsbDeviceManager.BROWSER;
   if (!manager) throw new Error(t("このブラウザは WebUSB を使えません。Chrome か Edge で開いてください", "This browser has no WebUSB. Open the page in Chrome or Edge"));
@@ -189,12 +214,17 @@ async function install(apk: File) {
   const device = await manager.requestDevice();
   if (!device) throw new Error(t("端末が選ばれませんでした", "No phone chosen"));
 
+  const connection = await claim(device);
   step(0, t("端末で USB デバッグを許可してください", "Allow USB debugging on the phone"));
   // The key stays in this browser's IndexedDB, so the phone asks only once per browser
   const transport = await AdbDaemonTransport.authenticate({
     serial: device.serial,
-    connection: await device.connect(),
+    connection,
     credentialStore: new AdbWebCredentialStore("bitwasm-signer lockdown installer"),
+  }).catch(async (e) => {
+    // Lets go of the phone, or a retry and other tools would find it held by this page
+    await device.raw.close().catch(() => undefined);
+    throw e;
   });
   const adb = new Adb(transport);
   try {
