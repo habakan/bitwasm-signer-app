@@ -22,7 +22,7 @@ const scale = ref(0.8);
 const fit = () => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   const room = figure.value?.parentElement?.clientWidth ?? width;
-  scale.value = Math.min(1, (innerHeight - nav - 140) / height, room / width);
+  scale.value = Math.min(1, (innerHeight - nav - 200) / height, room / width);
 };
 
 // `demo:` maps section ids to steps on a fresh demo: "#id" taps every match, "scroll:<selector>" scrolls it
@@ -38,12 +38,10 @@ const current = () => {
     if (scenes[heading.id] && heading.getBoundingClientRect().top < (end ? innerHeight : 140)) id = heading.id;
   return id;
 };
-// While the text scrolls to follow a tap, the phone keeps its screen; the section it lands on becomes current
-let following: ReturnType<typeof setTimeout> | 0 = 0;
-const settle = () => { following = 0; section = current(); };
+// "docs": scrolling the text moves the phone. "app": tapping the phone moves the text, and scrolling leaves it alone
+const mode = ref<"docs" | "app">("docs");
 const sync = () => {
-  if (!figure.value?.closest(".aside")) return;
-  if (following) { clearTimeout(following); following = setTimeout(settle, 200); return; }
+  if (mode.value === "app" || !figure.value?.closest(".aside")) return;
   const scenes = frontmatter.value.demo ?? {};
   const id = current();
   if (id === section) return;
@@ -80,23 +78,21 @@ const applyTheme = () => {
 };
 watch(isDark, applyTheme);
 
-// Touching the phone stops the scene's playback and scrolls the text to the section whose scene ends with
-// the tapped button, preferring the one that shares the longest run of recent taps
+// Touching the phone stops the scene's playback. In "app", a tap scrolls to the section whose scene ends with
+// that button, preferring the one that shares the longest run of recent taps
 let touched = false;
 let tapped: string[] = [];
 const onTap = (event: Event) => {
   const id = (event.target as Element).closest?.("button[id]")?.id;
   if (!id) return;
   tapped = [...tapped, `#${id}`].slice(-20);
-  if (!touched || !figure.value?.closest(".aside")) return;
+  if (mode.value !== "app" || !touched) return;
   const scenes: Record<string, string[]> = frontmatter.value.demo ?? {};
   const shared = (steps: string[]) => { let n = 0; while (n < steps.length && steps.at(-1 - n) === tapped.at(-1 - n)) n++; return n; };
   const ids = (name: string) => scenes[name].filter((step) => step.startsWith("#"));
   const match = Object.keys(scenes).filter((name) => ids(name).at(-1) === `#${id}`).sort((a, b) => shared(ids(b)) - shared(ids(a)))[0];
   const heading = match && document.getElementById(match);
   if (!heading) return;
-  clearTimeout(following);
-  following = setTimeout(settle, 200);
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   scrollTo({ top: heading.getBoundingClientRect().top + scrollY - nav - 24, behavior: "smooth" });
 };
@@ -111,16 +107,33 @@ const loaded = (event: Event, k: number) => {
   frame.contentDocument?.addEventListener("click", onTap, true);
   void play();
 };
-const reset = () => { key.value++; };
+watch(mode, (now) => {
+  if (now === "app") return;
+  section = "-";
+  sync();
+});
+const reset = () => {
+  if (mode.value === "app") taps = [];
+  key.value++;
+};
 </script>
 
 <template>
   <figure ref="figure" class="demo" :style="{ width: `${width * scale}px` }">
+    <div class="modes" role="group" :aria-label="ja ? 'デモの動き' : 'Demo mode'">
+      <button type="button" :aria-pressed="mode === 'docs'" @click="mode = 'docs'">Follow docs</button>
+      <button type="button" :aria-pressed="mode === 'app'" @click="mode = 'app'">Follow app</button>
+    </div>
+    <!-- Both notes take the same cell so switching never changes the height -->
+    <div class="mode-note">
+      <p :class="{ off: mode !== 'docs' }">{{ ja ? "スクロールに合わせてスマホが進みます" : "The phone follows your scrolling" }}</p>
+      <p :class="{ off: mode !== 'app' }">{{ ja ? "スマホの操作に合わせて説明が移ります" : "The text follows your taps on the phone" }}</p>
+    </div>
     <div class="screen" :style="{ height: `${height * scale}px` }">
       <iframe v-for="f in frames" :key="f.key" :src="f.src" :class="{ loading: f !== frames[0] }" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded($event, f.key)" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
     <figcaption>
-      <button type="button" @click="reset">{{ ja ? "この画面に戻す" : "Reset this screen" }}</button>
+      <button type="button" @click="reset">{{ mode === "app" ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>
       <a :href="src" target="_blank" rel="noopener">{{ ja ? "別のタブで開く" : "Open in a new tab" }}</a>
     </figcaption>
   </figure>
@@ -128,6 +141,12 @@ const reset = () => { key.value++; };
 
 <style scoped>
 .demo { margin: 0 auto 24px; }
+.demo .modes { display: flex; padding: 3px; border-radius: 999px; background: var(--vp-c-default-soft); }
+.demo .modes button { flex: 1; padding: 6px 0; border-radius: 999px; color: var(--vp-c-text-2); font-size: 14px; font-weight: 600; }
+.demo .modes button[aria-pressed="true"] { background: var(--vp-c-brand-1); color: var(--on-primary); }
+.demo .mode-note { display: grid; margin: 6px 0 12px; color: var(--vp-c-text-2); font-size: 13px; line-height: 20px; text-align: center; }
+.demo .mode-note p { grid-area: 1 / 1; margin: 0; }
+.demo .mode-note .off { visibility: hidden; }
 .demo .screen { position: relative; }
 .demo iframe { position: absolute; top: 0; left: 0; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; box-shadow: 0 0 0 1px var(--line); background: #fff; transform-origin: 0 0; }
 .demo iframe.loading { opacity: 0; pointer-events: none; }
