@@ -54,7 +54,7 @@ Keyboard learning and autofill are covered in [docs/faq.md](docs/faq.md).
 
 ## A phone that only signs
 
-On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB from the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) to keep the phone off every network. The same page can also install just the signer, without Lockdown. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card. See [docs/lockdown.md](docs/lockdown.md).
+On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB from the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) to keep the phone off every network. The same page can also install just the signer, without Lockdown. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card or a PC over USB. See [docs/lockdown.md](docs/lockdown.md).
 
 ## WASM
 

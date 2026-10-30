@@ -72,6 +72,7 @@ class MainActivity : Activity() {
         buttons = listOf(
             button(tr("署名アプリを入れる", "Install the signer"), Kind.SECONDARY) { run(policy::installSigner) },
             button(tr("SD カードからアプリを更新", "Update an app from an SD card"), Kind.SECONDARY) { pickUpdate() },
+            button(tr("PC から USB でアプリを更新", "Update an app from a PC over USB"), Kind.SECONDARY) { confirm(::usbUpdate) },
             button(tr("制限を適用", "Apply restrictions"), Kind.PRIMARY) { run { policy.apply(forgetWifi.isChecked) } },
             // Loosening needs the screen lock
             button(tr("制限を一時解除", "Lift restrictions"), Kind.SECONDARY) { confirm { run(policy::release) } },
@@ -110,6 +111,8 @@ class MainActivity : Activity() {
             insets
         }
         setContentView(root)
+        // Closes a transfer left open when this screen was recreated or the process was killed
+        runCatching(policy::closeUsbTransfer)
 
         val filter = IntentFilter(Policy.INSTALL_RESULT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(installResult, filter, RECEIVER_NOT_EXPORTED)
@@ -218,6 +221,22 @@ class MainActivity : Activity() {
         startActivityForResult(intent, PICK_APK)
     }
 
+    private fun usbUpdate() {
+        runCatching(policy::openUsbTransfer).onFailure { return toast(it.message) }
+        val theme = if (p === DesignTokens.light) android.R.style.Theme_DeviceDefault_Light_Dialog_Alert else android.R.style.Theme_DeviceDefault_Dialog_Alert
+        AlertDialog.Builder(this, theme)
+            .setTitle(tr("PC から USB で更新", "Update from a PC over USB"))
+            .setMessage(tr(
+                "署名アプリを終了し、USB のファイル転送を許可しました。\n\n1. PC と USB ケーブルでつなぎ、通知から「ファイル転送」を選ぶ\n2. PC から APK を端末の Download にコピーする\n3. 「APK を選ぶ」を押す\n\nこの画面を閉じるとファイル転送は止まります。",
+                "The signer was closed and USB file transfer is allowed.\n\n1. Connect a PC with a USB cable and pick File transfer in the notification\n2. Copy the APK from the PC to Download on the phone\n3. Tap Choose the APK\n\nFile transfer stops when this closes.",
+            ))
+            .setCancelable(false)
+            .setPositiveButton(tr("APK を選ぶ", "Choose the APK")) { _, _ -> run(policy::closeUsbTransfer); pickUpdate() }
+            .setNegativeButton(tr("やめる", "Cancel")) { _, _ -> run(policy::closeUsbTransfer) }
+            .show()
+            .getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(p.primary)
+    }
+
     // Copies the chosen APK first, then shows its version and SHA-256 for a person to check against the release
     private fun confirmUpdate(uri: Uri) {
         val apk = File(cacheDir, "update.apk")
@@ -252,6 +271,7 @@ class MainActivity : Activity() {
         }
         buttons[0].isEnabled = policy.hasBundledSigner && !policy.isSignerInstalled
         buttons[1].isEnabled = policy.isSignerInstalled
+        buttons[2].isEnabled = policy.isSignerInstalled
         buttons.forEach { if (!it.isEnabled) it.alpha = 0.45f }
 
         val active = policy.activeRestrictions()
