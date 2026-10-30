@@ -1,5 +1,7 @@
 # セットアップ方法
 
+<sup>[English](../setup.md)</sup>
+
 署名アプリの入れ方はいくつかあります。どれを選ぶかは、何を信頼するかで決まります。信頼するものが少ないほど手間が増えます。
 
 ## 選び方
@@ -24,7 +26,7 @@
 
 リリースを信頼したくない場合です。ソースを読み、自分のPCでビルドして入れます。
 
-- Android: READMEの[ビルド](https://github.com/habakan/bitwasm-signer-app#build)の手順でAPKを作り、`adb install`か導入ページの「APKだけ入れる」で入れます。デバッグビルドはスマホではとても遅いので、リリースビルドを使ってください。
+- Android: READMEの[ビルド](https://github.com/habakan/bitwasm-signer-app#build)の手順でAPKを作り、`adb install`か導入ページの「APK だけ入れる」で入れます。デバッグビルドはスマホではとても遅いので、リリースビルドを使ってください。
 - iOS: 配布はしていないので、Xcodeで自分の開発者アカウントで署名して入れます。iOSはシミュレーターでしか確認していません。
 
 自分でビルドしたAPKは作者のリリースと署名鍵が違うので、リリースのAPKの上から更新することはできません。
@@ -35,7 +37,7 @@
 
 1. スマホで開発者向けオプションを出し(端末情報のビルド番号を7回タップ)、USBデバッグをオンにする
 2. PCで[リリース](https://github.com/habakan/bitwasm-signer-app/releases)からAPKと`SHA256SUMS`をダウンロードする
-3. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/#apk)を「APKだけ入れる」で開き、APKと`SHA256SUMS`を選ぶ。一致したときだけ入れられる
+3. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/#apk)を「APK だけ入れる」で開き、APKと`SHA256SUMS`を選ぶ。一致したときだけ入れられる
 4. 入れ終わったらUSBデバッグをオフにし、機内モードにする
 
 ## Signer Lockdownを入れる {#lockdown}

@@ -18,31 +18,30 @@ demo:
   lock: ["#demo-seed", "#passphrase-continue", "#lock"]
 ---
 
-# Using the signer
+# bitwasm-signer-app
 
 <sup>[日本語](ja/guide.md)</sup>
 
-This page walks through the signer from setting up a phone to sending bitcoin. As you scroll, the phone on the right moves to the screen each section talks about. It runs the browser demo, the same Rust signing engine as the app built to WebAssembly, on testnet with the published BIP39 test words, so you can tap through it yourself: switch to **Try it yourself** above the phone, and the text moves to the section for whatever you tap. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
+bitwasm-signer is an app for air-gapped signing. It passes Bitcoin transactions as PSBTs (BIP174) in QR codes, so the private key that signs them stays on a device that never connects to anything.
+bitwasm-signer-app brings what air-gapped signing needs to a phone: loading the private key, signing, and showing the signed PSBT as a QR code.
 
-## The idea {#overview}
+## Under the hood {#overview}
 
-The signer keeps your private keys on a phone that never goes online. A wallet app on your everyday phone or computer, such as Sparrow or Nunchuk, watches your balance and builds transactions. The two pass everything as QR codes, so no cable or network ever connects them.
+The app runs [bitwasm-signer](https://github.com/habakan/bitwasm-signer), a set of WebAssembly modules made for signing bitcoin.
+![bitwasm-signer runs the same WebAssembly modules everywhere](https://github.com/habakan/bitwasm-signer/raw/main/docs/everywhere.svg)
 
-<Flow />
+With WebAssembly, **byte-for-byte the same signing logic runs in every environment**, including [a dedicated signing device built on a microcontroller](https://github.com/habakan/bitwasm-signer-pico). The aim is signing software that is easy to run and maintain because it is portable.
 
-1. The signer gives the wallet app your public keys once. With them the wallet app can see your balance and make addresses, but cannot spend.
-2. To send, the wallet app builds a transaction and shows it as a QR code. The signer reads it, shows what it pays and signs it.
-3. The signer shows the signed transaction as a QR code, and the wallet app sends it to the network.
+The phone on the right of this page also runs **the real WebAssembly modules**, so **you can try the app's screens and steps on testnet.**
+As you scroll, the phone moves to the screen each section talks about. Switch to **Try it yourself** above the phone to tap through it yourself, and the text moves to the section for whatever you tap. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
 
-## 1. Make a phone that only signs {#offline}
+## 1. Setup {#offline}
 
-Use a phone you no longer need. Turn on airplane mode and keep it off every network.
+The signer runs on Android and iOS. How to install it depends on what you are willing to trust; see [Setup](setup.md). On Android, [Signer Lockdown](lockdown.md) makes a dedicated signer that keeps airplane mode on and, as Device Owner, blocks USB debugging, new apps and accounts.
 
-Under Settings › Device restrictions the signer checks for things that could leak what is on the screen or what you type: networks, Bluetooth and NFC, third-party keyboards, USB debugging and accessibility services. For each one you choose whether it is ignored, warns, or stops the signer. The browser demo has the other settings but not these checks.
+Once installed, Settings › Device restrictions lets you choose how the signer treats things that could leak what is on the screen or what you type: networks, Bluetooth and NFC, third-party keyboards, USB debugging and accessibility services. For each one you choose whether it is ignored, warns, or stops the key from loading while it is on. The browser demo does not have these checks.
 
-On Android, [Signer Lockdown](lockdown.md) goes further. It makes a factory-reset phone a dedicated signer that keeps airplane mode on and blocks USB debugging, new apps and accounts.
-
-## 2. Make your key {#create}
+## 2. Make a key {#create}
 
 Your key is a list of 12 or 24 words, the recovery phrase. Tap **Create a new wallet**. The signer makes the words from secure random numbers, or from dice you roll yourself if you would rather not trust the phone's random numbers.
 
@@ -50,11 +49,11 @@ Have paper and a pen ready, and do this where no one and no camera can see.
 
 ### Roll dice {#dice}
 
-To make the words from dice, roll a die and tap the face that came up, once per roll. 12 words take exactly 50 rolls and 24 words 99. The signer warns if the rolls look uneven or follow a pattern that a fair die almost never gives, and **See how these words were made** shows how the rolls became the words.
+To make the words from dice, roll a die and tap the face that came up, once per roll. 12 words take exactly 50 rolls and 24 words 99. The signer warns if the rolls look uneven or follow a pattern that a fair die almost never gives.
 
 ### Write the words down {#write-down}
 
-Write the words on paper, in order. Anyone who sees them can take your bitcoin, and with the paper you can get it back even if you lose the phone. **See how these words were made** shows, step by step, how the words come from the random numbers or dice rolls.
+Write the words on paper, in order. Anyone who sees them can take your bitcoin, and with the paper you can get it back even if you lose the phone.
 
 ### Check what you wrote {#quiz}
 

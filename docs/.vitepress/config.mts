@@ -36,7 +36,7 @@ export default defineConfig({
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "Use", items: [{ text: "Using the signer", link: "/guide", items: chapters("../guide.md", "/guide") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
+          { text: "Use", items: [{ text: "Setup", link: "/setup" }, { text: "Using the signer", link: "/guide", items: chapters("../guide.md", "/guide") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
           { text: "Develop", items: [{ text: "Design", link: "/design" }, { text: "Roadmap", link: "/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "Edit this page on GitHub" },
