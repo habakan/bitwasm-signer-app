@@ -29,14 +29,23 @@ const fit = () => {
 // to the end and "type:<selector>=<text>" fills it in
 let section = "";
 let taps: string[] = [];
-const sync = () => {
-  if (!figure.value?.closest(".aside")) return;
+// A section counts once its heading nears the top; at the page end the last visible one wins
+const current = () => {
   const scenes = frontmatter.value.demo ?? {};
-  // A section counts once its heading nears the top; at the page end the last visible one wins
   const end = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
   let id = "";
   for (const heading of document.querySelectorAll<HTMLElement>(".vp-doc :is(h2, h3)[id]"))
     if (scenes[heading.id] && heading.getBoundingClientRect().top < (end ? innerHeight : 140)) id = heading.id;
+  return id;
+};
+// While the text scrolls to follow a tap, the phone keeps its screen; the section it lands on becomes current
+let following: ReturnType<typeof setTimeout> | 0 = 0;
+const settle = () => { following = 0; section = current(); };
+const sync = () => {
+  if (!figure.value?.closest(".aside")) return;
+  if (following) { clearTimeout(following); following = setTimeout(settle, 200); return; }
+  const scenes = frontmatter.value.demo ?? {};
+  const id = current();
   if (id === section) return;
   section = id;
   taps = id ? scenes[id] : [];
@@ -71,15 +80,35 @@ const applyTheme = () => {
 };
 watch(isDark, applyTheme);
 
-// Touching the phone stops the scene's playback; the next section's scene replaces what was done
+// Touching the phone stops the scene's playback and scrolls the text to the section whose scene ends with
+// the tapped button, preferring the one that shares the longest run of recent taps
 let touched = false;
+let tapped: string[] = [];
+const onTap = (event: Event) => {
+  const id = (event.target as Element).closest?.("button[id]")?.id;
+  if (!id) return;
+  tapped = [...tapped, `#${id}`].slice(-20);
+  if (!touched || !figure.value?.closest(".aside")) return;
+  const scenes: Record<string, string[]> = frontmatter.value.demo ?? {};
+  const shared = (steps: string[]) => { let n = 0; while (n < steps.length && steps.at(-1 - n) === tapped.at(-1 - n)) n++; return n; };
+  const ids = (name: string) => scenes[name].filter((step) => step.startsWith("#"));
+  const match = Object.keys(scenes).filter((name) => ids(name).at(-1) === `#${id}`).sort((a, b) => shared(ids(b)) - shared(ids(a)))[0];
+  const heading = match && document.getElementById(match);
+  if (!heading) return;
+  clearTimeout(following);
+  following = setTimeout(settle, 200);
+  const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
+  scrollTo({ top: heading.getBoundingClientRect().top + scrollY - nav - 24, behavior: "smooth" });
+};
 const loaded = (event: Event, k: number) => {
   if (k !== key.value) return;
   frame = event.target as HTMLIFrameElement;
   applyTheme();
   frames.value = [frames.value.at(-1)!];
   touched = false;
+  tapped = [];
   frame.contentDocument?.addEventListener("pointerdown", () => { touched = true; }, true);
+  frame.contentDocument?.addEventListener("click", onTap, true);
   void play();
 };
 const reset = () => { key.value++; };

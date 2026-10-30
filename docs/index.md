@@ -33,7 +33,7 @@ The app runs [bitwasm-signer](https://github.com/habakan/bitwasm-signer), a set 
 With WebAssembly, **byte-for-byte the same signing logic runs in every environment**, including [a dedicated signing device built on a microcontroller](https://github.com/habakan/bitwasm-signer-pico). The aim is signing software that is easy to run and maintain because it is portable.
 
 The phone on the right of this page also runs **the real WebAssembly modules**, so **you can try the app's screens and steps on testnet.**
-As you scroll, the phone moves to the screen each section talks about. You can also tap through it yourself; scrolling to another section puts the phone on that section's screen again. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
+As you scroll, the phone moves to the screen each section talks about. You can also tap through it yourself, and the text moves to the section for whatever you tap; scrolling to another section yourself puts the phone on that section's screen again. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
 
 ## 1. Setup {#offline}
 
