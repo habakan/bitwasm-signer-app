@@ -95,6 +95,10 @@ button:disabled { opacity: .45; cursor: default; }
 .fingerprint .data { flex: none; padding: var(--space-1) var(--space-2); white-space: nowrap; }
 .field-note { color: var(--ink-muted); font: var(--text-caption); }
 .data { padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-sunken); font: var(--text-data); word-spacing: 6px; overflow-wrap: anywhere; }
+.input { width: 100%; min-height: var(--control-height); padding: var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); font: var(--text-data); }
+.range { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.range label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); font: var(--text-caption); }
+.problem { color: var(--danger); font: var(--text-caption); }
 .data.hash { font-size: 12px; line-height: 20px; word-spacing: 0; }
 
 .restriction { display: flex; flex-direction: column; gap: var(--space-2); }

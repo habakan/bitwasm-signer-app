@@ -15,6 +15,7 @@ import android.view.Window
 import android.view.WindowInsets
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -120,9 +121,9 @@ internal object Design {
         dialog.setContentView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(p.surface)
-            // From Android 15 a full-screen window draws behind the status and navigation bars
+            // From Android 15 a full-screen window draws behind the status and navigation bars, and the keyboard
             if (Build.VERSION.SDK_INT >= 35) setOnApplyWindowInsetsListener { view, insets ->
-                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
                 view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
                 insets
             }
@@ -189,6 +190,18 @@ internal object Design {
         minHeight = dp(context, DesignTokens.CONTROL_HEIGHT)
         setTextColor(if (primary) p.onPrimary else p.ink)
         background = shape(context, if (primary) p.primary else p.surfaceRaised, if (primary) p.primary else p.lineStrong, DesignTokens.RADIUS_MD)
+    }
+
+    fun input(context: Context, p: Palette, hint: String) = EditText(context).apply {
+        this.hint = hint
+        textSize = Style.DATA.size
+        typeface = Typeface.MONOSPACE
+        setTextColor(p.ink)
+        setHintTextColor(p.inkMuted)
+        minHeight = dp(context, DesignTokens.CONTROL_HEIGHT)
+        val pad = dp(context, DesignTokens.SPACE_3)
+        setPadding(pad, pad, pad, pad)
+        background = shape(context, p.surfaceRaised, p.lineStrong, DesignTokens.RADIUS_MD)
     }
 
     fun card(context: Context, p: Palette) = LinearLayout(context).apply {

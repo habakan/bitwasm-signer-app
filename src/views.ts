@@ -107,6 +107,7 @@ function homeView({ signer, busy }: View) {
 function readyView({ signer, busy }: View) {
   const rows = webDemo ? [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
+    row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
   ] : [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),

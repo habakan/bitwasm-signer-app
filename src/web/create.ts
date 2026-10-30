@@ -19,7 +19,7 @@ function steps(current: number) {
 }
 
 // A sheet of this flow: Back in the top bar as on the phones, so the footer keeps only the step's own action
-function step(title: string, body: string, actions: string, onBack: () => void) {
+export function step(title: string, body: string, actions: string, onBack: () => void) {
   const view = sheet(title, body, actions);
   view.querySelector(".screen-body")!.classList.add("tight");
   const back = document.createElement("button");

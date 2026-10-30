@@ -3,11 +3,12 @@ import qrcode from "qrcode-generator";
 import { icon } from "../design/icons";
 import type { SignerState } from "../signer";
 import { tr } from "../views";
-import { createWallet } from "./create";
+import { createWallet, step } from "./create";
 import { call, startEngine } from "./engine";
 
-// Published BIP39 test words and a testnet PSBT that spends from them (samples/psbt-ur-test-only.png)
+// Published BIP39 test words, their first testnet receive address, and a testnet PSBT that spends from them (samples/psbt-ur-test-only.png)
 const testMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+const testAddress = "tb1q6rz28mcfaxtmd6v789l9rrlrusdprr9pqcpvkl";
 const testPsbt = "UR:CRYPTO-PSBT/HDYLJOJKIDJYZMADAEGMAOAEAEAEADFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWFWAEAEAEAEAEZMZMZMZMADROLFADAEAEAEAEAECMAEBBFMEEMKHLSGJLUTSOZOENNLFZVESTTPVOLTFHGMNSAEAEAEAEAEADADCTNBLNADAEAEAEAEAECMAEBBRTTORFTBSRTESGLKKPUOHYSWDMRNGOEOBAYTBEVOCPAMAXDYTLGWTIUTFWBKJTHELGENDKYKWFFDDWPLECBSKKTLWTKPFRYKRNWSNSDPMEPEFNCSJKSKTNBKGHAEAELAAEAEAELAAEAEAELAAEAEAEAEAEAEAEAEAECPAOAXAOGUDKLOMNFWNYROVLUYPECTKSAOIELUNSTICKNDFPLRLPSKZSGSCWNDHGAEVYOLCSJKSKTNBKGHAEAELAAEAEAELAAEAEAELAADAEAEAEAEAEAEAEAEUYASYLBN";
 
 type Output = { amount: number; owner: string; kind: string; text: string };
@@ -172,6 +173,88 @@ function showFrames(heading: string, name: string, frames: string[], note: strin
   return new Promise((resolve) => view.querySelector("#qr-done")!.addEventListener("click", () => { clearInterval(timer); view.remove(); resolve(); }));
 }
 
+// The fingerprint with no passphrase and with the typed one, as on the phones
+function askPassphrase(words: Uint8Array): Promise<string> {
+  const none = tr("入力すると表示します", "Shown as you type");
+  const fingerprint = (passphrase: string) =>
+    call<{ fingerprint: string }>("preview_fingerprint", words, new TextEncoder().encode(passphrase), 1).fingerprint.replace(/^(.{4})/, "$1 ");
+  const view = step(tr("パスフレーズ", "Passphrase"), `<div class="question"><h1>${tr("パスフレーズを入力する", "Enter the passphrase")}</h1>
+      <p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue.")}</p></div>
+    <input class="input" id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="${tr("パスフレーズ", "Passphrase")}">
+    <p class="caption">${tr("テスト用の単語では、TREZOR と入れると b4e3 f5ed になります。", "With the test words, TREZOR gives b4e3 f5ed.")}</p>
+    <h2 class="overline">${tr("フィンガープリント", "FINGERPRINT")}</h2>
+    <div class="card"><div class="field"><span class="field-label">${tr("パスフレーズなし", "WITHOUT A PASSPHRASE")}</span><span class="data">${fingerprint("")}</span></div>
+      <div class="field"><span class="field-label">${tr("入力したパスフレーズ", "WITH THIS PASSPHRASE")}</span><span class="data" id="typed-fingerprint">${none}</span>
+        <span class="field-note">${tr("控えておいたフィンガープリントと同じか確かめてください。1文字違うだけで別の鍵になります。", "Check it matches the fingerprint you noted. One wrong character makes a different key.")}</span></div></div>`,
+    button("passphrase-continue", tr("続ける", "Continue"), "primary"), () => cancel());
+  const input = view.querySelector<HTMLInputElement>("#passphrase")!;
+  const typed = view.querySelector<HTMLElement>("#typed-fingerprint")!;
+  let timer = 0;
+  let cancel = () => {};
+  // Waits for typing to pause, since each fingerprint runs the 2048 round BIP39 stretch
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    typed.textContent = input.value ? tr("計算しています…", "Working…") : none;
+    if (input.value) timer = setTimeout(() => { typed.textContent = fingerprint(input.value); }, 500);
+  });
+  return new Promise((resolve, reject) => {
+    const close = () => { clearTimeout(timer); input.value = ""; view.remove(); };
+    cancel = () => { close(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); };
+    view.querySelector("#passphrase-continue")!.addEventListener("click", () => { const value = input.value; close(); resolve(value); });
+  });
+}
+
+// The address check, with the test words' first receive address in place of a camera
+async function checkAddress(): Promise<void> {
+  const view = step(tr("アドレスの確認", "Address check"), `<div class="question"><h1>${tr("アドレスを確認する", "Check an address")}</h1>
+      <p class="lead">${tr("ウォレットアプリに出た受け取りのアドレスが、この鍵のものか確かめます。QRを読み取るか、アドレスを入力してください。", "Check that a receive address shown in your wallet app belongs to this key. Scan its QR or type it.")}</p></div>
+    <input class="input" id="address" autocomplete="off" spellcheck="false" placeholder="${tr("アドレスかbitcoin: URI", "Address or bitcoin: URI")}">
+    <p class="caption">${tr("ブラウザ版ではカメラの代わりに、テスト用のアドレスで試せます。", "The browser demo has the test address in place of a camera.")}</p>
+    <p class="problem" id="address-problem" hidden></p>
+    <h2 class="overline">${tr("探す範囲", "SEARCH RANGE")}</h2>
+    <div class="range"><label>${tr("アカウント", "Account")}<input class="input" id="address-account" inputmode="numeric" value="0"></label>
+      <label>${tr("それぞれ探す数", "Addresses per chain")}<input class="input" id="address-count" inputmode="numeric" value="1000"></label></div>
+    <p class="caption">${tr("受け取りとおつりのアドレスを、それぞれ最初から探す数だけ調べます。", "The first addresses of the receive and change chains are checked, this many of each.")}</p>`,
+    button("address-test", tr("テスト用のアドレスを使う", "Use the test address"), "secondary") + button("address-check", tr("調べる", "Check"), "primary"), () => cancel());
+  const field = (id: string) => view.querySelector<HTMLInputElement>(`#${id}`)!;
+  const problem = view.querySelector<HTMLElement>("#address-problem")!;
+  let cancel = () => {};
+  const search = await new Promise<{ address: string; account: number; count: number }>((resolve, reject) => {
+    cancel = () => { view.remove(); reject(tr("アドレスの確認をやめました。", "Address search was cancelled")); };
+    const check = () => {
+      const address = field("address").value.trim().replace(/^bitcoin:/i, "").split("?")[0];
+      const account = Number(field("address-account").value);
+      const count = Number(field("address-count").value);
+      if (!address || !Number.isInteger(account) || account < 0 || !Number.isInteger(count) || count < 1 || count > 100000) {
+        problem.textContent = tr("アドレスと、0以上のアカウント、1〜100000の探す数を入れてください。", "Enter an address, an account of 0 or more, and 1 to 100000 addresses.");
+        problem.hidden = false;
+        return;
+      }
+      view.remove();
+      resolve({ address, account, count });
+    };
+    view.querySelector("#address-test")!.addEventListener("click", () => { field("address").value = testAddress; check(); });
+    view.querySelector("#address-check")!.addEventListener("click", check);
+  });
+  const result = call<{ found: boolean; chain?: number; index?: number }>("find_address", search.address, search.account, search.count);
+  const chain = result.chain === 0 ? tr("受け取り", "Receive") : tr("おつり", "Change");
+  const shown = step(tr("アドレスの確認", "Address check"), `<div class="question"><h1>${result.found ? tr("このウォレットのアドレスです", "This address is yours") : tr("見つかりませんでした", "Not found")}</h1>
+      <p class="lead">${result.found ? tr("この鍵から作られたアドレスです。", "It was made from this key.")
+        : tr(`アカウント ${search.account} の受け取りとおつり、それぞれ最初の${search.count}個にはありません。別のウォレットのアドレスか、探す範囲の外です。`,
+          `It is not among the first ${search.count} receive and change addresses of account ${search.account}. It belongs to another wallet or lies outside the range.`)}</p></div>
+    <div class="card"><div class="field"><span class="field-label">${tr("アドレス", "ADDRESS")}</span><span class="data">${escape(search.address.match(/.{1,4}/g)!.join(" "))}</span></div>
+      ${result.found ? `<div class="field"><span class="field-label">${tr("場所", "WHERE")}</span><span class="data">${tr(`${chain}・番号 ${result.index}`, `${chain} · index ${result.index}`)}</span>
+        <span class="field-note">${tr(`アカウント ${search.account}`, `Account ${search.account}`)}</span></div>` : ""}</div>`,
+    button("address-again", tr("別のアドレスを調べる", "Check another address"), "secondary") + button("address-done", tr("完了", "Done"), "primary"), () => done());
+  let done = () => {};
+  const again = await new Promise<boolean>((resolve) => {
+    done = () => { shown.remove(); resolve(false); };
+    shown.querySelector("#address-done")!.addEventListener("click", done);
+    shown.querySelector("#address-again")!.addEventListener("click", () => { shown.remove(); resolve(true); });
+  });
+  if (again) return checkAddress();
+}
+
 export async function webInvoke<T>(command: string): Promise<T> {
   await ready;
   switch (command) {
@@ -180,9 +263,14 @@ export async function webInvoke<T>(command: string): Promise<T> {
       return state() as T;
     case "parser_info":
       return call("parser_info") as T;
-    case "demo_seed":
-      call("load_mnemonic", new TextEncoder().encode(testMnemonic), new Uint8Array());
+    case "demo_seed": {
+      const words = new TextEncoder().encode(testMnemonic);
+      call("load_mnemonic", words, new TextEncoder().encode(await askPassphrase(words)));
       return state() as T;
+    }
+    case "find_address":
+      await checkAddress();
+      return undefined as T;
     case "scan_psbt": {
       await reviewPsbt(await scanPsbt());
       const { frames } = call<{ frames: string[] }>("sign");
