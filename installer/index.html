@@ -84,6 +84,14 @@
         <h2 class="heading" data-ja="入れる">Install</h2>
         <button id="install" class="button button-primary" disabled data-ja="端末をつないで入れる">Connect the phone and install</button>
         <ol id="steps" class="steps" aria-live="polite"></ol>
+        <div id="busy-help" class="banner banner-warning busy-help" hidden>
+          <p data-ja="この PC のほかのものが端末を使っています。止めると、このページが自動でつなぎます。">Something else on this PC is using the phone. Stop it and this page connects on its own.</p>
+          <ul>
+            <li data-ja="adb：ターミナルで &lt;code&gt;adb kill-server&lt;/code&gt; を実行します。Android Studio やエミュレーターを開いていると adb がまた起動するので、先に閉じてください">adb: run <code>adb kill-server</code> in a terminal. Android Studio and the emulator start adb again while they are open, so close them first</li>
+            <li data-ja="このページの別のタブや、インストールしたアプリのウィンドウ：閉じてください">Another tab of this page, or its installed app window: close it</li>
+          </ul>
+          <button id="copy-kill" class="button" type="button"></button>
+        </div>
         <pre id="log" class="data"></pre>
       </section>
 

@@ -36,6 +36,8 @@ main { display: flex; flex-direction: column; gap: var(--space-6); width: min(10
 .banner-positive { background: var(--positive-bg); color: var(--positive); }
 .banner-warning { background: var(--warning-bg); color: var(--warning); }
 .banner-danger { background: var(--danger-bg); color: var(--danger); }
+.busy-help { display: flex; flex-direction: column; gap: var(--space-2); }
+.busy-help .button { font-weight: 700; }
 input[type="file"] { font: var(--text-small); }
 .pill-button { border: 1px solid var(--line-strong); background: var(--surface-raised); color: inherit; cursor: pointer; }
 
