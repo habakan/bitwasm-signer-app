@@ -36,6 +36,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
+      - run: pnpm build:pwa
       - run: pnpm build:installer
       - run: pnpm build:docs
       - uses: actions/upload-pages-artifact@v3

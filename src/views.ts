@@ -1,7 +1,7 @@
 import appIcon from "../src-tauri/icons/source/app-icon.svg?url";
 import { icon } from "./design/icons";
 import { theme } from "./design/theme";
-import { webDemo } from "./signer";
+import { webApp, webDemo } from "./signer";
 import type { Restriction, Screen, SignerState } from "./signer";
 
 export const moduleHashes = {
@@ -100,14 +100,14 @@ function homeView({ signer, busy }: View) {
       ${row("scan", "qr", tr("バックアップのQRを読み取る", "Scan your backup QR"), tr("SeedQR・CompactSeedQR", "SeedQR or CompactSeedQR"), { disabled: blocked })}
       ${row("import-mnemonic", "words", tr("シードフレーズを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), { disabled: blocked })}
     </div>`)}
-    ${group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
+    ${webApp ? "" : group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
       ${row("create-mnemonic", "plus", tr("新しいウォレットを作る", "Create a new wallet"), tr("安全な乱数かサイコロで作ります。", "From secure random or dice rolls."), { disabled: blocked })}
     </div>`)}`,
   };
 }
 
 function readyView({ signer, busy }: View) {
-  const rows = webDemo ? [
+  const rows = webDemo || webApp ? [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
   ] : [
@@ -162,7 +162,7 @@ function settingsView({ signer, busy }: View) {
         { id: "mainnet", label: tr("メインネット", "Mainnet"), selected: !signer.testnet, disabled: busy || signer.loaded || webDemo },
         { id: "signet", label: tr("テストネット", "Testnet"), selected: signer.testnet, disabled: busy || signer.loaded },
       ])}<p class="caption">${webDemo ? tr("ブラウザ版はテストネットだけです。", "The browser version is Testnet only.") : networkNote}</p>`)}
-    ${webDemo ? "" : `${group(tr("安全", "SAFETY"), `<div class="card">${row("restrictions", "shield", tr("端末の機能制限", "Device restrictions"), tr("ネットワーク、Bluetooth、キーボード", "Network, Bluetooth, keyboard"),
+    ${webDemo || webApp ? "" : `${group(tr("安全", "SAFETY"), `<div class="card">${row("restrictions", "shield", tr("端末の機能制限", "Device restrictions"), tr("ネットワーク、Bluetooth、キーボード", "Network, Bluetooth, keyboard"),
         { value: active.length ? tr(`${active.length}件オン`, `${active.length} on`) : "", disabled: busy })}</div>`)}
     ${group(tr("鍵の保存", "KEY STORAGE"), `${segments(tr("鍵の保存", "Key storage"), [
         { id: "storage-off", label: tr("メモリのみ", "Memory only"), selected: !signer.storage, disabled: busy },
@@ -176,7 +176,7 @@ function settingsView({ signer, busy }: View) {
       ]))}
     ${group(tr("署名モジュール", "SIGNING MODULES"), `<div class="card">
       ${moduleField("parser.wasm", "", "parser-hash")}${moduleField("signer.wasm", moduleHashes.signer)}${moduleField("checker.wasm", moduleHashes.checker)}
-    </div><p class="caption">${webDemo ? tr("起動時にSHA-256で検証し、このページの中のWasmiで動かします。", "Verified with SHA-256 at launch and run in Wasmi inside this page.") : tr("起動時にSHA-256で検証し、この端末のWasmiで動かします。", "Verified with SHA-256 at launch and run locally in Wasmi.")}</p>`)}
+    </div><p class="caption">${webDemo || webApp ? tr("起動時にSHA-256で検証し、このページの中のWasmiで動かします。", "Verified with SHA-256 at launch and run in Wasmi inside this page.") : tr("起動時にSHA-256で検証し、この端末のWasmiで動かします。", "Verified with SHA-256 at launch and run locally in Wasmi.")}</p>`)}
     <p class="about">bitwasm-signer 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
   };
 }
@@ -208,16 +208,31 @@ function restrictionsView({ signer, busy }: View) {
 const screens = { home: homeView, ready: readyView, advanced: advancedView, settings: settingsView, restrictions: restrictionsView };
 const titles: Partial<Record<Screen, string>> = { advanced: tr("高度な機能", "Advanced"), settings: tr("設定", "Settings"), restrictions: tr("端末の機能制限", "Device restrictions") };
 
+const notice = (tone: string, title: string, body: string) => `<div class="banner banner-${tone}" role="status">${icon("alert")}
+  <div class="banner-copy"><strong>${title}</strong><span>${body}</span></div></div>`;
+
+// The installed app only works offline once it runs from the home screen and its files are cached there
+function installNotice() {
+  if (!matchMedia("(display-mode: standalone)").matches) return notice("warning", tr("ホーム画面に追加して使います", "Add it to the home screen"),
+    tr("ブラウザの共有メニューかメニューから「ホーム画面に追加」を選び、ホーム画面から開いてください。", "Choose Add to Home Screen in the browser's share menu or menu, then open it from the home screen."));
+  if (!navigator.serviceWorker?.controller) return notice("info", tr("オフラインの準備をしています", "Getting ready for offline use"),
+    tr("準備ができるまで、ネットにつないだまま開いておいてください。", "Keep it open and online until this goes away."));
+  return "";
+}
+
 function banner(signer: SignerState) {
-  if (webDemo) return `<div class="banner banner-warning" role="status">${icon("alert")}
-    <div class="banner-copy"><strong>${tr("ブラウザ版のデモです", "This is the browser demo")}</strong><span>${tr("ネットにつながった端末で動くため、本物の鍵やお金には使わないでください。", "It runs on a connected device, so never use it with a real key or real funds.")}</span></div></div>`;
+  if (webDemo) return notice("warning", tr("ブラウザ版のデモです", "This is the browser demo"), tr("ネットにつながった端末で動くため、本物の鍵やお金には使わないでください。", "It runs on a connected device, so never use it with a real key or real funds."));
+  const install = webApp ? installNotice() : "";
+  if (install) return install;
   const active = activeRestrictions(signer);
   if (!active.length) return "";
   const blocks = restrictionBlocks(signer);
   const title = active.length === 1
     ? tr(`${restrictionName(active[0])}がオンです`, `${restrictionName(active[0])} is on`)
     : tr(`オン: ${active.map(restrictionName).join("、")}`, `On: ${active.map(restrictionName).join(", ")}`);
-  const body = blocks
+  const body = webApp
+    ? tr("機内モードにしてください。ネットにつながっている間は鍵を読み込めず、読み込んだ鍵は消去します。", "Turn on airplane mode. While online, keys cannot be loaded and a loaded key is wiped.")
+    : blocks
     ? tr("必須に設定しているため、オフにするまで鍵を読み込めません。", "It is set to Require, so keys cannot be loaded until it is off.")
     : tr("使い終わったら、オフにしてください。", "Turn it off when you are done.");
   return `<div class="banner banner-${blocks ? "danger" : "warning"}" role="${blocks ? "alert" : "status"}">${icon("alert")}

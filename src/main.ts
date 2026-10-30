@@ -1,5 +1,5 @@
 import "./styles.css";
-import { initialState, interactivePreview, isPreview, previewScreen, signerInvoke, webDemo } from "./signer";
+import { initialState, interactivePreview, isPreview, previewScreen, signerInvoke, webApp, webDemo } from "./signer";
 import type { Screen, SignedPsbtResult, SignerState } from "./signer";
 import { setTheme } from "./design/theme";
 import { appView, moduleHashes, restrictionBlocks, tr } from "./views";
@@ -14,6 +14,12 @@ if (webDemo) {
   root.before(phone);
   phone.append(root);
   document.documentElement.classList.add("web-demo");
+}
+// The installed app caches every file so it starts offline, and asks the browser not to evict that cache
+if (webApp && import.meta.env.PROD && "serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("./sw.js");
+  navigator.serviceWorker.addEventListener("controllerchange", () => render());
+  void navigator.storage?.persist?.();
 }
 let screen: Screen = previewScreen ?? "home";
 let signerState: SignerState = initialState;
@@ -226,7 +232,9 @@ if (!isPreview) {
       signerState = state;
       if (wiped) {
         if (screen === "ready" || screen === "advanced") screen = "home";
-        setStatus(restrictionBlocks(state)
+        setStatus(webApp && restrictionBlocks(state)
+          ? tr("ネットにつながったため、鍵を消去しました。", "The key was wiped because the device went online.")
+          : restrictionBlocks(state)
           ? tr("必須に設定した項目がオンになったため、鍵を消去しました。", "The key was wiped because a required restriction came on.")
           : tr("アプリを離れたため、鍵を消去しました。", "The key was wiped when you left the app."));
       } else if (changed) {
