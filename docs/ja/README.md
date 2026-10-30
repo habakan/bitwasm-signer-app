@@ -54,7 +54,7 @@ Android（Android 10）とiOSシミュレーターの画面です。テストネ
 
 ## 署名専用機にする
 
-Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに[導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)から USB で入れます。同じページで、Lockdown なしで署名アプリだけを入れることもできます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードからできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
+Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに[導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)から USB で入れます。同じページで、Lockdown なしで署名アプリだけを入れることもできます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードか、PC との USB 接続でできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
 
 ## WASM
 

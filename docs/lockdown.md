@@ -61,6 +61,14 @@ The signer and Lockdown can be updated with the restrictions on, from an APK on 
 
 Only the signer and Lockdown packages are accepted. Android refuses an APK signed with a different key or an older version (an APK re-signed with another key was refused in testing). Lockdown keeps no expected hash, so a new signer release does not need a new Lockdown.
 
+## Update from a PC over USB
+
+1. In Lockdown, tap Update an app from a PC over USB and unlock the screen. Lockdown force-stops the signer, which also drops a key left in its memory, then allows USB file transfer
+2. Connect the PC, pick File transfer in the phone's USB notification and copy the release APK to Download
+3. Tap Choose the APK. File transfer is blocked again at that moment, then continue as in step 3 above
+
+Only file transfer is allowed, and only while that dialog is open. USB debugging and airplane mode stay locked. File transfer reaches shared storage only; the signer's saved seeds are in its private storage, encrypted with its own Keystore keys, and neither the PC nor Lockdown can read them. If Lockdown is closed while the dialog is open, it blocks file transfer again the next time it starts.
+
 ## Check from a PC
 
 `lockdown/audit.sh` reads the phone's state over adb without changing anything: boot and OS integrity, radios, enabled apps against the profile, apps holding powerful permissions, accounts, backup and the lock screen. It needs USB debugging, so run it before applying the restrictions or after lifting them.

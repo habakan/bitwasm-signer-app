@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- From Android 11 the signer is invisible to this app without it -->
+    <queries>
+        <package android:name="com.habakan.bitwasm_signer" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:label="Signer Lockdown">

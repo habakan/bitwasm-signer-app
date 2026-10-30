@@ -25,6 +25,7 @@ fun tr(ja: String, en: String) = if (Locale.getDefault().language == "ja") ja el
 class Policy(private val context: Context) {
     private val dpm = context.getSystemService(DevicePolicyManager::class.java)
     private val admin = ComponentName(context, AdminReceiver::class.java)
+    private val prefs = context.getSharedPreferences("lockdown", Context.MODE_PRIVATE)
 
     val isDeviceOwner get() = dpm.isDeviceOwnerApp(context.packageName)
 
@@ -59,6 +60,22 @@ class Policy(private val context: Context) {
     fun installUpdate(apk: File) {
         install { apk.inputStream() }
         apk.delete()
+    }
+
+    // Hiding the signer force-stops it, dropping a key left in its memory. Its saved seeds sit in its private
+    // storage, which file transfer does not expose
+    fun openUsbTransfer() {
+        dpm.setApplicationHidden(admin, SIGNER, true)
+        dpm.setApplicationHidden(admin, SIGNER, false)
+        if (UserManager.DISALLOW_USB_FILE_TRANSFER !in activeRestrictions()) return
+        prefs.edit().putBoolean(USB_OPEN, true).commit()
+        dpm.clearUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+    }
+
+    fun closeUsbTransfer() {
+        if (!prefs.getBoolean(USB_OPEN, false)) return
+        dpm.addUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+        prefs.edit().remove(USB_OPEN).commit()
     }
 
     // A device owner installs without asking the user. The result arrives as an INSTALL_RESULT broadcast
@@ -111,6 +128,7 @@ class Policy(private val context: Context) {
     }
 
     fun release() {
+        prefs.edit().remove(USB_OPEN).commit()
         RESTRICTIONS.forEach { dpm.clearUserRestriction(admin, it) }
         dpm.setPermittedAccessibilityServices(admin, null)
         dpm.setPermittedInputMethods(admin, null)
@@ -127,6 +145,7 @@ class Policy(private val context: Context) {
         const val SIGNER = "com.habakan.bitwasm_signer"
         const val SIGNER_APK = "bitwasm-signer.apk"
         const val INSTALL_RESULT = "com.habakan.signer_lockdown.INSTALL_RESULT"
+        private const val USB_OPEN = "usbOpen"
 
         val RESTRICTIONS = listOf(
             UserManager.DISALLOW_AIRPLANE_MODE,
