@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef } from "vue";
+import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 import { useData, withBase } from "vitepress";
 
 // The browser demo is published one level above the docs; `pnpm dev:docs` uses the live one
-const { lang } = useData();
+const { lang, isDark } = useData();
 const home = import.meta.env.DEV ? "https://habakan.github.io/bitwasm-signer-app/" : withBase("/../");
 const src = `${home}?lang=${lang.value}`;
 const key = ref(0);
@@ -20,12 +20,20 @@ const fit = () => {
 };
 onMounted(() => { fit(); addEventListener("resize", fit); });
 onBeforeUnmount(() => removeEventListener("resize", fit));
+
+// Same origin, so the docs' light/dark switch is copied into the app without reloading it
+const frame = useTemplateRef<HTMLIFrameElement>("frame");
+const follow = () => {
+  const root = frame.value?.contentDocument?.documentElement;
+  if (root) root.dataset.theme = isDark.value ? "dark" : "light";
+};
+watch(isDark, follow);
 </script>
 
 <template>
   <figure ref="figure" class="demo" :style="{ width: `${width * scale}px` }">
     <div :style="{ height: `${height * scale}px` }">
-      <iframe :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" :style="{ transform: `scale(${scale})` }"></iframe>
+      <iframe ref="frame" :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="follow" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
     <figcaption>
       <button type="button" @click="key++">{{ ja ? "最初からやり直す" : "Start over" }}</button>
