@@ -53,7 +53,7 @@ export default defineConfig({
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "使う", items: [{ text: "署名アプリの使い方", link: "/ja/guide", items: chapters("../ja/guide.md", "/ja/guide") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
+          { text: "使う", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "署名アプリの使い方", link: "/ja/guide", items: chapters("../ja/guide.md", "/ja/guide") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
           { text: "開発", items: [{ text: "デザイン", link: "/ja/design" }, { text: "ロードマップ", link: "/ja/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "GitHubでこのページを編集" },
