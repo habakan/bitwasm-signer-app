@@ -21,7 +21,7 @@ The APK and the iOS app check the SHA-256 of the WASM modules they load and do n
 - **The GitHub release**: release APKs are signed with the author's key, and each release comes with a `SHA256SUMS` file. `SHA256SUMS` shows that the download is intact, but cannot catch a release that was replaced as a whole. Once installed, Android only accepts updates signed with the same key.
 - **The installer page**: the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) writes to the phone over WebUSB from Chrome or Edge. While connected it can do anything adb can do to the phone. The page is built from this repository.
 - **Your PC**: the USB ways also trust your PC and its browser. With the QR code, the PC only shows the QR code.
-- **GitHub Pages**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. When the phone goes online, it may update to a newer build.
+- **GitHub Pages**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. After that it runs only that build, but going online lets a new build arrive, which takes over at the next launch. A compromised site cannot be stopped this way, so keep the phone offline once it is installed. Settings › This build shows the running build, which you can compare with `CACHE` in `dist-web/app/sw.js` from your own build.
 - **Your build tools**: building it yourself trusts Rust, the Android SDK or Xcode, and the npm dependencies.
 
 ## Build it yourself {#build}
@@ -68,6 +68,8 @@ It differs from the native apps:
 - It cannot block third-party keyboards. Use the keyboard that came with the phone, or load the key from a SeedQR.
 - Keys cannot be saved, so load the key each time. Creating a new wallet is not available.
 - It knows whether the phone is online only as far as the browser tells it.
+- It cannot block screenshots or screen recording. Leaving the app covers and reloads it, but whether the app switcher keeps a snapshot is up to the browser.
+- Before opening it, check that the URL is `habakan.github.io/bitwasm-signer-app/app/`, so you do not install a copy from another site.
 
 It has not been tried on a real iPhone yet, only in the Simulator and in desktop Chrome.
 

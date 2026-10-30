@@ -3,6 +3,7 @@ import { initialState, interactivePreview, isPreview, previewScreen, signerInvok
 import type { Screen, SignedPsbtResult, SignerState } from "./signer";
 import { setTheme } from "./design/theme";
 import { appView, moduleHashes, restrictionBlocks, tr } from "./views";
+import { startPwa } from "./web/pwa";
 
 type StatusKind = "info" | "error" | "loading";
 
@@ -15,12 +16,7 @@ if (webDemo) {
   phone.append(root);
   document.documentElement.classList.add("web-demo");
 }
-// The installed app caches every file so it starts offline, and asks the browser not to evict that cache
-if (webApp && import.meta.env.PROD && "serviceWorker" in navigator) {
-  void navigator.serviceWorker.register("./sw.js");
-  navigator.serviceWorker.addEventListener("controllerchange", () => render());
-  void navigator.storage?.persist?.();
-}
+if (webApp) void startPwa(() => render());
 let screen: Screen = previewScreen ?? "home";
 let signerState: SignerState = initialState;
 let statusMessage = "";
