@@ -22,7 +22,7 @@ const scale = ref(0.8);
 const fit = () => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   const room = figure.value?.parentElement?.clientWidth ?? width;
-  scale.value = Math.min(1, (innerHeight - nav - 190) / height, room / width);
+  scale.value = Math.min(1, (innerHeight - nav - 140) / height, room / width);
 };
 
 // `demo:` maps section ids to steps on a fresh demo: "#id" taps every match, "scroll:<selector>" scrolls it
@@ -30,7 +30,7 @@ const fit = () => {
 let section = "";
 let taps: string[] = [];
 const sync = () => {
-  if (following.value || !figure.value?.closest(".aside")) return;
+  if (!figure.value?.closest(".aside")) return;
   const scenes = frontmatter.value.demo ?? {};
   // A section counts once its heading nears the top; at the page end the last visible one wins
   const end = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
@@ -51,7 +51,7 @@ const play = async () => {
     // The engine loads after the page, so buttons appear or stay disabled for a moment
     for (let i = 0; i < 100 && !(targets = [...(frame?.contentDocument?.querySelectorAll<HTMLElement>(selector) ?? [])]).length; i++)
       await new Promise((r) => setTimeout(r, 50));
-    if (run !== key.value || !targets.length) return;
+    if (run !== key.value || touched || !targets.length) return;
     for (const target of targets) {
       if (action === "scroll") { target.scrollTop = target.scrollHeight; target.dispatchEvent(new Event("scroll")); }
       else if (action === "type") { (target as HTMLInputElement).value = text; target.dispatchEvent(new Event("input")); }
@@ -71,54 +71,27 @@ const applyTheme = () => {
 };
 watch(isDark, applyTheme);
 
-// The other way round: tapping in the demo scrolls to the section whose scene ends with that button
-const following = ref(false);
-let tapped: string[] = [];
-const onTap = (event: Event) => {
-  const id = (event.target as Element).closest?.("button[id]")?.id;
-  if (!following.value || !id) return;
-  tapped = [...tapped, `#${id}`].slice(-20);
-  // Of the scenes ending with this button, the one sharing the longest run of recent taps
-  const scenes: Record<string, string[]> = frontmatter.value.demo ?? {};
-  const shared = (steps: string[]) => { let n = 0; while (n < steps.length && steps.at(-1 - n) === tapped.at(-1 - n)) n++; return n; };
-  const ids = (name: string) => scenes[name].filter((step) => step.startsWith("#"));
-  const match = Object.keys(scenes).filter((name) => ids(name).at(-1) === `#${id}`).sort((a, b) => shared(ids(b)) - shared(ids(a)))[0];
-  const heading = match && document.getElementById(match);
-  if (!heading) return;
-  const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
-  scrollTo({ top: heading.getBoundingClientRect().top + scrollY - nav - 24, behavior: "smooth" });
-};
+// Touching the phone stops the scene's playback; the next section's scene replaces what was done
+let touched = false;
 const loaded = (event: Event, k: number) => {
   if (k !== key.value) return;
   frame = event.target as HTMLIFrameElement;
   applyTheme();
   frames.value = [frames.value.at(-1)!];
-  frame.contentDocument?.addEventListener("click", onTap, true);
+  touched = false;
+  frame.contentDocument?.addEventListener("pointerdown", () => { touched = true; }, true);
   void play();
 };
-// Leaving the mode puts the phone back on the section in view
-watch(following, (on) => {
-  if (on) return;
-  section = "-";
-  sync();
-});
-const reset = () => {
-  if (following.value) { taps = []; tapped = []; }
-  key.value++;
-};
+const reset = () => { key.value++; };
 </script>
 
 <template>
   <figure ref="figure" class="demo" :style="{ width: `${width * scale}px` }">
-    <div class="modes" role="group" :aria-label="ja ? 'デモの使い方' : 'Demo mode'">
-      <button type="button" :aria-pressed="!following" @click="following = false">{{ ja ? "スクロールで見る" : "Watch as you scroll" }}</button>
-      <button type="button" :aria-pressed="following" @click="following = true">{{ ja ? "自分で触る" : "Try it yourself" }}</button>
-    </div>
     <div class="screen" :style="{ height: `${height * scale}px` }">
       <iframe v-for="f in frames" :key="f.key" :src="f.src" :class="{ loading: f !== frames[0] }" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded($event, f.key)" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
     <figcaption>
-      <button type="button" @click="reset">{{ following ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>
+      <button type="button" @click="reset">{{ ja ? "この画面に戻す" : "Reset this screen" }}</button>
       <a :href="src" target="_blank" rel="noopener">{{ ja ? "別のタブで開く" : "Open in a new tab" }}</a>
     </figcaption>
   </figure>
@@ -129,9 +102,6 @@ const reset = () => {
 .demo .screen { position: relative; }
 .demo iframe { position: absolute; top: 0; left: 0; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
 .demo iframe.loading { opacity: 0; pointer-events: none; }
-.demo .modes { display: flex; margin-bottom: 12px; padding: 3px; border-radius: 999px; background: var(--vp-c-default-soft); }
-.demo .modes button { flex: 1; padding: 6px 0; border-radius: 999px; color: var(--vp-c-text-2); font-size: 14px; font-weight: 600; }
-.demo .modes button[aria-pressed="true"] { background: var(--vp-c-brand-1); color: var(--vp-c-white); }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
 .demo figcaption :is(button, a) { color: var(--vp-c-brand-1); }
 :global(.aside) .demo { margin: 0; }
