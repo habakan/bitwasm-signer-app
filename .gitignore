@@ -28,3 +28,4 @@ dist-ssr
 *.keystore
 dist-web
 web/engine/target
+docs/.vitepress/cache

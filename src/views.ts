@@ -12,8 +12,9 @@ export const moduleHashes = {
 
 type View = { screen: Screen; signer: SignerState; busy: boolean };
 
-// Japanese first, English for every other system language
-export const lang = navigator.language.toLowerCase().startsWith("ja") ? "ja" : "en";
+// Japanese first, English for every other system language; the docs pick one with ?lang=
+const language = new URLSearchParams(location.search).get("lang") ?? navigator.language;
+export const lang = language.toLowerCase().startsWith("ja") ? "ja" : "en";
 export const tr = (ja: string, en: string) => (lang === "ja" ? ja : en);
 
 const androidKeyboardNotes = [

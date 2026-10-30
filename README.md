@@ -4,6 +4,8 @@
 
 An Android / iOS signing app built on the `bitwasm-signer` parser and signer WASM modules. By default the app keeps no key: it loads the key for each signing and erases it when you are done.
 
+**[Read the guide](https://habakan.github.io/bitwasm-signer-app/docs/)**: how to set up and use the signer, from making a key to signing a transaction, with the browser demo running beside the text.
+
 **[Try the testnet demo in your browser](https://habakan.github.io/bitwasm-signer-app/)** · **[Install over USB](https://habakan.github.io/bitwasm-signer-app/install/)**
 
 > **Warning:** This is experimental software. It has not been audited and comes with no warranty. The author is not responsible for lost funds or any other damage from using it. Keep amounts small.
@@ -124,6 +126,15 @@ pnpm build:web   # writes to dist-web
 ```
 
 To try signing, scan a QR from a wallet app with the camera, or use the test transaction from `samples/psbt-ur-test-only.png`. The camera only works on localhost or HTTPS pages.
+
+## Documentation
+
+The Markdown in `docs/` (English) and `docs/ja/` (Japanese) is published with VitePress at https://habakan.github.io/bitwasm-signer-app/docs/. A page with `demo:` in its frontmatter shows the browser demo in the right column; it maps section ids to the buttons to tap, so the phone moves to that screen when the section scrolls into view (see `docs/index.md`).
+
+```sh
+pnpm dev:docs    # the demo comes from the published site
+pnpm build:docs  # writes to dist-web/docs, after pnpm build:web
+```
 
 ## Current scope
 

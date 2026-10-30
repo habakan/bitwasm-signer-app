@@ -1,0 +1,59 @@
+# セットアップ方法
+
+<sup>[English](../setup.md)</sup>
+
+署名アプリの入れ方はいくつかあります。どれを選ぶかは、何を信頼するかで決まります。信頼するものが少ないほど手間が増えます。
+
+## 選び方
+
+| 方法 | 信頼するもの | 署名用のスマホがネットにつながるか | 対応 |
+| --- | --- | --- | --- |
+| [自分でビルドする](#build) | ソースコード(自分で読める)とビルド環境 | つながない | Android、iOS |
+| [リリースのAPKをUSBで入れる](#release-usb) | GitHubのリリースと導入ページ、PC | つながない | Android |
+| [Lockdownを入れる(USB)](#lockdown-usb) | GitHubのリリースと導入ページ、PC | つながない | Android |
+| [Lockdownを入れる(QR)](#lockdown-qr) | GitHubのリリース | 導入の間だけWi-Fiにつなぐ(まだ鍵はない) | Android |
+
+どの方法でも、アプリは読み込むWASMモジュールのSHA-256を確かめ、一致しなければ動きません。
+
+## 何を信頼することになるか {#trust}
+
+- **GitHubのリリース**: リリースのAPKは作者の鍵で署名され、同じリリースに`SHA256SUMS`が付きます。`SHA256SUMS`で分かるのはダウンロードが壊れていないことで、リリースそのものが差し替えられた場合は見抜けません。一度入れると、Androidは同じ鍵で署名された更新しか受け付けません。
+- **導入ページ**: [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)はブラウザ(ChromeかEdge)からWebUSBでスマホに書き込みます。つないでいる間は、スマホに対してadbのすべての操作ができます。ページはこのリポジトリからビルドしたものです。
+- **PC**: USBでつなぐ方法では、PCとそのブラウザも信頼します。QRで入れる方法では、PCはQRを表示するだけです。
+- **ビルド環境**: 自分でビルドするときは、Rust、Android SDKやXcode、npmの依存パッケージを信頼します。
+
+## 自分でビルドする {#build}
+
+リリースを信頼したくない場合です。ソースを読み、自分のPCでビルドして入れます。
+
+- Android: READMEの[ビルド](https://github.com/habakan/bitwasm-signer-app#build)の手順でAPKを作り、`adb install`か導入ページの「APK だけ入れる」で入れます。デバッグビルドはスマホではとても遅いので、リリースビルドを使ってください。
+- iOS: 配布はしていないので、Xcodeで自分の開発者アカウントで署名して入れます。iOSはシミュレーターでしか確認していません。
+
+自分でビルドしたAPKは作者のリリースと署名鍵が違うので、リリースのAPKの上から更新することはできません。
+
+## リリースのAPKをUSBで入れる {#release-usb}
+
+署名用のスマホを一度もネットにつながずに、APKだけを入れます。
+
+1. スマホで開発者向けオプションを出し(端末情報のビルド番号を7回タップ)、USBデバッグをオンにする
+2. PCで[リリース](https://github.com/habakan/bitwasm-signer-app/releases)からAPKと`SHA256SUMS`をダウンロードする
+3. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/#apk)を「APK だけ入れる」で開き、APKと`SHA256SUMS`を選ぶ。一致したときだけ入れられる
+4. 入れ終わったらUSBデバッグをオフにし、機内モードにする
+
+## Signer Lockdownを入れる {#lockdown}
+
+Androidでは、工場出荷リセットしたスマホを[Signer Lockdown](lockdown.md)で署名専用機にできます。機内モードを固定し、USBデバッグ、アプリやアカウントの追加を禁止します。署名アプリはLockdownに同梱されています。
+
+### USBで入れる {#lockdown-usb}
+
+スマホを一度もネットにつなぎません。上の「リリースのAPKをUSBで入れる」と同じように導入ページを使い、Lockdownを入れてDevice Ownerにします。手順は[ネットワークを使わずに導入する](lockdown.md#ネットワークを使わずに導入する)を参照してください。
+
+### QRで入れる {#lockdown-qr}
+
+PCはQRを表示するだけです。スマホはLockdownをダウンロードする間だけWi-Fiにつながり、QRに入っているSHA-256で照合します。手順は[QRで導入する](lockdown.md#qr-で導入する)を参照してください。
+
+## 入れたあと {#after}
+
+- 機内モードにし、どのネットワークにもつながないようにします(Lockdownでは固定されます)。
+- 署名アプリの 設定 › 端末の機能制限 で、ネットワークやサードパーティ製キーボードなどがオンのときの扱いを選べます。
+- Lockdownを入れたスマホは、制限を掛ける前か一時解除した後に、PCから`lockdown/audit.sh`で状態を確かめられます。
