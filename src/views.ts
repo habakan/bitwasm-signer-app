@@ -1,3 +1,4 @@
+import appIcon from "../src-tauri/icons/source/app-icon.svg?url";
 import { icon } from "./design/icons";
 import { theme } from "./design/theme";
 import { webDemo } from "./signer";
@@ -81,7 +82,7 @@ const question = (title: string, lead?: string) => `<div class="question"><h1>${
 
 function homeView({ signer, busy }: View) {
   if (webDemo) return {
-    body: `${question(tr("テスト用の鍵で試す", "Try it with a test key"), tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
+    body: `${question("bitwasm-signer", tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"),
       tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy))}
     ${group(tr("新しいウォレット", "NEW WALLET"),
@@ -90,7 +91,7 @@ function homeView({ signer, busy }: View) {
   const saved = signer.saved ?? 0;
   const blocked = busy || restrictionBlocks(signer);
   return {
-    body: `${question(tr("ウォレットを用意する", "Set up a wallet"), signer.storage
+    body: `${question("bitwasm-signer", signer.storage
       ? tr("保存した鍵は暗号化され、開くには画面ロックが必要です。ロックするかアプリを離れると、メモリから消去されます。", "Saved keys are encrypted on this phone and need your screen lock to open. Locking or leaving the app wipes the key from memory.")
       : tr("鍵はこのスマホのメモリにだけあり、ロックするかアプリを離れると消去されます。", "Your key stays in this phone's memory and is wiped when you lock it or leave the app."))}
     ${saved ? group(tr("この端末に保存した鍵", "SAVED ON THIS DEVICE"),
@@ -232,8 +233,8 @@ export function appView(view: View) {
   ].join("");
   return `<div class="app-shell" lang="${lang}">
     <header class="topbar">
-      ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>` : ""}
-      <span class="topbar-title${title ? " topbar-title-page" : ""}">${title ?? "bitwasm-signer"}</span>
+      ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>
+      <span class="topbar-title topbar-title-page">${title}</span>` : `<img class="topbar-icon" src="${appIcon}" alt="bitwasm-signer">`}
       <span class="topbar-status">${status}</span>
       ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("settings")}</button>` : ""}
     </header>
