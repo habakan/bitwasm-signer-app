@@ -22,11 +22,12 @@ main { display: flex; flex-direction: column; gap: var(--space-6); width: min(10
 .heading { font: var(--text-heading); }
 .field { display: flex; flex-direction: column; gap: var(--space-2); }
 .data { margin: 0; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-sunken); font: 500 13px/20px var(--font-mono); white-space: pre-wrap; }
-#log:empty { display: none; }
+#log:empty, .steps:empty { display: none; }
 
 .button { display: flex; width: 100%; min-height: var(--control-height); align-items: center; justify-content: center; padding: 0 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-raised); color: inherit; font: var(--text-label); cursor: pointer; }
 .button-primary { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
 .button:disabled { opacity: .45; cursor: default; }
+.button[aria-busy="true"] { gap: var(--space-2); opacity: 1; }
 .button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .check { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--primary); }
@@ -42,3 +43,24 @@ input[type="file"] { font: var(--text-small); }
 .segment { min-height: 44px; padding: 0 var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--ink-muted); font: var(--text-label); cursor: pointer; }
 .segment[aria-checked="true"] { border-color: var(--line-strong); background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-raised); }
 .app-mode-lockdown [data-mode="apk"], .app-mode-apk [data-mode="lockdown"] { display: none !important; }
+
+/* Progress: a turning ring while something runs, and a mark for each step's state */
+.spinner { flex: none; width: 18px; height: 18px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.steps { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: flex-start; gap: var(--space-3); margin: 0; color: var(--ink-muted); }
+.steps li[data-state="active"], .steps li[data-state="done"] { color: var(--ink); font-weight: 600; }
+.steps li[data-state="failed"] { color: var(--danger); font-weight: 600; }
+.step-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: var(--space-1); }
+.step-copy .note { font-weight: 400; }
+.step-copy .note:empty { display: none; }
+.step-mark { display: grid; flex: none; width: 22px; height: 22px; margin-top: 1px; place-items: center; border: 2px solid var(--line-strong); border-radius: 50%; color: var(--on-primary); font: 700 13px/1 var(--font-sans); }
+.steps li[data-state="active"] .step-mark { border-color: var(--primary); border-right-color: transparent; animation: spin .8s linear infinite; }
+.steps li[data-state="done"] .step-mark { border-color: var(--positive); background: var(--positive); }
+.steps li[data-state="done"] .step-mark::after { content: "✓"; }
+.steps li[data-state="failed"] .step-mark { border-color: var(--danger); background: var(--danger); }
+.steps li[data-state="failed"] .step-mark::after { content: "!"; }
+progress { width: 100%; height: 6px; border: 0; border-radius: var(--radius-full); background: var(--surface-sunken); accent-color: var(--primary); }
+progress::-webkit-progress-bar { border-radius: var(--radius-full); background: var(--surface-sunken); }
+progress::-webkit-progress-value { border-radius: var(--radius-full); background: var(--primary); }
+@media (prefers-reduced-motion: reduce) { .spinner, .steps li[data-state="active"] .step-mark { animation-duration: 2.4s; } }

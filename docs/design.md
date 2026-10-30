@@ -30,6 +30,17 @@ Add SVG paths drawn on a 24×24 grid to `icons` in `src/design/icons.ts`. Stroke
 
 Screen text is in `tr("日本語", "English")` calls in `src/views.ts` and `src/main.ts`, and in `Design.tr` for Android screens. Write the screen in Japanese first, then check that the English also fits.
 
+## Showing progress
+
+When a tap starts something that takes time, such as an install, an update or a check, the screen shows it right away.
+
+- The tapped button shows a turning ring and says what is happening ("Installing…"). It keeps its size and full color. Other controls on the screen are disabled until the work ends.
+- Work with several stages lists them. Each stage is marked as waiting (empty circle), running (turning ring), done (check) or failed (exclamation mark, in danger color). A stage that waits for the person says what to do, such as allowing USB debugging. A stage that moves a file shows how much has been sent.
+- The result appears as a message, and the button returns to its label.
+- With reduced motion turned on, the ring turns more slowly.
+
+Lockdown (`lockdown/`) and the installer page (`installer/`) follow this.
+
 ## Checking
 
 Run `pnpm dev` and open it with `?ui-preview=home`, `ready`, `settings` or `restrictions` to see each screen without a device. The language follows the browser's language setting.
