@@ -127,7 +127,7 @@ pnpm build:web   # dist-web に出力
 
 ## ドキュメント
 
-`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。ページに `<Demo />` と書くと、本文の横にブラウザ版のデモを出せます。
+`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。ページのフロントマターに `demo: true` と書くと、右の欄にブラウザ版のデモを出せます。
 
 ```sh
 pnpm dev:docs    # デモは公開中のサイトのものを使う

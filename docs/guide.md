@@ -1,8 +1,11 @@
+---
+demo: true
+outline: false
+---
+
 # Try the signer
 
 <sup>[日本語](ja/guide.md)</sup>
-
-<Demo />
 
 The phone on this page runs the signer's browser demo. It is the same Rust signing engine as the app, built to WebAssembly, on testnet. Follow the steps below in it. The demo only uses the published BIP39 test words, so never send real bitcoin to its addresses.
 

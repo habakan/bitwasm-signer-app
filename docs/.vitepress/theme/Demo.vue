@@ -21,13 +21,13 @@ const ja = lang.value === "ja";
 </template>
 
 <style scoped>
-.demo { margin: 16px auto; width: 320px; }
-.demo iframe { display: block; width: 100%; height: 600px; border: 10px solid #16191c; border-radius: 36px; background: #fff; }
+.demo { margin: 0 auto 24px; width: 360px; max-width: 100%; }
+.demo iframe { display: block; width: 100%; height: 600px; border: 10px solid #16191c; border-radius: 40px; background: #fff; }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
-.demo button { color: var(--vp-c-brand-1); }
-@media (min-width: 1200px) {
-  /* The text keeps a right column free, so the phone can stay in view while the page scrolls */
-  .demo { position: sticky; top: calc(var(--vp-nav-height) + 24px); float: right; margin: 0 -352px 24px 32px; }
-  :global(.vp-doc:has(.demo)) { padding-right: 352px; }
-}
+.demo :is(button, a) { color: var(--vp-c-brand-1); }
+/* In the right column, sized so the whole phone fits the window */
+:global(.aside) .demo { margin: 0; }
+:global(.aside) .demo iframe { height: min(780px, calc(100vh - var(--vp-nav-height) - 120px)); }
+:global(.VPDoc:has(.demo) .aside) { max-width: 392px; }
+:global(.VPDoc:has(.demo) :is(.aside-container, .aside-curtain)) { width: 360px; }
 </style>

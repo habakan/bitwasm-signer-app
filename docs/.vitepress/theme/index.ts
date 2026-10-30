@@ -1,9 +1,4 @@
 import DefaultTheme from "vitepress/theme";
-import Demo from "./Demo.vue";
+import Layout from "./Layout.vue";
 
-export default {
-  extends: DefaultTheme,
-  enhanceApp({ app }) {
-    app.component("Demo", Demo);
-  },
-};
+export default { extends: DefaultTheme, Layout };
