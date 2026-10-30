@@ -6,7 +6,7 @@ hero:
   tagline: Keep the keys on a phone that never goes online, and pass transactions by QR code.
   actions:
     - theme: brand
-      text: Try the signer
+      text: How it works
       link: /guide
     - theme: alt
       text: Signer Lockdown

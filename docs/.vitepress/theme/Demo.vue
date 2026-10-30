@@ -16,20 +16,21 @@ const scale = ref(0.8);
 const fit = () => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   const room = figure.value?.parentElement?.clientWidth ?? width;
-  scale.value = Math.min(1, (innerHeight - nav - 120) / height, room / width);
+  scale.value = Math.min(1, (innerHeight - nav - 150) / height, room / width);
 };
 
-// `demo:` in the frontmatter maps section ids to the taps that reach their screen
+// `demo:` maps section ids to steps on a fresh demo: "#id" taps every match, "scroll:<selector>" scrolls it
+// to the end and "type:<selector>=<text>" fills it in
 let section = "";
 let taps: string[] = [];
 const sync = () => {
-  if (!figure.value?.closest(".aside")) return;
+  if (following.value || !figure.value?.closest(".aside")) return;
   const scenes = frontmatter.value.demo ?? {};
   // A section counts once its heading nears the top; at the page end the last visible one wins
   const end = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
   let id = "";
-  for (const heading of document.querySelectorAll<HTMLElement>(".vp-doc h2[id]"))
-    if (Array.isArray(scenes[heading.id]) && heading.getBoundingClientRect().top < (end ? innerHeight : 200)) id = heading.id;
+  for (const heading of document.querySelectorAll<HTMLElement>(".vp-doc :is(h2, h3)[id]"))
+    if (scenes[heading.id] && heading.getBoundingClientRect().top < (end ? innerHeight : 140)) id = heading.id;
   if (id === section) return;
   section = id;
   taps = id ? scenes[id] : [];
@@ -37,14 +38,20 @@ const sync = () => {
 };
 const play = async () => {
   const run = key.value;
-  for (const selector of taps) {
-    let target: HTMLButtonElement | null | undefined;
+  for (const step of taps) {
+    const [action, arg] = /^(scroll|type):(.*)$/.exec(step)?.slice(1) ?? ["tap", step];
+    const [selector, text] = action === "type" ? arg.split("=") : [action === "tap" ? `${arg}:not(:disabled)` : arg];
+    let targets: HTMLElement[] = [];
     // The engine loads after the page, so buttons appear or stay disabled for a moment
-    for (let i = 0; i < 100 && !(target = frame.value?.contentDocument?.querySelector<HTMLButtonElement>(`${selector}:not(:disabled)`)); i++)
+    for (let i = 0; i < 100 && !(targets = [...(frame.value?.contentDocument?.querySelectorAll<HTMLElement>(selector) ?? [])]).length; i++)
       await new Promise((r) => setTimeout(r, 50));
-    if (run !== key.value || !target) return;
-    target.click();
-    await new Promise((r) => setTimeout(r, 300));
+    if (run !== key.value || !targets.length) return;
+    for (const target of targets) {
+      if (action === "scroll") { target.scrollTop = target.scrollHeight; target.dispatchEvent(new Event("scroll")); }
+      else if (action === "type") { (target as HTMLInputElement).value = text; target.dispatchEvent(new Event("input")); }
+      else target.click();
+    }
+    await new Promise((r) => setTimeout(r, 1000));
   }
 };
 
@@ -53,20 +60,49 @@ onBeforeUnmount(() => { removeEventListener("resize", fit); removeEventListener(
 
 // Same origin, so the docs' light/dark switch is copied into the app without reloading it
 const frame = useTemplateRef<HTMLIFrameElement>("frame");
-const follow = () => {
+const applyTheme = () => {
   const root = frame.value?.contentDocument?.documentElement;
   if (root) root.dataset.theme = isDark.value ? "dark" : "light";
 };
-watch(isDark, follow);
+watch(isDark, applyTheme);
+
+// The other way round: tapping in the demo scrolls to the section whose scene ends with that button
+const following = ref(false);
+const onTap = (event: Event) => {
+  const id = (event.target as Element).closest?.("button[id]")?.id;
+  if (!following.value || !id) return;
+  const scenes: Record<string, string[]> = frontmatter.value.demo ?? {};
+  const match = Object.keys(scenes).find((name) => scenes[name].filter((step) => step.startsWith("#")).at(-1) === `#${id}`);
+  const heading = match && document.getElementById(match);
+  if (!heading) return;
+  const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
+  scrollTo({ top: heading.getBoundingClientRect().top + scrollY - nav - 24, behavior: "smooth" });
+};
+const loaded = () => {
+  applyTheme();
+  frame.value?.contentDocument?.addEventListener("click", onTap, true);
+  void play();
+};
+// Leaving the mode puts the phone back on the section in view
+watch(following, (on) => {
+  if (on) return;
+  section = "-";
+  sync();
+});
+const reset = () => {
+  if (following.value) taps = [];
+  key.value++;
+};
 </script>
 
 <template>
   <figure ref="figure" class="demo" :style="{ width: `${width * scale}px` }">
     <div :style="{ height: `${height * scale}px` }">
-      <iframe ref="frame" :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="follow(); play()" :style="{ transform: `scale(${scale})` }"></iframe>
+      <iframe ref="frame" :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
+    <label class="mode"><input v-model="following" type="checkbox" />{{ ja ? "操作に合わせて説明を出す" : "Follow the demo with the text" }}</label>
     <figcaption>
-      <button type="button" @click="key++">{{ ja ? "この画面に戻す" : "Reset this screen" }}</button>
+      <button type="button" @click="reset">{{ following ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>
       <a :href="src" target="_blank" rel="noopener">{{ ja ? "別のタブで開く" : "Open in a new tab" }}</a>
     </figcaption>
   </figure>
@@ -75,6 +111,8 @@ watch(isDark, follow);
 <style scoped>
 .demo { margin: 0 auto 24px; }
 .demo iframe { display: block; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
+.demo .mode { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; }
+.demo .mode input { accent-color: var(--vp-c-brand-1); }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
 .demo :is(button, a) { color: var(--vp-c-brand-1); }
 :global(.aside) .demo { margin: 0; }

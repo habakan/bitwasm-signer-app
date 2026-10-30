@@ -6,7 +6,7 @@ hero:
   tagline: 鍵はネットにつながないスマホに置き、取引はQRコードでやり取りします。
   actions:
     - theme: brand
-      text: 署名アプリを試す
+      text: しくみと使い方
       link: /ja/guide
     - theme: alt
       text: Signer Lockdown
