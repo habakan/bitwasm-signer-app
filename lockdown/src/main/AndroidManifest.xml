@@ -13,7 +13,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="Signer Lockdown">
+        android:label="Signer Lockdown"
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
 
         <activity
             android:name=".MainActivity"
