@@ -25,7 +25,8 @@ button:disabled { opacity: .45; cursor: default; }
 .topbar-title { min-width: 0; flex: 1; font-weight: 700; line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A screen's own title stays whole; the status pills wrap instead */
 .topbar-title-page { flex: 1 0 auto; }
-.topbar-status { display: flex; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1); }
+.topbar-icon { width: 32px; height: 32px; flex: none; border-radius: var(--radius-sm); }
+.topbar-status { display: flex; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1); margin-left: auto; }
 .screen-banner { padding: 0 var(--space-4); }
 .screen-banner > :not([hidden]) { margin-top: var(--space-3); }
 .screen-body { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: var(--space-6); overflow-y: auto; padding: var(--space-6) var(--space-4); }
