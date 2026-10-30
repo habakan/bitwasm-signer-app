@@ -12,14 +12,16 @@ There are several ways to install the signer. Which one to pick depends on what 
 | [Install the release APK over USB](#release-usb) | The GitHub release, the installer page and your PC | No | Android |
 | [Install Lockdown over USB](#lockdown-usb) | The GitHub release, the installer page and your PC | No | Android |
 | [Install Lockdown with the QR code](#lockdown-qr) | The GitHub release | On Wi-Fi only during setup, before any key is on it | Android |
+| [Add the web app to the home screen](#pwa) | GitHub Pages at the time you add it | Only during setup, before any key is on it | iOS, Android |
 
-Whichever way you choose, the app checks the SHA-256 of the WASM modules it loads and does not run if they differ.
+The APK and the iOS app check the SHA-256 of the WASM modules they load and do not run if they differ. In the web app the checking code comes from the site too, so the check cannot catch a replaced site.
 
 ## What you end up trusting {#trust}
 
 - **The GitHub release**: release APKs are signed with the author's key, and each release comes with a `SHA256SUMS` file. `SHA256SUMS` shows that the download is intact, but cannot catch a release that was replaced as a whole. Once installed, Android only accepts updates signed with the same key.
 - **The installer page**: the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) writes to the phone over WebUSB from Chrome or Edge. While connected it can do anything adb can do to the phone. The page is built from this repository.
 - **Your PC**: the USB ways also trust your PC and its browser. With the QR code, the PC only shows the QR code.
+- **GitHub Pages**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. When the phone goes online, it may update to a newer build.
 - **Your build tools**: building it yourself trusts Rust, the Android SDK or Xcode, and the npm dependencies.
 
 ## Build it yourself {#build}
@@ -51,6 +53,23 @@ The phone never goes online. Use the installer page as above to install Lockdown
 ### With the QR code {#lockdown-qr}
 
 The PC only shows the QR code. The phone is on Wi-Fi only while it downloads Lockdown, and checks it against the SHA-256 in the QR code. See [Set up with the QR code](lockdown.md#set-up-with-the-qr-code) for the steps.
+
+## Add the web app to the home screen {#pwa}
+
+The same signing engine, running in the browser. On an iPhone it is the only way in that needs no signing of your own.
+
+1. On the phone, before any key is on it, open the [web app](https://habakan.github.io/bitwasm-signer-app/app/) in Safari (iPhone) or Chrome (Android)
+2. Add it with Add to Home Screen in the share menu or menu, and open it from the home screen
+3. Keep it open and online until "Getting ready for offline use" goes away. On an iPhone it takes the files again when first opened from the home screen
+4. Turn on airplane mode. While any network is on, it does not load a key and wipes a loaded one
+
+It differs from the native apps:
+
+- It cannot block third-party keyboards. Use the keyboard that came with the phone, or load the key from a SeedQR.
+- Keys cannot be saved, so load the key each time. Creating a new wallet is not available.
+- It knows whether the phone is online only as far as the browser tells it.
+
+It has not been tried on a real iPhone yet, only in the Simulator and in desktop Chrome.
 
 ## After installing {#after}
 

@@ -23,6 +23,8 @@ export const previewScreen: Screen | null =
 export const isPreview = previewScreen !== null || interactivePreview;
 // `vite --mode web` builds the browser demo: the engine runs in the page with test keys only
 export const webDemo = import.meta.env.MODE === "web";
+// `vite --mode pwa` builds the installable signer: the same engine with real keys, used offline only
+export const webApp = import.meta.env.MODE === "pwa";
 
 export const initialState: SignerState = {
   loaded: previewScreen === "ready",
@@ -40,7 +42,7 @@ export const initialState: SignerState = {
 };
 
 export async function signerInvoke<T>(command: string, args?: Record<string, unknown>, current = initialState): Promise<T> {
-  if (webDemo) return (await import("./web/demo")).webInvoke<T>(command);
+  if (webDemo || webApp) return (await import("./web/demo")).webInvoke<T>(command, args);
   if (!interactivePreview) return invoke<T>(`plugin:signer|${command}`, args);
   await new Promise((resolve) => setTimeout(resolve, 250));
   const demo: SignerState = { ...current, loaded: true, fingerprint: "73c5da0a", testnet: true };

@@ -1,6 +1,8 @@
 import jsQR from "jsqr";
+import type { QRCode } from "jsqr";
 import qrcode from "qrcode-generator";
 import { icon } from "../design/icons";
+import { webApp, webDemo } from "../signer";
 import type { SignerState } from "../signer";
 import { tr } from "../views";
 import { createWallet, step } from "./create";
@@ -14,24 +16,69 @@ const testPsbt = "UR:CRYPTO-PSBT/HDYLJOJKIDJYZMADAEGMAOAEAEAEADFWFWFWFWFWFWFWFWF
 type Output = { amount: number; owner: string; kind: string; text: string };
 type Review = { spend: number; fee: number; totalIn: number; signatures: number; outputs: Output[] };
 
-const ready = startEngine().then(() => call("set_network", 1));
-const state = () => ({ ...call<SignerState>("state"), testnet: true, storage: false, deviceSecure: false, restrictions: [] });
+const ready = startEngine().then(() => { if (webDemo) call("set_network", 1); });
+// The installed app cannot turn networks off, so it treats any network as a required restriction and wipes the key
+function state() {
+  const online = webApp && navigator.onLine;
+  if (online) call("lock");
+  const engine = call<SignerState>("state");
+  return { ...engine, testnet: webDemo || engine.testnet, storage: false, deviceSecure: false,
+    restrictions: webApp ? [{ id: "network", level: "require" as const, active: online, detail: "" }] : [] };
+}
+// As on the phones, leaving the app wipes the key
+if (webApp) document.addEventListener("visibilitychange", () => { if (document.hidden) void ready.then(() => call("lock")); });
 const btc = (sats: number) => `${Math.floor(sats / 1e8)}.${String(sats % 1e8).padStart(8, "0")}`;
 export const button = (id: string, label: string, variant: string) => `<button class="button button-${variant}" id="${id}"><span>${label}</span></button>`;
 export const escape = (text: string) => text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // A full-screen step over the app, laid out like the native ones
 export function sheet(title: string, body: string, actions: string) {
+  const network = call<SignerState>("state").testnet ? tr("テストネット", "Testnet") : tr("メインネット", "Mainnet");
   const element = document.createElement("div");
   element.className = "sheet";
   element.innerHTML = `<div class="app-shell">
     <header class="topbar"><span class="topbar-title">${title}</span>
-      <span class="topbar-status"><span class="pill pill-neutral">${icon("check", 16)}<span>${tr("テストネット", "Testnet")}</span></span></span></header>
+      <span class="topbar-status"><span class="pill pill-neutral">${icon("check", 16)}<span>${network}</span></span></span></header>
     <main class="screen-body">${body}</main>
     <footer class="screen-actions">${actions}</footer>
   </div>`;
-  document.querySelector(".phone")!.append(element);
+  (document.querySelector(".phone") ?? document.body).append(element);
   return element;
+}
+
+// Reads QR codes with the back camera into the sheet's video until the returned function stops it
+function startCamera(view: HTMLElement, status: HTMLElement, onCode: (code: QRCode) => void) {
+  const video = view.querySelector("video")!;
+  const canvas = document.createElement("canvas");
+  let stream: MediaStream | null = null;
+  let stopped = false;
+  let last = "";
+  const tick = () => {
+    if (!stream) return;
+    if (video.readyState >= 2) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d", { willReadFrequently: true })!;
+      context.drawImage(video, 0, 0);
+      const code = jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+      const key = code?.binaryData.join() ?? "";
+      if (code && key && key !== last) { last = key; onCode(code); }
+    }
+    requestAnimationFrame(tick);
+  };
+  navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" } }).then((media) => {
+    if (stopped) return media.getTracks().forEach((track) => track.stop());
+    stream = media;
+    video.srcObject = media;
+    void video.play();
+    status.textContent = tr("QRを枠の中に合わせてください", "Fit the QR inside the frame");
+    tick();
+  }).catch(() => { status.textContent = tr("カメラを使えません。", "The camera is not available."); });
+  return () => {
+    stopped = true;
+    stream?.getTracks().forEach((track) => track.stop());
+    stream = null;
+  };
 }
 
 function scanPsbt(): Promise<Review> {
@@ -40,17 +87,12 @@ function scanPsbt(): Promise<Review> {
       <p class="lead">${tr("ウォレットアプリのアニメーションQRをカメラに向けてください。読み取りは自動で進みます。", "Point the camera at your wallet app's animated QR. Scanning continues as frames arrive.")}</p></div>
     <div class="camera"><video playsinline muted></video></div>
     <p class="caption" id="scan-status">${tr("カメラを準備しています", "Starting the camera")}</p>
-    <p class="caption">${tr("カメラがないときは、テスト用の取引で試せます。", "Without a camera, try the test transaction.")}</p>`,
-    button("scan-test", tr("テスト用の取引を使う", "Use the test transaction"), "secondary") + button("scan-cancel", tr("キャンセル", "Cancel"), "secondary"));
-  const video = view.querySelector("video")!;
+    ${webDemo ? `<p class="caption">${tr("カメラがないときは、テスト用の取引で試せます。", "Without a camera, try the test transaction.")}</p>` : ""}`,
+    (webDemo ? button("scan-test", tr("テスト用の取引を使う", "Use the test transaction"), "secondary") : "") + button("scan-cancel", tr("キャンセル", "Cancel"), "secondary"));
   const status = view.querySelector<HTMLElement>("#scan-status")!;
-  const canvas = document.createElement("canvas");
-  let stream: MediaStream | null = null;
-  let last = "";
   return new Promise((resolve, reject) => {
     const finish = (error?: string, review?: Review) => {
-      stream?.getTracks().forEach((track) => track.stop());
-      stream = null;
+      stop();
       view.remove();
       if (review) resolve(review); else reject(error);
     };
@@ -64,27 +106,52 @@ function scanPsbt(): Promise<Review> {
         status.textContent = String(error);
       }
     };
-    const tick = () => {
-      if (!stream) return;
-      if (video.readyState >= 2) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext("2d", { willReadFrequently: true })!;
-        context.drawImage(video, 0, 0);
-        const code = jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-        if (code?.data && code.data !== last) { last = code.data; receive(code.data); }
-      }
-      requestAnimationFrame(tick);
-    };
-    view.querySelector("#scan-test")!.addEventListener("click", () => receive(testPsbt));
+    const stop = startCamera(view, status, (code) => receive(code.data));
+    view.querySelector("#scan-test")?.addEventListener("click", () => receive(testPsbt));
     view.querySelector("#scan-cancel")!.addEventListener("click", () => finish(tr("QRの読み取りをやめました。", "QR scan was cancelled")));
-    navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" } }).then((media) => {
-      stream = media;
-      video.srcObject = media;
-      void video.play();
-      status.textContent = tr("QRを枠の中に合わせてください", "Fit the QR inside the frame");
-      tick();
-    }).catch(() => { status.textContent = tr("カメラを使えません。テスト用の取引で試せます。", "The camera is not available. Try the test transaction."); });
+  });
+}
+
+// A standard SeedQR is digits and a CompactSeedQR is bytes; the engine takes either as read
+function scanSeed(): Promise<Uint8Array> {
+  const view = sheet(tr("読み取り", "Scan"), `<div class="question"><h1>${tr("バックアップのQRを読み取る", "Scan your backup QR")}</h1>
+      <p class="lead">${tr("SeedQRかCompactSeedQRをカメラに向けてください。", "Point the camera at your SeedQR or CompactSeedQR.")}</p></div>
+    <div class="camera"><video playsinline muted></video></div>
+    <p class="caption" id="scan-status">${tr("カメラを準備しています", "Starting the camera")}</p>`,
+    button("scan-cancel", tr("キャンセル", "Cancel"), "secondary"));
+  const status = view.querySelector<HTMLElement>("#scan-status")!;
+  return new Promise((resolve, reject) => {
+    const stop = startCamera(view, status, (code) => { stop(); view.remove(); resolve(new Uint8Array(code.binaryData)); });
+    view.querySelector("#scan-cancel")!.addEventListener("click", () => { stop(); view.remove(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); });
+  });
+}
+
+// Third-party keyboards can record what is typed, which the page cannot block as the native apps do
+function askWords(): Promise<Uint8Array> {
+  const view = step(tr("シードフレーズ", "Recovery words"), `<div class="question"><h1>${tr("シードフレーズを入力する", "Type your recovery words")}</h1>
+      <p class="lead">${tr("12〜24個の単語を、スペースで区切って入力してください。", "Type the 12 to 24 words, separated by spaces.")}</p></div>
+    <textarea class="input" id="words" rows="6" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <p class="problem" id="words-problem" hidden></p>
+    <p class="caption">${tr("サードパーティ製キーボードは入力を記録できます。端末に最初から入っているキーボードを使ってください。", "Third-party keyboards can record what you type. Use the keyboard that came with the device.")}</p>`,
+    button("words-continue", tr("続ける", "Continue"), "primary"), () => cancel());
+  const field = view.querySelector<HTMLTextAreaElement>("#words")!;
+  const problem = view.querySelector<HTMLElement>("#words-problem")!;
+  let cancel = () => {};
+  return new Promise((resolve, reject) => {
+    const close = () => { field.value = ""; view.remove(); };
+    cancel = () => { close(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); };
+    view.querySelector("#words-continue")!.addEventListener("click", () => {
+      const words = new TextEncoder().encode(field.value.trim().toLowerCase().split(/\s+/).join(" "));
+      try {
+        call("preview_fingerprint", words, new Uint8Array(), 1);
+      } catch (error) {
+        problem.textContent = String(error);
+        problem.hidden = false;
+        return;
+      }
+      close();
+      resolve(words);
+    });
   });
 }
 
@@ -174,14 +241,14 @@ function showFrames(heading: string, name: string, frames: string[], note: strin
 }
 
 // The fingerprint with no passphrase and with the typed one, as on the phones
-function askPassphrase(words: Uint8Array): Promise<string> {
+function askPassphrase(payload: Uint8Array, mnemonic: boolean): Promise<string> {
   const none = tr("入力すると表示します", "Shown as you type");
   const fingerprint = (passphrase: string) =>
-    call<{ fingerprint: string }>("preview_fingerprint", words, new TextEncoder().encode(passphrase), 1).fingerprint.replace(/^(.{4})/, "$1 ");
+    call<{ fingerprint: string }>("preview_fingerprint", payload, new TextEncoder().encode(passphrase), mnemonic ? 1 : 0).fingerprint.replace(/^(.{4})/, "$1 ");
   const view = step(tr("パスフレーズ", "Passphrase"), `<div class="question"><h1>${tr("パスフレーズを入力する", "Enter the passphrase")}</h1>
       <p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue.")}</p></div>
     <input class="input" id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="${tr("パスフレーズ", "Passphrase")}">
-    <p class="caption">${tr("テスト用の単語では、TREZOR と入れると b4e3 f5ed になります。", "With the test words, TREZOR gives b4e3 f5ed.")}</p>
+    ${webDemo ? `<p class="caption">${tr("テスト用の単語では、TREZOR と入れると b4e3 f5ed になります。", "With the test words, TREZOR gives b4e3 f5ed.")}</p>` : ""}
     <h2 class="overline">${tr("フィンガープリント", "FINGERPRINT")}</h2>
     <div class="card"><div class="field"><span class="field-label">${tr("パスフレーズなし", "WITHOUT A PASSPHRASE")}</span><span class="data">${fingerprint("")}</span></div>
       <div class="field"><span class="field-label">${tr("入力したパスフレーズ", "WITH THIS PASSPHRASE")}</span><span class="data" id="typed-fingerprint">${none}</span>
@@ -209,13 +276,13 @@ async function checkAddress(): Promise<void> {
   const view = step(tr("アドレスの確認", "Address check"), `<div class="question"><h1>${tr("アドレスを確認する", "Check an address")}</h1>
       <p class="lead">${tr("ウォレットアプリに出た受け取りのアドレスが、この鍵のものか確かめます。QRを読み取るか、アドレスを入力してください。", "Check that a receive address shown in your wallet app belongs to this key. Scan its QR or type it.")}</p></div>
     <input class="input" id="address" autocomplete="off" spellcheck="false" placeholder="${tr("アドレスかbitcoin: URI", "Address or bitcoin: URI")}">
-    <p class="caption">${tr("ブラウザ版ではカメラの代わりに、テスト用のアドレスで試せます。", "The browser demo has the test address in place of a camera.")}</p>
+    ${webDemo ? `<p class="caption">${tr("ブラウザ版ではカメラの代わりに、テスト用のアドレスで試せます。", "The browser demo has the test address in place of a camera.")}</p>` : ""}
     <p class="problem" id="address-problem" hidden></p>
     <h2 class="overline">${tr("探す範囲", "SEARCH RANGE")}</h2>
     <div class="range"><label>${tr("アカウント", "Account")}<input class="input" id="address-account" inputmode="numeric" value="0"></label>
       <label>${tr("それぞれ探す数", "Addresses per chain")}<input class="input" id="address-count" inputmode="numeric" value="1000"></label></div>
     <p class="caption">${tr("受け取りとおつりのアドレスを、それぞれ最初から探す数だけ調べます。", "The first addresses of the receive and change chains are checked, this many of each.")}</p>`,
-    button("address-test", tr("テスト用のアドレスを使う", "Use the test address"), "secondary") + button("address-check", tr("調べる", "Check"), "primary"), () => cancel());
+    (webDemo ? button("address-test", tr("テスト用のアドレスを使う", "Use the test address"), "secondary") : "") + button("address-check", tr("調べる", "Check"), "primary"), () => cancel());
   const field = (id: string) => view.querySelector<HTMLInputElement>(`#${id}`)!;
   const problem = view.querySelector<HTMLElement>("#address-problem")!;
   let cancel = () => {};
@@ -233,7 +300,7 @@ async function checkAddress(): Promise<void> {
       view.remove();
       resolve({ address, account, count });
     };
-    view.querySelector("#address-test")!.addEventListener("click", () => { field("address").value = testAddress; check(); });
+    view.querySelector("#address-test")?.addEventListener("click", () => { field("address").value = testAddress; check(); });
     view.querySelector("#address-check")!.addEventListener("click", check);
   });
   const result = call<{ found: boolean; chain?: number; index?: number }>("find_address", search.address, search.account, search.count);
@@ -255,17 +322,37 @@ async function checkAddress(): Promise<void> {
   if (again) return checkAddress();
 }
 
-export async function webInvoke<T>(command: string): Promise<T> {
+// Loads a seed with the passphrase asked for it, then clears the page's copy
+function loadSeed(name: string, payload: Uint8Array, passphrase: string) {
+  const bytes = new TextEncoder().encode(passphrase);
+  call(name, payload, bytes);
+  payload.fill(0);
+  bytes.fill(0);
+}
+
+export async function webInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   await ready;
   switch (command) {
     case "state":
-    case "set_network":
       return state() as T;
+    case "set_network":
+      if (webApp) call("set_network", args?.testnet === true ? 1 : 0);
+      return state() as T;
+    case "import_mnemonic": {
+      const words = await askWords();
+      loadSeed("load_mnemonic", words, await askPassphrase(words, true));
+      return state() as T;
+    }
+    case "scan_seed_qr": {
+      const payload = await scanSeed();
+      loadSeed("load_seed_qr", payload, await askPassphrase(payload, false));
+      return state() as T;
+    }
     case "parser_info":
       return call("parser_info") as T;
     case "demo_seed": {
       const words = new TextEncoder().encode(testMnemonic);
-      call("load_mnemonic", words, new TextEncoder().encode(await askPassphrase(words)));
+      loadSeed("load_mnemonic", words, await askPassphrase(words, true));
       return state() as T;
     }
     case "find_address":

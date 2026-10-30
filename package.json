@@ -9,6 +9,7 @@
     "engine:web": "cargo build --release --target wasm32-unknown-unknown --manifest-path web/engine/Cargo.toml",
     "dev:web": "pnpm engine:web && vite --mode web",
     "build:web": "pnpm engine:web && tsc && vite build --mode web --outDir dist-web",
+    "build:pwa": "pnpm engine:web && tsc && vite build --mode pwa --outDir dist-web/app",
     "dev:installer": "vite installer",
     "build:installer": "tsc -p installer && vite build installer",
     "dev:docs": "vitepress dev docs",
