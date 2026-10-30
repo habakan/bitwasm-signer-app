@@ -4,7 +4,7 @@
 
 `bitwasm-signer` の parser / signer WASM を使うAndroid / iOSの署名アプリです。初めの設定ではアプリは鍵を持たず、署名のたびに読み込み、使い終わったら消します。
 
-**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)**
+**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)** · **[ドキュメント](https://habakan.github.io/bitwasm-signer-app/docs/ja/)**
 
 > **注意:** 実験的なソフトウェアです。監査を受けておらず、無保証です。使用によって生じた資金の損失やその他の損害について、作者は責任を負いません。使う場合は少額にとどめてください。
 
@@ -124,6 +124,15 @@ pnpm build:web   # dist-web に出力
 ```
 
 取引の署名は、カメラでウォレットアプリのQRを読み取るか、`samples/psbt-ur-test-only.png` と同じテスト用の取引で試せます。カメラはlocalhostかHTTPSのページでだけ使えます。
+
+## ドキュメント
+
+`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。ページに `<Demo />` と書くと、本文の横にブラウザ版のデモを出せます。
+
+```sh
+pnpm dev:docs    # デモは公開中のサイトのものを使う
+pnpm build:docs  # dist-web/docs に書き出す。pnpm build:web のあとに実行
+```
 
 ## 現在の範囲
 
