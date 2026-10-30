@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 import { useData, withBase } from "vitepress";
 
 // The browser demo is published one level above the docs; `pnpm dev:docs` uses the live one
 const { lang, isDark, frontmatter } = useData();
 const home = import.meta.env.DEV ? "https://habakan.github.io/bitwasm-signer-app/" : withBase("/../");
-const src = `${home}?lang=${lang.value}`;
+// Switching the docs' language does not reload the page, so the demo follows it here
+const src = computed(() => `${home}?lang=${lang.value}`);
 const key = ref(0);
-const ja = lang.value === "ja";
+const ja = computed(() => lang.value === "ja");
+watch(lang, () => { section = "-"; void nextTick(sync); });
 
 // A 390×844 screen plus the 10px bezel, scaled as a whole so the phone keeps its shape and text size ratio
 const [width, height] = [410, 864];
@@ -68,11 +70,16 @@ watch(isDark, applyTheme);
 
 // The other way round: tapping in the demo scrolls to the section whose scene ends with that button
 const following = ref(false);
+let tapped: string[] = [];
 const onTap = (event: Event) => {
   const id = (event.target as Element).closest?.("button[id]")?.id;
   if (!following.value || !id) return;
+  tapped = [...tapped, `#${id}`].slice(-20);
+  // Of the scenes ending with this button, the one sharing the longest run of recent taps
   const scenes: Record<string, string[]> = frontmatter.value.demo ?? {};
-  const match = Object.keys(scenes).find((name) => scenes[name].filter((step) => step.startsWith("#")).at(-1) === `#${id}`);
+  const shared = (steps: string[]) => { let n = 0; while (n < steps.length && steps.at(-1 - n) === tapped.at(-1 - n)) n++; return n; };
+  const ids = (name: string) => scenes[name].filter((step) => step.startsWith("#"));
+  const match = Object.keys(scenes).filter((name) => ids(name).at(-1) === `#${id}`).sort((a, b) => shared(ids(b)) - shared(ids(a)))[0];
   const heading = match && document.getElementById(match);
   if (!heading) return;
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
@@ -90,7 +97,7 @@ watch(following, (on) => {
   sync();
 });
 const reset = () => {
-  if (following.value) taps = [];
+  if (following.value) { taps = []; tapped = []; }
   key.value++;
 };
 </script>

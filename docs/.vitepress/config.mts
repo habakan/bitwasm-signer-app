@@ -20,7 +20,6 @@ export default defineConfig({
   base: "/bitwasm-signer-app/docs/",
   outDir: "../dist-web/docs",
   srcExclude: ["ja/README.md"],
-  cleanUrls: true,
   themeConfig: {
     socialLinks: [{ icon: "github", link: repo }],
     search: { provider: "local" },

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useData } from "vitepress";
 
-const ja = useData().lang.value === "ja";
-const t = ja
+const { lang } = useData();
+const ja = computed(() => lang.value === "ja");
+const t = computed(() => ja.value
   ? { wallet: "ウォレットアプリ", online: "ネットにつながる", signer: "署名アプリ", offline: "ネットにつながない", keys: "公開鍵", tx: "署名する取引", signed: "署名済みの取引", note: "秘密鍵は署名アプリから出ません", title: "ウォレットアプリと署名アプリのやり取り" }
-  : { wallet: "Wallet app", online: "Online", signer: "Signer", offline: "Offline", keys: "Public keys", tx: "Transaction to sign", signed: "Signed transaction", note: "Private keys never leave the signer", title: "How the wallet app and the signer talk" };
+  : { wallet: "Wallet app", online: "Online", signer: "Signer", offline: "Offline", keys: "Public keys", tx: "Transaction to sign", signed: "Signed transaction", note: "Private keys never leave the signer", title: "How the wallet app and the signer talk" });
 </script>
 
 <template>

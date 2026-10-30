@@ -5,6 +5,7 @@ demo:
   overview: []
   offline: ["#settings"]
   create: ["#create-mnemonic"]
+  dice: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-dice", "#words-12", "[data-face=\"3\"]", "[data-face=\"5\"]", "[data-face=\"1\"]", "[data-face=\"6\"]", "[data-face=\"2\"]"]
   write-down: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-random", "#words-12"]
   quiz: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-random", "#words-12", "#write-done"]
   load: ["#demo-seed", "#passphrase-continue"]
@@ -46,6 +47,10 @@ On Android, [Signer Lockdown](lockdown.md) goes further. It makes a factory-rese
 Your key is a list of 12 or 24 words, the recovery phrase. Tap **Create a new wallet**. The signer makes the words from secure random numbers, or from dice you roll yourself if you would rather not trust the phone's random numbers.
 
 Have paper and a pen ready, and do this where no one and no camera can see.
+
+### Roll dice {#dice}
+
+To make the words from dice, roll a die and tap the face that came up, once per roll. 12 words take exactly 50 rolls and 24 words 99. The signer warns if the rolls look uneven or follow a pattern that a fair die almost never gives, and **See how these words were made** shows how the rolls became the words.
 
 ### Write the words down {#write-down}
 

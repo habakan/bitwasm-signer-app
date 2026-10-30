@@ -5,6 +5,7 @@ demo:
   overview: []
   offline: ["#settings"]
   create: ["#create-mnemonic"]
+  dice: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-dice", "#words-12", "[data-face=\"3\"]", "[data-face=\"5\"]", "[data-face=\"1\"]", "[data-face=\"6\"]", "[data-face=\"2\"]"]
   write-down: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-random", "#words-12"]
   quiz: ["#create-mnemonic", "#walk-next", "#walk-next", "#walk-next", "#walk-random", "#words-12", "#write-done"]
   load: ["#demo-seed", "#passphrase-continue"]
@@ -46,6 +47,10 @@ Androidでは、[Signer Lockdown](lockdown.md)を使うとさらに固くでき�
 鍵は12個か24個の英単語の並び(シードフレーズ)です。**新しいウォレットを作る** を押すと、安全な乱数から単語を作ります。スマホの乱数を信用したくなければ、自分で振ったサイコロの目から作ることもできます。
 
 紙とペンを用意し、周りに人やカメラがない場所で行ってください。
+
+### サイコロで作る {#dice}
+
+サイコロで作るときは、1回振るごとに出た目を押します。12語ならちょうど50回、24語なら99回です。公平なサイコロではほとんど起きない偏りや規則性があると、署名アプリが警告します。**この単語のでき方を見る** では、サイコロの目から単語ができる計算を順に見られます。
 
 ### 紙に書き写す {#write-down}
 
