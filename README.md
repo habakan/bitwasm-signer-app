@@ -127,7 +127,7 @@ To try signing, scan a QR from a wallet app with the camera, or use the test tra
 
 ## Documentation
 
-The Markdown in `docs/` (English) and `docs/ja/` (Japanese) is published with VitePress at https://habakan.github.io/bitwasm-signer-app/docs/. A page with `demo:` in its frontmatter shows the browser demo in the right column; it maps section ids to the buttons to tap, so the phone moves to that screen when the section scrolls into view (see `docs/guide.md`).
+The Markdown in `docs/` (English) and `docs/ja/` (Japanese) is published with VitePress at https://habakan.github.io/bitwasm-signer-app/docs/. A page with `demo:` in its frontmatter shows the browser demo in the right column; it maps section ids to the buttons to tap, so the phone moves to that screen when the section scrolls into view (see `docs/index.md`).
 
 ```sh
 pnpm dev:docs    # the demo comes from the published site

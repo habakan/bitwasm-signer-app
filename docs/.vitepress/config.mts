@@ -31,12 +31,12 @@ export default defineConfig({
       description: "An offline Bitcoin signer for old phones",
       themeConfig: {
         nav: [
-          { text: "Guide", link: "/guide" },
+          { text: "Guide", link: "/" },
           { text: "Demo", link: "https://habakan.github.io/bitwasm-signer-app/" },
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "Use", items: [{ text: "Setup", link: "/setup" }, { text: "Using the signer", link: "/guide", items: chapters("../guide.md", "/guide") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
+          { text: "Use", items: [{ text: "Setup", link: "/setup" }, { text: "Using the signer", link: "/", items: chapters("../index.md", "/") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
           { text: "Develop", items: [{ text: "Design", link: "/design" }, { text: "Roadmap", link: "/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "Edit this page on GitHub" },
@@ -48,12 +48,12 @@ export default defineConfig({
       description: "古いスマホで使う、オフラインのビットコイン署名アプリ",
       themeConfig: {
         nav: [
-          { text: "使い方", link: "/ja/guide" },
+          { text: "使い方", link: "/ja/" },
           { text: "デモ", link: "https://habakan.github.io/bitwasm-signer-app/" },
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "使う", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "署名アプリの使い方", link: "/ja/guide", items: chapters("../ja/guide.md", "/ja/guide") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
+          { text: "使う", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "署名アプリの使い方", link: "/ja/", items: chapters("../ja/index.md", "/ja/") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
           { text: "開発", items: [{ text: "デザイン", link: "/ja/design" }, { text: "ロードマップ", link: "/ja/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "GitHubでこのページを編集" },

@@ -127,7 +127,7 @@ pnpm build:web   # dist-web に出力
 
 ## ドキュメント
 
-`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。フロントマターに `demo:` があるページは、右の欄にブラウザ版のデモを出します。`demo:` には節のIDと押すボタンを書き、その節までスクロールするとスマホがその画面に進みます(`docs/ja/guide.md` を参照)。
+`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。フロントマターに `demo:` があるページは、右の欄にブラウザ版のデモを出します。`demo:` には節のIDと押すボタンを書き、その節までスクロールするとスマホがその画面に進みます(`docs/ja/index.md` を参照)。
 
 ```sh
 pnpm dev:docs    # デモは公開中のサイトのものを使う
