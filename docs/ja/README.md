@@ -4,7 +4,9 @@
 
 `bitwasm-signer` の parser / signer WASM を使うAndroid / iOSの署名アプリです。初めの設定ではアプリは鍵を持たず、署名のたびに読み込み、使い終わったら消します。
 
-**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)** · **[ドキュメント](https://habakan.github.io/bitwasm-signer-app/docs/ja/)**
+**[使い方ガイドを読む](https://habakan.github.io/bitwasm-signer-app/docs/ja/)**: 鍵の作成から取引の署名まで、署名アプリの準備と使い方を、横で動くブラウザ版のデモと一緒に説明しています。
+
+**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)**
 
 > **注意:** 実験的なソフトウェアです。監査を受けておらず、無保証です。使用によって生じた資金の損失やその他の損害について、作者は責任を負いません。使う場合は少額にとどめてください。
 
