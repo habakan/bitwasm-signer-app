@@ -75,6 +75,38 @@ fn seed_import_handles_passphrases_compact_qr_and_raw_seed() {
 }
 
 #[test]
+fn passphrase_preview_matches_the_loaded_fingerprint_without_loading() {
+    let mut engine = engine();
+    let preview = |engine: &SignerEngine, payload: &str, passphrase: &[u8], mnemonic: bool| {
+        let mut payload = payload.as_bytes().to_vec();
+        let mut passphrase = passphrase.to_vec();
+        let value = engine
+            .preview_fingerprint(&mut payload, &mut passphrase, mnemonic)
+            .unwrap();
+        assert!(
+            payload
+                .iter()
+                .chain(passphrase.iter())
+                .all(|byte| *byte == 0)
+        );
+        value["fingerprint"].clone()
+    };
+    assert_eq!(preview(&engine, MNEMONIC, b"", true), "73c5da0a");
+    assert_eq!(preview(&engine, SEEDQR, b"", false), "73c5da0a");
+    let with_passphrase = preview(&engine, MNEMONIC, b"TREZOR", true);
+    assert_ne!(with_passphrase, "73c5da0a");
+    assert_eq!(preview(&engine, SEEDQR, b"TREZOR", false), with_passphrase);
+    assert_eq!(engine.state()["loaded"], false);
+
+    let mut mnemonic = MNEMONIC.as_bytes().to_vec();
+    let mut passphrase = b"TREZOR".to_vec();
+    let state = engine
+        .load_mnemonic(&mut mnemonic, &mut passphrase)
+        .unwrap();
+    assert_eq!(state["fingerprint"], with_passphrase);
+}
+
+#[test]
 fn mnemonic_import_normalises_words_and_rejects_bad_checksums() {
     let mut engine = engine();
     let mut mnemonic = format!("  {}  ", MNEMONIC.to_uppercase()).into_bytes();

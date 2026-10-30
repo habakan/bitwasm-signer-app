@@ -30,6 +30,9 @@ private func bitwasmEngineLoadSeedQr(_ bytes: UnsafePointer<UInt8>, _ length: In
 @_silgen_name("bitwasm_ios_engine_load_mnemonic")
 private func bitwasmEngineLoadMnemonic(_ bytes: UnsafePointer<UInt8>, _ length: Int32, _ passphrase: UnsafePointer<UInt8>?, _ passLength: Int32) -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("bitwasm_ios_engine_preview_fingerprint")
+private func bitwasmEnginePreviewFingerprint(_ bytes: UnsafePointer<UInt8>, _ length: Int32, _ passphrase: UnsafePointer<UInt8>?, _ passLength: Int32, _ mnemonic: Int32) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("bitwasm_ios_engine_wordlist")
 private func bitwasmEngineWordlist() -> UnsafeMutablePointer<CChar>?
 
@@ -193,27 +196,42 @@ private enum SignerBridge {
     try load(Data(mnemonic.utf8), passphrase: passphrase, with: bitwasmEngineLoadMnemonic)
   }
 
+  // The fingerprint a seed gets with this passphrase, from a module dropped right after, so no key is loaded
+  static func previewFingerprint(_ payload: Data, mnemonic: Bool, passphrase: String) throws -> String {
+    let reply = try withSecret(payload, passphrase: passphrase) { bitwasmEnginePreviewFingerprint($0, $1, $2, $3, mnemonic ? 1 : 0) }
+    guard let fingerprint = reply["fingerprint"] as? String else { throw SignerError.missingData }
+    return fingerprint
+  }
+
   private static func load(
     _ payload: Data,
     passphrase: String,
     with engine: (UnsafePointer<UInt8>, Int32, UnsafePointer<UInt8>?, Int32) -> UnsafeMutablePointer<CChar>?
   ) throws -> [String: Any] {
     if let name = DeviceRestrictions.blockedBy { throw SignerError.restricted(name) }
+    let state = try withSecret(payload, passphrase: passphrase, engine)
+    // A wallet registered while storage was on comes back with its seed; it is public, so it is kept in the clear
+    guard let saved = UserDefaults.standard.string(forKey: walletKey(state)), (try? multisigLoad(Data(saved.utf8))) != nil else { return state }
+    return try self.state()
+  }
+
+  private static func withSecret(
+    _ payload: Data,
+    passphrase: String,
+    _ engine: (UnsafePointer<UInt8>, Int32, UnsafePointer<UInt8>?, Int32) -> UnsafeMutablePointer<CChar>?
+  ) throws -> [String: Any] {
     var payload = payload
     var passphrase = Data(passphrase.utf8)
     defer {
       payload.resetBytes(in: 0..<payload.count)
       passphrase.resetBytes(in: 0..<passphrase.count)
     }
-    let state = try payload.withUnsafeBytes { buffer in
+    return try payload.withUnsafeBytes { buffer in
       guard let bytes = buffer.bindMemory(to: UInt8.self).baseAddress else { throw SignerError.missingData }
       return try passphrase.withUnsafeBytes { passBuffer in
         try read(engine(bytes, Int32(payload.count), passBuffer.bindMemory(to: UInt8.self).baseAddress, Int32(passphrase.count)))
       }
     }
-    // A wallet registered while storage was on comes back with its seed; it is public, so it is kept in the clear
-    guard let saved = UserDefaults.standard.string(forKey: walletKey(state)), (try? multisigLoad(Data(saved.utf8))) != nil else { return state }
-    return try self.state()
   }
 
   static func walletKey(_ state: [String: Any]) -> String {
@@ -734,7 +752,7 @@ final class SignerPlugin: Plugin {
   }
 
   private func unlockWithPassphrase(_ entry: SeedVault.Entry, entropy: Data, invoke: Invoke) {
-    askPassphrase(Design.tr("\(entry.name)のパスフレーズ", "Passphrase for \(entry.name)"), onCancel: { Design.fail(invoke, "Unlock was cancelled") }) { [weak self] passphrase in
+    askPassphrase(Design.tr("\(entry.name)のパスフレーズ", "Passphrase for \(entry.name)"), seed: (entropy, false), onCancel: { Design.fail(invoke, "Unlock was cancelled") }) { [weak self] passphrase in
       self?.worker.async {
         do {
           let result = try SignerBridge.loadSeedQr(entropy, passphrase: passphrase)
@@ -841,7 +859,7 @@ final class SignerPlugin: Plugin {
           if payload.data.count == 64 {
             self.loadSeed(invoke) { try SignerBridge.loadSeedQr(payload.data) }
           } else {
-            self.askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+            self.askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), seed: (payload.data, false), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
               self.loadSeed(invoke, saving: self.entropy(seedQr: payload.data)) { try SignerBridge.loadSeedQr(payload.data, passphrase: passphrase) }
             }
           }
@@ -916,24 +934,63 @@ final class SignerPlugin: Plugin {
     let entry = MnemonicEntryViewController(words: SignerBridge.words)
     entry.onCancel = { Design.fail(invoke, "Seed import was cancelled") }
     entry.onPhrase = { [weak self] phrase in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), seed: (Data(phrase.utf8), true), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) { try SignerBridge.loadMnemonic(phrase, passphrase: passphrase) }
       }
     }
     present(entry)
   }
 
-  private func askPassphrase(_ title: String, onCancel: @escaping () -> Void, onContinue: @escaping (String) -> Void) {
-    let alert = UIAlertController(title: title, message: Design.tr("パスフレーズを付けていない場合は、空のまま続けてください。", "Leave blank if this seed has no passphrase."), preferredStyle: .alert)
+  // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads.
+  // seed is a SeedQR payload or, when the flag is set, mnemonic words
+  private func askPassphrase(_ title: String, seed: (Data, Bool), onCancel: @escaping () -> Void, onContinue: @escaping (String) -> Void) {
+    let working = Design.tr("計算しています…", "Working…")
+    var plain = working
+    var typed: String?
+    var generation = 0
+    var pending: DispatchWorkItem?
+    var observer: NSObjectProtocol?
+    let alert = UIAlertController(title: title, message: nil, preferredStyle: .alert)
+    func show() {
+      alert.message = Design.tr("パスフレーズを付けていない場合は、空のまま続けてください。\n\nフィンガープリント\nパスフレーズなし: \(plain)", "Leave blank if this seed has no passphrase.\n\nFingerprint\nNo passphrase: \(plain)")
+        + (typed.map { Design.tr("\n入力したパスフレーズ: \($0)", "\nThis passphrase: \($0)") } ?? "")
+    }
+    func preview(_ passphrase: String, done: @escaping (String) -> Void) {
+      worker.async {
+        let value = (try? SignerBridge.previewFingerprint(seed.0, mnemonic: seed.1, passphrase: passphrase)).map { "\($0.prefix(4)) \($0.dropFirst(4))" }
+        DispatchQueue.main.async { done(value ?? Design.tr("計算できません", "Unavailable")) }
+      }
+    }
+    func finish() {
+      pending?.cancel()
+      generation += 1
+      observer.map(NotificationCenter.default.removeObserver)
+    }
     alert.addTextField { field in
       field.placeholder = Design.tr("パスフレーズ(なくてもかまいません)", "Optional BIP39 passphrase")
       field.isSecureTextEntry = true
       field.autocorrectionType = .no
       field.spellCheckingType = .no
       field.autocapitalizationType = .none
+      // Waits for typing to pause, since each fingerprint runs the 2048 round BIP39 stretch
+      observer = NotificationCenter.default.addObserver(forName: UITextField.textDidChangeNotification, object: field, queue: .main) { _ in
+        generation += 1
+        let asked = generation
+        pending?.cancel()
+        let text = field.text ?? ""
+        typed = text.isEmpty ? nil : working
+        show()
+        guard !text.isEmpty else { return }
+        let item = DispatchWorkItem { preview(text) { if asked == generation { typed = $0; show() } } }
+        pending = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: item)
+      }
     }
-    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in onCancel() })
+    show()
+    preview("") { plain = $0; show() }
+    alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in finish(); onCancel() })
     alert.addAction(UIAlertAction(title: Design.tr("続ける", "Continue"), style: .default) { _ in
+      finish()
       let passphrase = alert.textFields?.first?.text ?? ""
       alert.textFields?.first?.text = ""
       onContinue(passphrase)
@@ -1375,7 +1432,7 @@ final class SignerPlugin: Plugin {
     forgetOrigin()
     alert.addAction(UIAlertAction(title: Design.tr("完了", "Done"), style: .cancel) { _ in invoke.resolve(["shown": true]) })
     alert.addAction(UIAlertAction(title: Design.tr("読み込む", "Load it"), style: .default) { [weak self] _ in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), seed: (Data(phrase.utf8), true), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) {
           try SignerBridge.loadMnemonic(phrase, passphrase: passphrase).merging(["shown": true]) { $1 }
         }

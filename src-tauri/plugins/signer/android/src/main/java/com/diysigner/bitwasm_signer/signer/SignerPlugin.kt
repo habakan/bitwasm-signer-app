@@ -5,6 +5,8 @@ import android.app.Activity
 import android.app.Application
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -26,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager.Authenticators
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import app.tauri.PermissionState
 import app.tauri.annotation.ActivityCallback
@@ -41,6 +44,7 @@ import app.tauri.plugin.Plugin
 import java.util.concurrent.Executors
 import java.security.SecureRandom
 import javax.crypto.Cipher
+import wasmsigner.Signer
 import kotlin.random.asKotlinRandom
 
 @InvokeArg
@@ -678,7 +682,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             .setMessage(Design.tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"))
             .setNegativeButton(Design.tr("完了", "Done")) { _, _ -> done() }
             .setPositiveButton(Design.tr("読み込む", "Load it")) { _, _ ->
-                askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), ::done) { passphrase ->
+                askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), { s, p -> s.seedFromMnemonic(phrase.copyOf(), p) }, ::done) { passphrase ->
                     worker.execute {
                         try {
                             val entropy = if (vault.enabled) engine.mnemonicEntropy(phrase) else null
@@ -699,21 +703,49 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         dialog.show()
     }
 
-    private fun askPassphrase(title: String, onCancel: () -> Unit, onContinue: (CharArray) -> Unit) {
+    // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads
+    private fun askPassphrase(title: String, seed: (Signer, CharArray) -> Unit, onCancel: () -> Unit, onContinue: (CharArray) -> Unit) {
+        val working = Design.tr("計算しています…", "Working…")
+        var plain = working
+        var typed: String? = null
+        var generation = 0
+        lateinit var dialog: AlertDialog
+        fun message() = Design.tr(
+            "パスフレーズを付けていない場合は、空のまま続けてください。\n\nフィンガープリント\nパスフレーズなし: $plain" + (typed?.let { "\n入力したパスフレーズ: $it" } ?: ""),
+            "Leave blank if this seed has no passphrase.\n\nFingerprint\nNo passphrase: $plain" + (typed?.let { "\nThis passphrase: $it" } ?: ""),
+        )
+        fun preview(chars: CharArray, done: (String) -> Unit) = worker.execute {
+            val value = runCatching { engine.previewFingerprint(seed, chars).chunked(4).joinToString(" ") }
+                .getOrDefault(Design.tr("計算できません", "Unavailable"))
+            activity.runOnUiThread { done(value) }
+        }
+        val waiting = Handler(Looper.getMainLooper())
         val passphrase = EditText(activity).apply {
             hint = Design.tr("パスフレーズ(なくてもかまいません)", "Optional BIP39 passphrase")
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             keepFromKeyboard()
+            // Waits for typing to pause, since each fingerprint runs the 2048 round BIP39 stretch
+            doAfterTextChanged { text ->
+                val asked = ++generation
+                waiting.removeCallbacksAndMessages(null)
+                typed = if (text.isNullOrEmpty()) null else working
+                dialog.setMessage(message())
+                if (typed != null) waiting.postDelayed({
+                    preview(this.text.toString().toCharArray()) { if (asked == generation) { typed = it; dialog.setMessage(message()) } }
+                }, 500)
+            }
         }
-        val dialog = Design.alert(activity).setTitle(title)
-            .setMessage(Design.tr("パスフレーズを付けていない場合は、空のまま続けてください。", "Leave blank if this seed has no passphrase."))
+        dialog = Design.alert(activity).setTitle(title)
+            .setMessage(message())
             .setView(passphrase)
             .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> onCancel() }
             .setPositiveButton(Design.tr("続ける", "Continue"), null)
             .create()
         dialog.setOnCancelListener { onCancel() }
+        dialog.setOnDismissListener { waiting.removeCallbacksAndMessages(null); generation++ }
         dialog.setOnShowListener {
+            preview(charArrayOf()) { plain = it; dialog.setMessage(message()) }
             dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             Design.styleDialog(dialog)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -869,7 +901,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     }
 
     private fun unlockWithPassphrase(invoke: Invoke, entry: KeyVault.Entry, entropy: ByteArray) {
-        askPassphrase(Design.tr("${entry.name}のパスフレーズ", "Passphrase for ${entry.name}"), { entropy.fill(0); invoke.fail("Unlock was cancelled") }) { passphrase ->
+        askPassphrase(Design.tr("${entry.name}のパスフレーズ", "Passphrase for ${entry.name}"), { s, p -> s.seedFromSeedQr(entropy.copyOf(), p) }, { entropy.fill(0); invoke.fail("Unlock was cancelled") }) { passphrase ->
             worker.execute {
                 try {
                     engine.loadSeedQr(listOf("vault" to entropy.copyOf()), "saved seed", passphrase).fill(0)
@@ -1052,7 +1084,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun importMnemonic(invoke: Invoke) {
         MnemonicKeypad(activity, engine.testnet, engine.words, engine.wordEntry(), { invoke.fail("Seed import was cancelled") }) { mnemonic ->
-            askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), {
+            askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), { s, p -> s.seedFromMnemonic(mnemonic.copyOf(), p) }, {
                 mnemonic.fill('\u0000')
                 invoke.fail("Seed import was cancelled")
             }) { passphrase ->
@@ -1131,7 +1163,12 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             }
             return
         }
-        askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), {
+        // The first reading that decodes, as loadSeedQr picks
+        val seed = { s: Signer, p: CharArray ->
+            candidates.firstNotNullOf { (_, payload) -> runCatching { s.seedFromSeedQr(payload.copyOf(), p.copyOf()) }.getOrNull() }
+            p.fill('\u0000')
+        }
+        askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), seed, {
             candidates.forEach { it.second.fill(0) }
             invoke.fail("Seed import was cancelled")
         }) { passphraseChars ->
