@@ -77,6 +77,8 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     private val vault by lazy { KeyVault(activity) }
     private val restrictions by lazy { DeviceRestrictions(activity) { worker.execute { engine.lock() } } }
     private var pendingScanMode = "seed"
+    // The open address check, filled in and searched when the scanner returns
+    private var scannedAddress: ((String) -> Unit)? = null
     // How the new wallet being written down was made: its rolls, kept until the flow ends or the user clears them
     private class Origin(val dice: Boolean, val rolls: ByteArray?)
     private var origin: Origin? = null
@@ -423,51 +425,95 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun findAddress(invoke: Invoke) {
         if (!engine.isLoaded) { invoke.fail("Load a seed first"); return }
-        val address = EditText(activity).apply { hint = Design.tr("ビットコインのアドレスかbitcoin: URI", "Bitcoin address or bitcoin: URI") }
-        val account = EditText(activity).apply {
-            hint = Design.tr("アカウントの番号", "Account index")
-            setText("0")
-            inputType = InputType.TYPE_CLASS_NUMBER
+        val p = Design.palette(activity)
+        val tr = Design::tr
+        val address = Design.input(activity, p, tr("アドレスかbitcoin: URI", "Address or bitcoin: URI")).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
-        val count = EditText(activity).apply {
-            hint = Design.tr("調べるアドレスの数", "Addresses per chain")
-            setText("1000")
-            inputType = InputType.TYPE_CLASS_NUMBER
-        }
-        val form = LinearLayout(activity).apply {
+        fun number(value: String) = Design.input(activity, p, "").apply { setText(value); inputType = InputType.TYPE_CLASS_NUMBER }
+        val account = number("0")
+        val count = number("1000")
+        fun labelled(label: String, input: View) = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), 0)
-            addView(address)
-            addView(account)
-            addView(count)
+            addView(Design.text(activity, label, Design.Style.CAPTION, p.inkMuted))
+            addView(input, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(DesignTokens.SPACE_1) })
         }
-        val dialog = Design.alert(activity).setTitle(Design.tr("アドレスを確認する", "Check an address"))
-            .setView(form)
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("Address search was cancelled") }
-            .setOnCancelListener { invoke.fail("Address search was cancelled") }
-            .setPositiveButton(Design.tr("調べる", "Search"), null)
-            .create()
-        dialog.setOnShowListener {
-            Design.styleDialog(dialog)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val accountValue = account.text.toString().toIntOrNull()
-                val countValue = count.text.toString().toIntOrNull()
-                if (address.text.isBlank() || accountValue == null || accountValue < 0 || countValue == null || countValue !in 1..100000) {
-                    address.error = Design.tr("アドレス、アカウント、調べる数を入れてください", "Enter an address, account, and search range")
-                    return@setOnClickListener
-                }
-                dialog.dismiss()
-                worker.execute {
-                    try {
-                        val path = engine.findAddress(address.text.toString(), accountValue, countValue!!)
-                        val result = path?.let { Design.tr("このウォレットのアドレスです。${if (it.chain == 0) "受け取り" else "おつり"}の${it.index}番目(アカウント $accountValue)。", "Found on the ${if (it.chain == 0) "receive" else "change"} chain at index ${it.index} (account $accountValue).") }
-                            ?: Design.tr("受け取りとおつりの最初の${countValue}個には見つかりませんでした。", "Address not found in the first $countValue receive and change addresses.")
-                        activity.runOnUiThread { showInfo(invoke, Design.tr("アドレスの確認", "Address search"), result) }
-                    } catch (e: Exception) {
-                        activity.runOnUiThread { invoke.fail(e.message ?: "Address search failed") }
-                    }
+        val range = LinearLayout(activity).apply {
+            addView(labelled(tr("アカウント", "Account"), account), LinearLayout.LayoutParams(0, -2, 1f))
+            addView(labelled(tr("それぞれ探す数", "Addresses per chain"), count), LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(DesignTokens.SPACE_3) })
+        }
+        lateinit var dialog: android.app.Dialog
+        fun search() {
+            val accountValue = account.text.toString().toIntOrNull()
+            val countValue = count.text.toString().toIntOrNull()
+            if (address.text.isBlank()) { address.error = tr("アドレスを入れてください", "Enter an address"); return }
+            if (accountValue == null || accountValue < 0) { account.error = tr("0以上の数を入れてください", "Enter 0 or more"); return }
+            if (countValue == null || countValue !in 1..100000) { count.error = tr("1〜100000の数を入れてください", "Enter 1 to 100000"); return }
+            scannedAddress = null
+            dialog.dismiss()
+            val shown = address.text.toString().trim().replace(Regex("^bitcoin:", RegexOption.IGNORE_CASE), "").substringBefore('?')
+            worker.execute {
+                try {
+                    val path = engine.findAddress(shown, accountValue, countValue)
+                    activity.runOnUiThread { showAddressResult(invoke, shown, accountValue, countValue, path) }
+                } catch (e: Exception) {
+                    activity.runOnUiThread { invoke.fail(e.message ?: "Address search failed") }
                 }
             }
+        }
+        val scan = Design.button(activity, tr("QRを読み取る", "Scan a QR"), false, p).apply {
+            setOnClickListener {
+                scannedAddress = { address.setText(it); search() }
+                pendingScanMode = "address"
+                if (getPermissionState("camera") == PermissionState.GRANTED) startScanner(invoke)
+                else requestPermissionForAlias("camera", invoke, "cameraPermissionResult")
+            }
+        }
+        val check = Design.button(activity, tr("調べる", "Check"), true, p).apply { setOnClickListener { search() } }
+        val content = page(
+            Design.text(activity, tr("アドレスを確認する", "Check an address"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, tr("ウォレットアプリに出た受け取りのアドレスが、この鍵のものか確かめます。QRを読み取るか、アドレスを入力してください。",
+                "Check that a receive address shown in your wallet app belongs to this key. Scan its QR or type it."), Design.Style.BODY, p.inkMuted),
+            address,
+            Design.text(activity, tr("探す範囲", "SEARCH RANGE"), Design.Style.OVERLINE, p.inkMuted),
+            range,
+            Design.text(activity, tr("受け取りとおつりのアドレスを、それぞれ最初から探す数だけ調べます。", "The first addresses of the receive and change chains are checked, this many of each."), Design.Style.CAPTION, p.inkMuted),
+        )
+        dialog = Design.screen(activity, tr("アドレスの確認", "Address check"), engine.testnet, content, listOf(scan, check)) {
+            scannedAddress = null
+            invoke.fail("Address search was cancelled")
+        }
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        dialog.show()
+    }
+
+    private fun showAddressResult(invoke: Invoke, address: String, account: Int, count: Int, path: wasmsigner.AddressPath?) {
+        val p = Design.palette(activity)
+        val tr = Design::tr
+        val card = Design.card(activity, p).apply {
+            addView(Design.field(activity, p, tr("アドレス", "ADDRESS"), Design.well(activity, p, address, true)))
+            if (path != null) {
+                val chain = if (path.chain == 0) tr("受け取り", "Receive") else tr("おつり", "Change")
+                addView(Design.divider(activity, p), LinearLayout.LayoutParams(-1, dp(1)))
+                addView(Design.field(activity, p, tr("場所", "WHERE"), Design.text(activity, tr("$chain・番号 ${path.index}", "$chain · index ${path.index}"), Design.Style.DATA, p.ink),
+                    tr("アカウント $account", "Account $account")))
+            }
+        }
+        val content = page(
+            Design.text(activity, if (path != null) tr("このウォレットのアドレスです", "This address is yours") else tr("見つかりませんでした", "Not found"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, if (path != null) tr("この鍵から作られたアドレスです。", "It was made from this key.")
+                else tr("アカウント $account の受け取りとおつり、それぞれ最初の${count}個にはありません。別のウォレットのアドレスか、探す範囲の外です。",
+                    "It is not among the first $count receive and change addresses of account $account. It belongs to another wallet or lies outside the range."),
+                Design.Style.BODY, p.inkMuted),
+            card,
+        )
+        lateinit var dialog: android.app.Dialog
+        val again = Design.button(activity, tr("別のアドレスを調べる", "Check another address"), false, p).apply { setOnClickListener { dialog.dismiss(); findAddress(invoke) } }
+        val done = Design.button(activity, tr("完了", "Done"), true, p).apply {
+            setOnClickListener { dialog.dismiss(); invoke.resolve(JSObject().apply { put("shown", true) }) }
+        }
+        dialog = Design.screen(activity, tr("アドレスの確認", "Address check"), engine.testnet, content, listOf(again, done)) {
+            invoke.resolve(JSObject().apply { put("shown", true) })
         }
         dialog.show()
     }
@@ -682,7 +728,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             .setMessage(Design.tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"))
             .setNegativeButton(Design.tr("完了", "Done")) { _, _ -> done() }
             .setPositiveButton(Design.tr("読み込む", "Load it")) { _, _ ->
-                askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), { s, p -> s.seedFromMnemonic(phrase.copyOf(), p) }, ::done) { passphrase ->
+                askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(phrase.copyOf(), p) }, ::done) { passphrase ->
                     worker.execute {
                         try {
                             val entropy = if (vault.enabled) engine.mnemonicEntropy(phrase) else null
@@ -705,23 +751,20 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
 
     // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads
     private fun askPassphrase(title: String, seed: (Signer, CharArray) -> Unit, onCancel: () -> Unit, onContinue: (CharArray) -> Unit) {
-        val working = Design.tr("計算しています…", "Working…")
-        var plain = working
-        var typed: String? = null
+        val p = Design.palette(activity)
+        val tr = Design::tr
+        val working = tr("計算しています…", "Working…")
+        val none = tr("入力すると表示します", "Shown as you type")
         var generation = 0
-        lateinit var dialog: AlertDialog
-        fun message() = Design.tr(
-            "パスフレーズを付けていない場合は、空のまま続けてください。\n\nフィンガープリント\nパスフレーズなし: $plain" + (typed?.let { "\n入力したパスフレーズ: $it" } ?: ""),
-            "Leave blank if this seed has no passphrase.\n\nFingerprint\nNo passphrase: $plain" + (typed?.let { "\nThis passphrase: $it" } ?: ""),
-        )
+        val plain = Design.well(activity, p, working, false)
+        val typed = Design.well(activity, p, none, false)
         fun preview(chars: CharArray, done: (String) -> Unit) = worker.execute {
             val value = runCatching { engine.previewFingerprint(seed, chars).chunked(4).joinToString(" ") }
-                .getOrDefault(Design.tr("計算できません", "Unavailable"))
+                .getOrDefault(tr("計算できません", "Unavailable"))
             activity.runOnUiThread { done(value) }
         }
         val waiting = Handler(Looper.getMainLooper())
-        val passphrase = EditText(activity).apply {
-            hint = Design.tr("パスフレーズ(なくてもかまいません)", "Optional BIP39 passphrase")
+        val passphrase = Design.input(activity, p, tr("パスフレーズ", "Passphrase")).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             keepFromKeyboard()
@@ -729,33 +772,41 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             doAfterTextChanged { text ->
                 val asked = ++generation
                 waiting.removeCallbacksAndMessages(null)
-                typed = if (text.isNullOrEmpty()) null else working
-                dialog.setMessage(message())
-                if (typed != null) waiting.postDelayed({
-                    preview(this.text.toString().toCharArray()) { if (asked == generation) { typed = it; dialog.setMessage(message()) } }
+                typed.text = if (text.isNullOrEmpty()) none else working
+                if (!text.isNullOrEmpty()) waiting.postDelayed({
+                    preview(this.text.toString().toCharArray()) { if (asked == generation) typed.text = it }
                 }, 500)
             }
         }
-        dialog = Design.alert(activity).setTitle(title)
-            .setMessage(message())
-            .setView(passphrase)
-            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> onCancel() }
-            .setPositiveButton(Design.tr("続ける", "Continue"), null)
-            .create()
-        dialog.setOnCancelListener { onCancel() }
-        dialog.setOnDismissListener { waiting.removeCallbacksAndMessages(null); generation++ }
-        dialog.setOnShowListener {
-            preview(charArrayOf()) { plain = it; dialog.setMessage(message()) }
-            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-            Design.styleDialog(dialog)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+        val fingerprints = Design.card(activity, p).apply {
+            addView(Design.field(activity, p, tr("パスフレーズなし", "WITHOUT A PASSPHRASE"), plain))
+            addView(Design.divider(activity, p), LinearLayout.LayoutParams(-1, dp(1)))
+            addView(Design.field(activity, p, tr("入力したパスフレーズ", "WITH THIS PASSPHRASE"), typed,
+                tr("控えておいたフィンガープリントと同じか確かめてください。1文字違うだけで別の鍵になります。", "Check it matches the fingerprint you noted. One wrong character makes a different key.")))
+        }
+        lateinit var dialog: android.app.Dialog
+        fun stop() { waiting.removeCallbacksAndMessages(null); generation++ }
+        val next = Design.button(activity, tr("続ける", "Continue"), true, p).apply {
+            setOnClickListener {
                 val chars = passphrase.text.toString().toCharArray()
                 passphrase.text.clear()
+                stop()
                 dialog.dismiss()
                 onContinue(chars)
             }
         }
+        val content = page(
+            Design.text(activity, tr("パスフレーズを入力する", "Enter the passphrase"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue."), Design.Style.BODY, p.inkMuted),
+            passphrase,
+            Design.text(activity, tr("フィンガープリント", "FINGERPRINT"), Design.Style.OVERLINE, p.inkMuted),
+            fingerprints,
+        )
+        dialog = Design.screen(activity, title, engine.testnet, content, listOf(next)) { stop(); passphrase.text.clear(); onCancel() }
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         dialog.show()
+        preview(charArrayOf()) { plain.text = it }
     }
 
     private fun stateObject() = JSObject().apply {
@@ -1084,7 +1135,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun importMnemonic(invoke: Invoke) {
         MnemonicKeypad(activity, engine.testnet, engine.words, engine.wordEntry(), { invoke.fail("Seed import was cancelled") }) { mnemonic ->
-            askPassphrase(Design.tr("パスフレーズ", "Mnemonic passphrase"), { s, p -> s.seedFromMnemonic(mnemonic.copyOf(), p) }, {
+            askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(mnemonic.copyOf(), p) }, {
                 mnemonic.fill('\u0000')
                 invoke.fail("Seed import was cancelled")
             }) { passphrase ->
@@ -1117,12 +1168,14 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         if (getPermissionState("camera") == PermissionState.GRANTED) {
             startScanner(invoke)
         }
-        else invoke.fail("Camera permission was denied")
+        // The address check stays open, so the address can still be typed
+        else if (pendingScanMode != "address") invoke.fail("Camera permission was denied")
     }
 
     private fun startScanner(invoke: Invoke) = when (pendingScanMode) {
         "psbt" -> startPsbtScanner(invoke)
         "multisig" -> startActivityForResult(invoke, Intent(activity, QrScanActivity::class.java).putExtra("mode", "multisig"), "multisigScanResult")
+        "address" -> startActivityForResult(invoke, Intent(activity, QrScanActivity::class.java).putExtra("mode", "address").putExtra("testnet", engine.testnet), "addressScanResult")
         else -> startSeedScanner(invoke)
     }
 
@@ -1168,7 +1221,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             candidates.firstNotNullOf { (_, payload) -> runCatching { s.seedFromSeedQr(payload.copyOf(), p.copyOf()) }.getOrNull() }
             p.fill('\u0000')
         }
-        askPassphrase(Design.tr("パスフレーズ", "SeedQR passphrase"), seed, {
+        askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed, {
             candidates.forEach { it.second.fill(0) }
             invoke.fail("Seed import was cancelled")
         }) { passphraseChars ->
@@ -1186,6 +1239,12 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                 }
             }
         }
+    }
+
+    @ActivityCallback
+    private fun addressScanResult(invoke: Invoke, result: androidx.activity.result.ActivityResult) {
+        val text = result.data?.getStringExtra(QrScanActivity.PAYLOAD)
+        if (result.resultCode == Activity.RESULT_OK && text != null) scannedAddress?.invoke(text)
     }
 
     @ActivityCallback
