@@ -320,6 +320,30 @@ impl SignerEngine {
         passphrase: &mut [u8],
         mnemonic: bool,
     ) -> Result<Value, String> {
+        let (signer, fingerprint) = self.seed_signer(payload, passphrase, mnemonic)?;
+        self.lock();
+        self.signer = Some(signer);
+        self.fingerprint = Some(fingerprint);
+        Ok(self.state())
+    }
+
+    // The fingerprint a seed gets with this passphrase; the module is dropped here, so no key is loaded
+    fn preview_fingerprint(
+        &self,
+        payload: &mut [u8],
+        passphrase: &mut [u8],
+        mnemonic: bool,
+    ) -> Result<Value, String> {
+        let (_, fingerprint) = self.seed_signer(payload, passphrase, mnemonic)?;
+        Ok(json!({"fingerprint": format!("{fingerprint:08x}")}))
+    }
+
+    fn seed_signer(
+        &self,
+        payload: &mut [u8],
+        passphrase: &mut [u8],
+        mnemonic: bool,
+    ) -> Result<(WasmModule, u32), String> {
         let raw_seed = !mnemonic && payload.len() == 64;
         let length = payload.len();
         let pass_length = passphrase.len();
@@ -363,10 +387,7 @@ impl SignerEngine {
             });
         }
         let fingerprint = signer.call("signer_fingerprint", &[])? as u32;
-        self.lock();
-        self.signer = Some(signer);
-        self.fingerprint = Some(fingerprint);
-        Ok(self.state())
+        Ok((signer, fingerprint))
     }
 
     fn mnemonic_from_entropy(&self, entropy: &mut [u8]) -> Result<Zeroizing<Vec<u8>>, String> {
@@ -1227,6 +1248,27 @@ pub unsafe extern "C" fn bitwasm_ios_engine_load_mnemonic(
         let mut passphrase = Zeroizing::new(unsafe { copy_bytes(passphrase, pass_length) }?);
         with_engine(|engine| {
             engine.load_mnemonic(mnemonic.as_mut_slice(), passphrase.as_mut_slice())
+        })
+    })
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn bitwasm_ios_engine_preview_fingerprint(
+    payload: *const u8,
+    length: i32,
+    passphrase: *const u8,
+    pass_length: i32,
+    mnemonic: i32,
+) -> *mut c_char {
+    ffi_reply(|| {
+        let mut payload = Zeroizing::new(unsafe { copy_bytes(payload, length) }?);
+        let mut passphrase = Zeroizing::new(unsafe { copy_bytes(passphrase, pass_length) }?);
+        with_engine(|engine| {
+            engine.preview_fingerprint(
+                payload.as_mut_slice(),
+                passphrase.as_mut_slice(),
+                mnemonic != 0,
+            )
         })
     })
 }

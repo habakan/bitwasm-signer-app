@@ -129,6 +129,11 @@ internal class SignerEngine(private val context: Context) {
     fun mnemonicEntropy(mnemonic: CharArray): ByteArray? =
         runCatching { withTemporarySigner { it.seedQrFromMnemonic(mnemonic.copyOf(), compact = true) } }.getOrNull()
 
+    // The fingerprint a seed gets with this passphrase, from a module dropped right after, so no key is loaded
+    @Synchronized
+    fun previewFingerprint(seed: (Signer, CharArray) -> Unit, passphrase: CharArray): String =
+        try { withTemporarySigner { seed(it, passphrase.copyOf()); it.fingerprint } } finally { passphrase.fill('\u0000') }
+
     @Synchronized
     fun lock() {
         signer?.unload()
