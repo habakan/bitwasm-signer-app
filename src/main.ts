@@ -165,6 +165,7 @@ function goBack() {
 const actions: Record<string, () => void> = {
   "back": goBack,
   "settings": () => { screen = "settings"; render(); },
+  "advanced": () => { screen = "advanced"; render(); },
   "restrictions": () => { screen = "restrictions"; render(); },
   "theme-system": () => { setTheme("system"); render(); },
   "theme-light": () => { setTheme("light"); render(); },
@@ -211,7 +212,7 @@ if (!isPreview) {
       const changed = wiped || JSON.stringify(state.restrictions) !== JSON.stringify(signerState.restrictions);
       signerState = state;
       if (wiped) {
-        if (screen === "ready") screen = "home";
+        if (screen === "ready" || screen === "advanced") screen = "home";
         setStatus(restrictionBlocks(state)
           ? tr("必須に設定した項目がオンになったため、鍵を消去しました。", "The key was wiped because a required restriction came on.")
           : tr("アプリを離れたため、鍵を消去しました。", "The key was wiped when you left the app."));

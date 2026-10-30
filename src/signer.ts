@@ -13,7 +13,7 @@ export type SignerState = {
 // A device feature such as a network; "require" stops seeds from loading while it is on
 export type Restriction = { id: string; level: "off" | "warn" | "require"; active: boolean; detail: string };
 export type SignedPsbtResult = SignerState & { signed: boolean; shown: boolean };
-export type Screen = "home" | "ready" | "settings" | "restrictions";
+export type Screen = "home" | "ready" | "advanced" | "settings" | "restrictions";
 
 // ?ui-preview=home|ready|settings|restrictions renders a static screen; ?ui-preview=interactive fakes the plugin
 const previewParam = new URLSearchParams(window.location.search).get("ui-preview");

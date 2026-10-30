@@ -109,13 +109,8 @@ function readyView({ signer, busy }: View) {
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
   ] : [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
-    signer.multisig
-      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}をQRで渡す`, `Share multisig ${signer.multisig} as a QR`), "", { disabled: busy })
-      : row("multisig", "shield", tr("マルチシグを登録する", "Register a multisig"), tr("コーディネーターの設定を読み取る", "Scan the setup from your coordinator"), { disabled: busy }),
-    signer.multisig ? row("forget-multisig", "alert", tr("マルチシグの登録を解除する", "Forget the multisig"), "", { disabled: busy }) : "",
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
-    row("sign-message", "signature", tr("メッセージに署名する", "Sign a message"), "", { value: "BIP137", disabled: busy }),
-    row("bip85", "words", tr("子ニーモニックを作る", "Derive a child mnemonic"), "", { value: "BIP85", disabled: busy }),
+    row("advanced", "sliders", tr("高度な機能", "Advanced"), tr("マルチシグ、メッセージ署名など", "Multisig, message signing and more"), { disabled: busy }),
   ];
   return {
     body: `<div class="card"><div class="field">
@@ -125,6 +120,22 @@ function readyView({ signer, busy }: View) {
     ${group(tr("そのほかの操作", "MORE"), `<div class="card">${rows.join("")}</div>`)}`,
     actions: `<div class="action-pair">${button("lock", tr("ロック", "Lock"), "danger", { icon: "lock", disabled: busy })}
       ${button("psbt", tr("取引に署名する", "Sign a transaction"), "primary", { icon: "signature", disabled: busy })}</div>`,
+  };
+}
+
+// Tools most people never need, kept off the main screen
+function advancedView({ signer, busy }: View) {
+  const rows = [
+    signer.multisig
+      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}をQRで渡す`, `Share multisig ${signer.multisig} as a QR`), "", { disabled: busy })
+      : row("multisig", "shield", tr("マルチシグを登録する", "Register a multisig"), tr("コーディネーターの設定を読み取る", "Scan the setup from your coordinator"), { disabled: busy }),
+    signer.multisig ? row("forget-multisig", "alert", tr("マルチシグの登録を解除する", "Forget the multisig"), "", { disabled: busy }) : "",
+    row("sign-message", "signature", tr("メッセージに署名する", "Sign a message"), "", { value: "BIP137", disabled: busy }),
+    row("bip85", "words", tr("子ニーモニックを作る", "Derive a child mnemonic"), "", { value: "BIP85", disabled: busy }),
+  ];
+  return {
+    body: `<p class="lead">${tr("ふだんの送金と受け取りには使いません。必要なときだけ開いてください。", "Everyday sending and receiving does not need these. Open them only when you need one.")}</p>
+    <div class="card">${rows.join("")}</div>`,
   };
 }
 
@@ -191,8 +202,8 @@ function restrictionsView({ signer, busy }: View) {
   };
 }
 
-const screens = { home: homeView, ready: readyView, settings: settingsView, restrictions: restrictionsView };
-const titles: Partial<Record<Screen, string>> = { settings: tr("設定", "Settings"), restrictions: tr("端末の機能制限", "Device restrictions") };
+const screens = { home: homeView, ready: readyView, advanced: advancedView, settings: settingsView, restrictions: restrictionsView };
+const titles: Partial<Record<Screen, string>> = { advanced: tr("高度な機能", "Advanced"), settings: tr("設定", "Settings"), restrictions: tr("端末の機能制限", "Device restrictions") };
 
 function banner(signer: SignerState) {
   if (webDemo) return `<div class="banner banner-warning" role="status">${icon("alert")}
@@ -220,7 +231,7 @@ export function appView(view: View) {
   return `<div class="app-shell" lang="${lang}">
     <header class="topbar">
       ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>` : ""}
-      <span class="topbar-title">${title ?? "bitwasm-signer"}</span>
+      <span class="topbar-title${title ? " topbar-title-page" : ""}">${title ?? "bitwasm-signer"}</span>
       <span class="topbar-status">${status}</span>
       ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("settings")}</button>` : ""}
     </header>
