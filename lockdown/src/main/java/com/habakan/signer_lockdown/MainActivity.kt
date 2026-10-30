@@ -2,6 +2,7 @@ package com.habakan.signer_lockdown
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.animation.ValueAnimator
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -10,14 +11,25 @@ import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Animatable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.style.DynamicDrawableSpan
+import android.text.style.ImageSpan
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
+import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
@@ -37,11 +49,16 @@ class MainActivity : Activity() {
     private lateinit var buttons: List<Button>
     private lateinit var forgetWifi: CheckBox
     private var afterConfirm: (() -> Unit)? = null
+    private var updateButton: Button? = null
+    private var busy: Button? = null
+    private var busyLabel: CharSequence = ""
+    private var spinner: Spinner? = null
 
     private val installResult = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val ok = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, -1) == PackageInstaller.STATUS_SUCCESS
             val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+            endBusy()
             toast(if (ok) tr("インストールしました。", "Installed") else tr("インストールできませんでした: ", "Not installed: ") + message)
             render()
         }
@@ -70,8 +87,8 @@ class MainActivity : Activity() {
             isChecked = true
         }
         buttons = listOf(
-            button(tr("署名アプリを入れる", "Install the signer"), Kind.SECONDARY) { run(policy::installSigner) },
-            button(tr("SD カードからアプリを更新", "Update an app from an SD card"), Kind.SECONDARY) { pickUpdate() },
+            button(tr("署名アプリを入れる", "Install the signer"), Kind.SECONDARY) { install(it, tr("署名アプリを入れています…", "Installing the signer…"), policy::installSigner) },
+            button(tr("SD カードからアプリを更新", "Update an app from an SD card"), Kind.SECONDARY) { pickUpdate(it) },
             button(tr("PC から USB でアプリを更新", "Update an app from a PC over USB"), Kind.SECONDARY) { confirm(::usbUpdate) },
             button(tr("制限を適用", "Apply restrictions"), Kind.PRIMARY) { run { policy.apply(forgetWifi.isChecked) } },
             // Loosening needs the screen lock
@@ -134,7 +151,7 @@ class MainActivity : Activity() {
         if (resultCode == RESULT_OK) {
             when (requestCode) {
                 CONFIRM -> afterConfirm?.invoke()
-                PICK_APK -> data?.data?.let(::confirmUpdate)
+                PICK_APK -> data?.data?.let { confirmUpdate(it, updateButton!!) }
             }
         }
         afterConfirm = null
@@ -143,7 +160,7 @@ class MainActivity : Activity() {
     private enum class Kind { PRIMARY, SECONDARY, DANGER }
 
     // Drawn like the signer app's screens, from design/tokens.json
-    private fun button(label: String, kind: Kind, onClick: () -> Unit) = Button(this).apply {
+    private fun button(label: String, kind: Kind, onClick: (Button) -> Unit) = Button(this).apply {
         text = label
         isAllCaps = false
         stateListAnimator = null
@@ -156,7 +173,7 @@ class MainActivity : Activity() {
             Kind.SECONDARY -> shape(p.surfaceRaised, p.lineStrong, DesignTokens.RADIUS_MD)
             Kind.DANGER -> shape(p.surface, p.danger, DesignTokens.RADIUS_MD)
         }
-        setOnClickListener { onClick() }
+        setOnClickListener { onClick(this) }
     }
 
     private fun text(value: String, size: Float, bold: Boolean = false, mono: Boolean = false, color: Int = p.ink) = TextView(this).apply {
@@ -213,8 +230,32 @@ class MainActivity : Activity() {
         startActivityForResult(intent, CONFIRM)
     }
 
+    // The tapped button turns and says what is happening, and every button waits until it ends
+    private fun startBusy(button: Button, label: String) {
+        busy = button
+        busyLabel = button.text
+        val align = if (Build.VERSION.SDK_INT >= 29) DynamicDrawableSpan.ALIGN_CENTER else DynamicDrawableSpan.ALIGN_BASELINE
+        spinner = Spinner(dp(18), button.currentTextColor, button::invalidate).also { it.start() }
+        button.text = SpannableString("  $label").apply { setSpan(ImageSpan(spinner!!, align), 0, 1, 0) }
+        render()
+    }
+
+    private fun endBusy() {
+        spinner?.stop()
+        busy?.text = busyLabel
+        busy = null
+        render()
+    }
+
+    // Writing the APK into the install session takes seconds, so it runs off the main thread
+    private fun install(button: Button, label: String, action: () -> Unit) {
+        startBusy(button, label)
+        Thread { runCatching(action).onFailure { runOnUiThread { endBusy(); toast(it.message) } } }.start()
+    }
+
     @Suppress("DEPRECATION")
-    private fun pickUpdate() {
+    private fun pickUpdate(button: Button) {
+        updateButton = button
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
             .addCategory(Intent.CATEGORY_OPENABLE)
             .setType("application/vnd.android.package-archive")
@@ -231,23 +272,34 @@ class MainActivity : Activity() {
                 "The signer was closed and USB file transfer is allowed.\n\n1. Connect a PC with a USB cable and pick File transfer in the notification\n2. Copy the APK from the PC to Download on the phone\n3. Tap Choose the APK\n\nFile transfer stops when this closes.",
             ))
             .setCancelable(false)
-            .setPositiveButton(tr("APK を選ぶ", "Choose the APK")) { _, _ -> run(policy::closeUsbTransfer); pickUpdate() }
+            .setPositiveButton(tr("APK を選ぶ", "Choose the APK")) { _, _ -> run(policy::closeUsbTransfer); pickUpdate(buttons[2]) }
             .setNegativeButton(tr("やめる", "Cancel")) { _, _ -> run(policy::closeUsbTransfer) }
             .show()
             .getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(p.primary)
     }
 
     // Copies the chosen APK first, then shows its version and SHA-256 for a person to check against the release
-    private fun confirmUpdate(uri: Uri) {
-        val apk = File(cacheDir, "update.apk")
-        contentResolver.openInputStream(uri)!!.use { input -> apk.outputStream().use { input.copyTo(it) } }
-        val info = runCatching { policy.readUpdate(apk) }.getOrElse { return toast(it.message) }
-        val sha256 = MessageDigest.getInstance("SHA-256").digest(apk.readBytes()).joinToString("") { "%02x".format(it) }
+    private fun confirmUpdate(uri: Uri, button: Button) {
+        startBusy(button, tr("APK を確かめています…", "Checking the APK…"))
+        Thread {
+            val apk = File(cacheDir, "update.apk")
+            val checked = runCatching {
+                contentResolver.openInputStream(uri)!!.use { input -> apk.outputStream().use { input.copyTo(it) } }
+                policy.readUpdate(apk) to MessageDigest.getInstance("SHA-256").digest(apk.readBytes()).joinToString("") { "%02x".format(it) }
+            }
+            runOnUiThread {
+                endBusy()
+                checked.onSuccess { (info, sha256) -> askUpdate(button, apk, info, sha256) }.onFailure { toast(it.message) }
+            }
+        }.start()
+    }
+
+    private fun askUpdate(button: Button, apk: File, info: android.content.pm.PackageInfo, sha256: String) {
         val theme = if (p === DesignTokens.light) android.R.style.Theme_DeviceDefault_Light_Dialog_Alert else android.R.style.Theme_DeviceDefault_Dialog_Alert
         AlertDialog.Builder(this, theme)
             .setTitle(info.packageName)
             .setMessage("${policy.versionOf(info.packageName)} → ${info.versionName}\n\nSHA-256:\n$sha256\n\n" + tr("リリースページの SHA256SUMS と同じか確かめてください。", "Check it matches SHA256SUMS on the release page"))
-            .setPositiveButton(tr("更新", "Update")) { _, _ -> run { policy.installUpdate(apk) } }
+            .setPositiveButton(tr("更新", "Update")) { _, _ -> install(button, tr("更新しています…", "Updating…")) { policy.installUpdate(apk) } }
             .setNegativeButton(tr("やめる", "Cancel")) { _, _ -> apk.delete() }
             .show()
             .getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(p.primary)
@@ -272,7 +324,9 @@ class MainActivity : Activity() {
         buttons[0].isEnabled = policy.hasBundledSigner && !policy.isSignerInstalled
         buttons[1].isEnabled = policy.isSignerInstalled
         buttons[2].isEnabled = policy.isSignerInstalled
-        buttons.forEach { if (!it.isEnabled) it.alpha = 0.45f }
+        if (busy != null) buttons.forEach { it.isEnabled = false }
+        forgetWifi.isEnabled = busy == null
+        buttons.forEach { if (!it.isEnabled && it !== busy) it.alpha = 0.45f }
 
         val active = policy.activeRestrictions()
         val locked = active.size == Policy.RESTRICTIONS.size
@@ -299,6 +353,39 @@ class MainActivity : Activity() {
         setTextColor(color)
         setPadding(dp(10), dp(4), dp(10), dp(4))
         background = shape(fill, radius = DesignTokens.RADIUS_FULL)
+    }
+
+    // A ring drawn in the label, since a Button cannot hold a ProgressBar
+    private class Spinner(private val size: Int, color: Int, redraw: () -> Unit) : Drawable(), Animatable {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = size / 8f
+            strokeCap = Paint.Cap.ROUND
+            this.color = color
+        }
+        private val turn = ValueAnimator.ofFloat(0f, 360f).apply {
+            duration = 800
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            addUpdateListener { redraw() }
+        }
+
+        init { setBounds(0, 0, size, size) }
+
+        override fun draw(canvas: Canvas) {
+            val inset = paint.strokeWidth / 2
+            canvas.drawArc(RectF(bounds).apply { inset(inset, inset) }, turn.animatedValue as Float, 270f, false, paint)
+        }
+
+        override fun getIntrinsicWidth() = size
+        override fun getIntrinsicHeight() = size
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(filter: ColorFilter?) { paint.colorFilter = filter }
+        @Deprecated("Required by Drawable")
+        override fun getOpacity() = PixelFormat.TRANSLUCENT
+        override fun start() = turn.start()
+        override fun stop() = turn.cancel()
+        override fun isRunning() = turn.isRunning
     }
 
     companion object {

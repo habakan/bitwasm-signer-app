@@ -23,6 +23,7 @@ const sumsInput = document.getElementById("sums") as HTMLInputElement;
 const verdict = document.getElementById("verdict")!;
 const installButton = document.getElementById("install") as HTMLButtonElement;
 const logArea = document.getElementById("log")!;
+const stepList = document.getElementById("steps")!;
 const done = document.getElementById("done")!;
 const installed = document.getElementById("installed")!;
 
@@ -32,7 +33,7 @@ function applyMode() {
   document.body.className = `app-mode-${mode}`;
   document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.setMode === mode)));
   done.hidden = installed.hidden = true;
-  logArea.textContent = "";
+  logArea.textContent = stepList.innerHTML = "";
 }
 document.querySelectorAll<HTMLElement>("[data-set-mode]").forEach((b) =>
   b.addEventListener("click", () => {
@@ -121,29 +122,74 @@ function verify() {
 
 matches.addEventListener("change", () => (installButton.disabled = !matches.checked));
 
+// Each step shows whether it waits, runs, finished or failed, so a long install never looks stuck
+const steps = () => [...stepList.children] as HTMLElement[];
+function showSteps(labels: string[]) {
+  stepList.innerHTML = labels.map((label) => `<li data-state="pending"><span class="step-mark"></span><span class="step-copy"><span>${label}</span><span class="note"></span><progress max="1" hidden></progress></span></li>`).join("");
+}
+function step(index: number, note = "") {
+  steps().forEach((li, i) => (li.dataset.state = i < index ? "done" : i === index ? "active" : "pending"));
+  steps()[index].querySelector(".note")!.textContent = note;
+}
+function progress(index: number, ratio: number) {
+  const bar = steps()[index].querySelector("progress")!;
+  bar.hidden = false;
+  bar.value = ratio;
+  steps()[index].querySelector(".note")!.textContent = `${Math.floor(ratio * 100)}%`;
+}
+
+function setBusy(busy: boolean) {
+  installButton.setAttribute("aria-busy", String(busy));
+  installButton.innerHTML = busy ? `<span class="spinner"></span><span>${t("入れています…", "Installing…")}</span>` : t("端末をつないで入れる", "Connect the phone and install");
+  document.querySelectorAll<HTMLButtonElement | HTMLInputElement>(".segment, input").forEach((el) => (el.disabled = busy));
+  if (!busy) verify();
+  else installButton.disabled = true;
+}
+
 installButton.addEventListener("click", async () => {
-  installButton.disabled = true;
   logArea.textContent = "";
+  showSteps(mode === "apk"
+    ? [t("端末をつなぐ", "Connect the phone"), t("APK を入れる", "Install the APK")]
+    : [t("端末をつなぐ", "Connect the phone"), t("端末を確かめる", "Check the phone"), t("Lockdown を入れる", "Install Lockdown"), t("Device Owner にする", "Make it the device owner")]);
+  setBusy(true);
   try {
     await install(apkInput.files![0]);
+    steps().forEach((li) => (li.dataset.state = "done"));
     (mode === "apk" ? installed : done).hidden = false;
+    setBusy(false);
+    installButton.disabled = true;
   } catch (e) {
+    const failed = steps().find((li) => li.dataset.state === "active");
+    if (failed) failed.dataset.state = "failed";
     log(
       e instanceof AdbDaemonWebUsbDevice.DeviceBusyError
         ? t("端末が使用中です。この PC の adb を止めて（adb kill-server）やり直してください", "The phone is busy. Stop adb on this PC (adb kill-server) and try again")
         : String(e),
     );
-    installButton.disabled = false;
+    setBusy(false);
   }
 });
+
+// Counts the bytes read from the file, which the USB transfer pulls as it sends them
+function counted(apk: File, index: number) {
+  let sent = 0;
+  return apk.stream().pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      sent += chunk.byteLength;
+      progress(index, sent / apk.size);
+      controller.enqueue(chunk);
+    },
+  }));
+}
 
 async function install(apk: File) {
   const manager = AdbDaemonWebUsbDeviceManager.BROWSER;
   if (!manager) throw new Error(t("このブラウザは WebUSB を使えません。Chrome か Edge で開いてください", "This browser has no WebUSB. Open the page in Chrome or Edge"));
+  step(0, t("ブラウザの画面で端末を選んでください", "Choose the phone in the browser's dialog"));
   const device = await manager.requestDevice();
   if (!device) throw new Error(t("端末が選ばれませんでした", "No phone chosen"));
 
-  log(t("端末で USB デバッグを許可してください", "Allow USB debugging on the phone"));
+  step(0, t("端末で USB デバッグを許可してください", "Allow USB debugging on the phone"));
   // The key stays in this browser's IndexedDB, so the phone asks only once per browser
   const transport = await AdbDaemonTransport.authenticate({
     serial: device.serial,
@@ -156,10 +202,11 @@ async function install(apk: File) {
     log(`${await shell("getprop ro.product.brand")} ${await shell("getprop ro.product.model")} / Android ${await shell("getprop ro.build.version.release")}`);
 
     if (mode === "apk") {
-      log(t(`${apk.name} を入れています…`, `Installing ${apk.name}…`));
-      await new PackageManager(adb).installStream(apk.size, apk.stream() as never);
-      return log(t("入りました", "Installed"));
+      step(1);
+      return await new PackageManager(adb).installStream(apk.size, counted(apk, 1) as never);
     }
+
+    step(1);
 
     // Run again on a phone already set up, this only replaces Lockdown
     const owner = /Device Owner:[\s\S]*?package=(\S+)/.exec(await shell("dumpsys device_policy"))?.[1];
@@ -168,10 +215,11 @@ async function install(apk: File) {
       throw new Error(t(`端末にアカウントが ${accounts} 件あります。設定 > アカウント からすべて削除してやり直してください`, `The phone has ${accounts} account(s). Remove them all in Settings > Accounts and try again`));
     }
 
-    log(t("Lockdown を入れています…", "Installing Lockdown…"));
+    step(2);
     // stream-extra types the browser's ReadableStream a little differently; the object is the same
-    await new PackageManager(adb).installStream(apk.size, apk.stream() as never);
+    await new PackageManager(adb).installStream(apk.size, counted(apk, 2) as never);
 
+    step(3);
     if (owner === LOCKDOWN) return log(t("Lockdown はすでに Device Owner です", "Lockdown is already the device owner"));
     const result = await shell(`dpm set-device-owner ${ADMIN}`);
     log(result);
