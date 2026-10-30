@@ -8,6 +8,10 @@ const home = import.meta.env.DEV ? "https://habakan.github.io/bitwasm-signer-app
 // Switching the docs' language does not reload the page, so the demo follows it here
 const src = computed(() => `${home}?lang=${lang.value}`);
 const key = ref(0);
+// A new scene loads behind the one on screen and replaces it once loaded, so the phone never goes blank
+const frames = ref([{ key: 0, src: src.value }]);
+watch(key, (k) => { frames.value = [frames.value[0], { key: k, src: src.value }]; });
+let frame: HTMLIFrameElement | undefined;
 const ja = computed(() => lang.value === "ja");
 watch(lang, () => { section = "-"; void nextTick(sync); });
 
@@ -45,7 +49,7 @@ const play = async () => {
     const [selector, text] = action === "type" ? arg.split("=") : [action === "tap" ? `${arg}:not(:disabled)` : arg];
     let targets: HTMLElement[] = [];
     // The engine loads after the page, so buttons appear or stay disabled for a moment
-    for (let i = 0; i < 100 && !(targets = [...(frame.value?.contentDocument?.querySelectorAll<HTMLElement>(selector) ?? [])]).length; i++)
+    for (let i = 0; i < 100 && !(targets = [...(frame?.contentDocument?.querySelectorAll<HTMLElement>(selector) ?? [])]).length; i++)
       await new Promise((r) => setTimeout(r, 50));
     if (run !== key.value || !targets.length) return;
     for (const target of targets) {
@@ -61,9 +65,8 @@ onMounted(() => { fit(); sync(); addEventListener("resize", fit); addEventListen
 onBeforeUnmount(() => { removeEventListener("resize", fit); removeEventListener("scroll", sync); });
 
 // Same origin, so the docs' light/dark switch is copied into the app without reloading it
-const frame = useTemplateRef<HTMLIFrameElement>("frame");
 const applyTheme = () => {
-  const root = frame.value?.contentDocument?.documentElement;
+  const root = frame?.contentDocument?.documentElement;
   if (root) root.dataset.theme = isDark.value ? "dark" : "light";
 };
 watch(isDark, applyTheme);
@@ -85,9 +88,12 @@ const onTap = (event: Event) => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
   scrollTo({ top: heading.getBoundingClientRect().top + scrollY - nav - 24, behavior: "smooth" });
 };
-const loaded = () => {
+const loaded = (event: Event, k: number) => {
+  if (k !== key.value) return;
+  frame = event.target as HTMLIFrameElement;
   applyTheme();
-  frame.value?.contentDocument?.addEventListener("click", onTap, true);
+  frames.value = [frames.value.at(-1)!];
+  frame.contentDocument?.addEventListener("click", onTap, true);
   void play();
 };
 // Leaving the mode puts the phone back on the section in view
@@ -108,8 +114,8 @@ const reset = () => {
       <button type="button" :aria-pressed="!following" @click="following = false">{{ ja ? "スクロールで見る" : "Watch as you scroll" }}</button>
       <button type="button" :aria-pressed="following" @click="following = true">{{ ja ? "自分で触る" : "Try it yourself" }}</button>
     </div>
-    <div :style="{ height: `${height * scale}px` }">
-      <iframe ref="frame" :key="key" :src="src" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded" :style="{ transform: `scale(${scale})` }"></iframe>
+    <div class="screen" :style="{ height: `${height * scale}px` }">
+      <iframe v-for="f in frames" :key="f.key" :src="f.src" :class="{ loading: f !== frames[0] }" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded($event, f.key)" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
     <figcaption>
       <button type="button" @click="reset">{{ following ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>
@@ -120,7 +126,9 @@ const reset = () => {
 
 <style scoped>
 .demo { margin: 0 auto 24px; }
-.demo iframe { display: block; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
+.demo .screen { position: relative; }
+.demo iframe { position: absolute; top: 0; left: 0; box-sizing: border-box; width: 410px; height: 864px; border: 10px solid #16191c; border-radius: 52px; background: #fff; transform-origin: 0 0; }
+.demo iframe.loading { opacity: 0; pointer-events: none; }
 .demo .modes { display: flex; margin-bottom: 12px; padding: 3px; border-radius: 999px; background: var(--vp-c-default-soft); }
 .demo .modes button { flex: 1; padding: 6px 0; border-radius: 999px; color: var(--vp-c-text-2); font-size: 14px; font-weight: 600; }
 .demo .modes button[aria-pressed="true"] { background: var(--vp-c-brand-1); color: var(--vp-c-white); }
