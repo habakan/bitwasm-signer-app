@@ -1,6 +1,6 @@
 [package]
 name = "bitwasm-signer-app"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cross-platform Bitcoin signer using bitwasm-signer WASM"
 authors = ["DIYSigner"]
 edition = "2021"
