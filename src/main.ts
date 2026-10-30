@@ -155,18 +155,31 @@ function lockSigner() {
   });
 }
 
-function goBack() {
+function leaveScreen() {
   screen = screen === "restrictions" ? "settings" : signerState.loaded ? "ready" : "home";
   statusMessage = "";
   render();
 }
 
+// Each sub-screen adds a history entry, so Android's back button returns here instead of closing the app
+function openScreen(next: Screen) {
+  screen = next;
+  history.pushState({ sub: true }, "");
+  render();
+}
+
+function goBack() {
+  if (history.state?.sub) history.back();
+  else leaveScreen();
+}
+window.addEventListener("popstate", leaveScreen);
+
 // Keyed by button id
 const actions: Record<string, () => void> = {
   "back": goBack,
-  "settings": () => { screen = "settings"; render(); },
-  "advanced": () => { screen = "advanced"; render(); },
-  "restrictions": () => { screen = "restrictions"; render(); },
+  "settings": () => openScreen("settings"),
+  "advanced": () => openScreen("advanced"),
+  "restrictions": () => openScreen("restrictions"),
   "theme-system": () => { setTheme("system"); render(); },
   "theme-light": () => { setTheme("light"); render(); },
   "theme-dark": () => { setTheme("dark"); render(); },
