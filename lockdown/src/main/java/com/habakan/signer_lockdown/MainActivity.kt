@@ -102,7 +102,8 @@ class MainActivity : Activity() {
                 addView(stateBadge)
             })
             addView(View(context).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)))
-            addView(ScrollView(context).apply { addView(body) }, LinearLayout.LayoutParams(-1, 0, 1f))
+            // After a key press the focused ScrollView would get Android's gray focus highlight over the whole page
+            addView(ScrollView(context).apply { defaultFocusHighlightEnabled = false; addView(body) }, LinearLayout.LayoutParams(-1, 0, 1f))
         }
         // From Android 15 the app draws behind the system bars
         if (Build.VERSION.SDK_INT >= 35) root.setOnApplyWindowInsetsListener { view, insets ->
