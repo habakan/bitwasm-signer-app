@@ -21,7 +21,9 @@ const figure = useTemplateRef<HTMLElement>("figure");
 const scale = ref(0.8);
 const fit = () => {
   const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--vp-nav-height")) || 64;
-  const room = figure.value?.parentElement?.clientWidth ?? width;
+  // The fixed aside container is wider than the aside itself below 1440px, so measure the aside
+  const aside = figure.value?.closest<HTMLElement>(".aside");
+  const room = aside ? aside.clientWidth - parseFloat(getComputedStyle(aside).paddingLeft) : figure.value?.parentElement?.clientWidth ?? width;
   scale.value = Math.min(1, (innerHeight - nav - 200) / height, room / width);
 };
 
@@ -152,7 +154,7 @@ const reset = () => {
 .demo iframe.loading { opacity: 0; pointer-events: none; }
 .demo figcaption { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
 .demo figcaption :is(button, a) { color: var(--vp-c-brand-1); }
-:global(.aside) .demo { margin: 0; }
+:global(.aside .demo) { margin: 0; }
 :global(.VPDoc:has(.demo) .aside) { max-width: 442px; }
 :global(.VPDoc:has(.demo) :is(.aside-container, .aside-curtain)) { width: 410px; }
 </style>
