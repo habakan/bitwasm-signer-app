@@ -1,6 +1,6 @@
 {
   "name": "bitwasm-signer",
-  "short_name": "Signer",
+  "short_name": "bitwasm-signer",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

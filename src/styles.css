@@ -158,6 +158,20 @@ button:disabled { opacity: .45; cursor: default; }
 .arrow { color: var(--accent-ink); font: var(--text-caption); }
 .link { align-self: flex-start; padding: var(--space-3) 0; border: 0; background: none; color: var(--primary); font: var(--text-label); cursor: pointer; }
 .quiz-options { display: flex; flex-direction: column; gap: var(--space-3); }
+.segments-5 { grid-template-columns: repeat(5, 1fr); }
+.word-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.word-slots.three { grid-template-columns: 1fr 1fr 1fr; }
+.word-slot { display: flex; min-width: 0; min-height: 34px; align-items: center; gap: 6px; padding: 0 8px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); font: 500 14px var(--font-mono); white-space: nowrap; cursor: pointer; }
+.word-slot span { flex: none; width: 18px; color: var(--ink-muted); font: var(--text-caption); text-align: right; }
+.word-slot.current { border-color: var(--primary); color: var(--primary); }
+.word-entry { display: flex; justify-content: space-between; align-items: baseline; font: var(--text-heading); }
+.word-candidates { display: flex; min-height: 40px; gap: var(--space-2); overflow-x: auto; }
+.word-candidate { flex: none; padding: 0 14px; border: 1px solid var(--primary); border-radius: var(--radius-full); background: var(--primary-soft); color: var(--primary); font: 600 15px var(--font-mono); cursor: pointer; }
+.word-keys { display: flex; flex-direction: column; gap: 4px; }
+.word-keys div { display: flex; gap: 4px; }
+.word-key { flex: 1; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); font: 16px var(--font-mono); cursor: pointer; }
+.word-key:disabled { border-color: var(--surface-sunken); background: var(--surface-sunken); color: var(--line-strong); }
+.caption.positive { color: var(--positive); }
 /* The words are real BIP39 words made in a connected browser: every screen showing them says so */
 .screen-body.tight { gap: var(--space-3); padding-top: var(--space-4); }
 .demo-stamp { position: sticky; top: calc(-1 * var(--space-4)); z-index: 1; margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0; padding: var(--space-2) var(--space-4); background: var(--danger); color: #fff; font: var(--text-label); text-align: center; }

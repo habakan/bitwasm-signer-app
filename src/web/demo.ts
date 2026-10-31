@@ -157,32 +157,102 @@ function scanSeed(): Promise<void> {
   });
 }
 
-// Third-party keyboards can record what is typed, which the page cannot block as the native apps do
+// The native apps' entry: an A-Z keypad that only offers letters continuing a BIP39 word, so the words
+// never pass through the system keyboard. Words are kept as indices and joined into bytes the caller wipes
 function askWords(): Promise<Uint8Array> {
-  const view = step(tr("シードフレーズ", "Recovery words"), `<div class="question"><h1>${tr("シードフレーズを入力する", "Type your recovery words")}</h1>
-      <p class="lead">${tr("12〜24個の単語を、スペースで区切って入力してください。", "Type the 12 to 24 words, separated by spaces.")}</p></div>
-    <textarea class="input" id="words" rows="6" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-    <p class="problem" id="words-problem" hidden></p>
-    <p class="caption">${tr("サードパーティ製キーボードは入力を記録できます。端末に最初から入っているキーボードを使ってください。", "Third-party keyboards can record what you type. Use the keyboard that came with the device.")}</p>`,
+  const list = call<{ words: string[] }>("wordlist").words;
+  const slots = new Int16Array(24).fill(-1);
+  let size = 12, cur = 0, typed = "", lastPool: number[] | null = null;
+  const packed = (indices: ArrayLike<number>) => Uint8Array.from(Array.from(indices).flatMap((v) => [v & 0xff, v >> 8]));
+  const letters = (text: string) => new TextEncoder().encode(text);
+  const filter = () => (lastPool ? packed(lastPool) : new Uint8Array());
+  const matches = (prefix: string) => call<{ matches: number[] }>("word_matches", letters(prefix), filter()).matches;
+  const finalWords = () => call<{ words: number[] }>("final_words", packed(slots.subarray(0, size - 1))).words;
+  const view = step(tr("シードフレーズ", "Recovery words"), `<span class="overline">${tr("単語の数", "NUMBER OF WORDS")}</span>
+    <div class="segments segments-5" id="lengths">${[12, 15, 18, 21, 24].map((n) => `<button class="segment" data-size="${n}">${n}</button>`).join("")}</div>
+    <div class="word-slots" id="slots"></div>
+    <div class="word-entry"><span id="entry"></span><span class="caption" id="hint"></span></div>
+    <div class="word-candidates" id="candidates"></div>
+    <div class="word-keys">${["qwertyuiop", "asdfghjkl", "zxcvbnm"].map((row, r) => `<div>${[...row].map((c) => `<button class="word-key" data-key="${c}">${c}</button>`).join("")}${r === 2 ? `<button class="word-key" id="back" aria-label="${tr("1文字消す", "Delete")}">⌫</button>` : ""}</div>`).join("")}</div>
+    <p class="caption" id="status"></p>`,
     button("words-continue", tr("続ける", "Continue"), "primary"), () => cancel());
-  const field = view.querySelector<HTMLTextAreaElement>("#words")!;
-  const problem = view.querySelector<HTMLElement>("#words-problem")!;
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => view.querySelector<T>(`#${id}`)!;
+  const nextEmpty = (from: number) => {
+    for (let i = from; i < size; i++) if (slots[i] < 0) return i;
+    for (let i = 0; i < size; i++) if (slots[i] < 0) return i;
+    return size;
+  };
+  const complete = () => Array.from(slots.subarray(0, size - 1)).every((v) => v >= 0);
+  const refresh = () => {
+    lastPool = cur === size - 1 && complete() ? finalWords() : null;
+    render();
+  };
+  const commit = (index: number) => { slots[cur] = index; typed = ""; cur = nextEmpty(cur + 1); refresh(); };
+  const render = () => {
+    const done = cur >= size;
+    view.querySelectorAll<HTMLElement>("#lengths .segment").forEach((b) => b.classList.toggle("selected", Number(b.dataset.size) === size));
+    // Down each column, as on the write-down screen: 24 words are three columns of eight
+    const columns = size > 12 ? 3 : 2, per = Math.ceil(size / columns);
+    const slotsEl = $("slots");
+    slotsEl.className = `word-slots${columns === 3 ? " three" : ""}`;
+    slotsEl.innerHTML = Array.from({ length: per * columns }, (_, n) => (n % columns) * per + Math.floor(n / columns)).map((i) => i >= size ? "<span></span>"
+      : `<button class="word-slot${i === cur ? " current" : ""}" data-slot="${i}"><span>${i + 1}</span>${i === cur ? escape(typed) : slots[i] >= 0 ? list[slots[i]] : ""}</button>`).join("");
+    const hits = done ? [] : typed ? matches(typed) : lastPool ?? [];
+    $("entry").textContent = done ? "" : tr(`${cur + 1}番目の単語`, `Word ${cur + 1}`);
+    $("hint").textContent = done ? "" : lastPool ? tr(`チェックサムが合う${hits.length}件`, `${hits.length} with a valid checksum`) : typed ? tr(`${hits.length}件の候補`, `${hits.length} matches`) : "";
+    $("candidates").innerHTML = hits.slice(0, 24).map((i) => `<button class="word-candidate" data-word="${i}">${list[i]}</button>`).join("");
+    const allowed = done ? 0 : call<{ letters: number }>("word_letters", letters(typed), filter()).letters;
+    view.querySelectorAll<HTMLButtonElement>("[data-key]").forEach((b) => { b.disabled = !((allowed >> (b.dataset.key!.charCodeAt(0) - 97)) & 1); });
+    const valid = done && finalWords().includes(slots[size - 1]);
+    const status = $("status");
+    status.textContent = valid ? tr(`${size}個の単語・チェックサムOK`, `${size} words · checksum OK`)
+      : done ? tr("チェックサムが一致しません。単語をタップして直してください。", "The checksum does not match. Tap a word to fix it.")
+      : tr("単語をタップすると打ち直せます。紙のバックアップと同じ順番で入力してください。", "Tap a word to retype it. Enter them in the order on your paper backup.");
+    status.className = `caption${valid ? " positive" : done ? " problem" : ""}`;
+    $<HTMLButtonElement>("words-continue").disabled = !valid;
+  };
+  view.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("button");
+    if (!target) return;
+    const { size: length, slot, word, key } = target.dataset;
+    if (length) {
+      size = Number(length);
+      slots.fill(-1, size);
+      typed = "";
+      cur = nextEmpty(0);
+      refresh();
+    } else if (slot) {
+      slots[Number(slot)] = -1;
+      typed = "";
+      cur = Number(slot);
+      refresh();
+    } else if (word) commit(Number(word));
+    else if (key) {
+      typed += key;
+      const hits = matches(typed);
+      if (hits.length === 1) commit(hits[0]);
+      else render();
+    } else if (target.id === "back") {
+      if (typed) { typed = typed.slice(0, -1); render(); return; }
+      const previous = Math.min(cur, size) - 1;
+      if (previous < 0) return;
+      slots[previous] = -1;
+      cur = previous;
+      refresh();
+    }
+  });
   let cancel = () => {};
   return new Promise((resolve, reject) => {
-    const close = () => { field.value = ""; view.remove(); };
+    const close = () => { slots.fill(-1); typed = ""; lastPool = null; call("word_entry_end"); view.remove(); };
     cancel = () => { close(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); };
-    view.querySelector("#words-continue")!.addEventListener("click", () => {
-      const words = new TextEncoder().encode(field.value.trim().toLowerCase().split(/\s+/).join(" "));
-      try {
-        call("preview_fingerprint", words, new Uint8Array(), 1);
-      } catch (error) {
-        problem.textContent = String(error);
-        problem.hidden = false;
-        return;
-      }
+    $("words-continue").addEventListener("click", () => {
+      const parts = Array.from(slots.subarray(0, size), (i) => letters(list[i]));
+      const words = new Uint8Array(parts.reduce((n, w) => n + w.length + 1, -1)).fill(32);
+      parts.reduce((at, w) => { words.set(w, at); return at + w.length + 1; }, 0);
       close();
       resolve(words);
     });
+    render();
   });
 }
 
