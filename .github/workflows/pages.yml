@@ -40,7 +40,8 @@ jobs:
       - run: pnpm build:web
       - run: pnpm build:pwa
       - name: Web app build name, the one shown in Settings
-        run: grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
       - run: pnpm build:installer
       - run: pnpm build:docs
       - uses: actions/upload-pages-artifact@v3

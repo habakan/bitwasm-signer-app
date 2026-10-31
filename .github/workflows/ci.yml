@@ -40,7 +40,9 @@ jobs:
       - run: pnpm build
       - run: pnpm build:web
       - name: Web app build name, which a build of this commit anywhere should match
-        run: pnpm build:pwa && grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          pnpm build:pwa
+          grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
 
   plugin:
     runs-on: ubuntu-latest
