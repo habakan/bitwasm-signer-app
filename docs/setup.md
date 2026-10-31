@@ -67,7 +67,7 @@ The same signing engine, running in the browser. On an iPhone it is the only way
 It differs from the native apps:
 
 - It cannot block third-party keyboards. Use the keyboard that came with the phone, or load the key from a SeedQR.
-- Keys cannot be saved, so load the key each time. Creating a new wallet is not available.
+- Keys can be saved once Settings › Key storage is on. They are encrypted with this app's passkey, and opening one asks for Face ID, a fingerprint or the device passcode. Anyone who knows the device passcode can open them, and browser data can be cleared, so the paper backup stays essential. Creating a new wallet is not available.
 - It knows whether the phone is online only as far as the browser tells it.
 - It cannot block screenshots or screen recording. Leaving the app covers and reloads it, but whether the app switcher keeps a snapshot is up to the browser.
 - Before opening it, check that the URL is `habakan.github.io/bitwasm-signer-app/app/`, so you do not install a copy from another site.

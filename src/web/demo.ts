@@ -4,6 +4,7 @@ import { webApp, webDemo } from "../signer";
 import type { SignerState } from "../signer";
 import { tr } from "../views";
 import { createWallet, step } from "./create";
+import { canStore, disableStorage, enableStorage, hex, passkeySecret, savedKeys, setSavedKeys, storageOn, unhex } from "./keystore";
 import { call, startEngine } from "./engine";
 
 // Published BIP39 test words, their first testnet receive address, and a testnet PSBT that spends from them (samples/psbt-ur-test-only.png)
@@ -20,7 +21,8 @@ function state() {
   const online = webApp && navigator.onLine;
   if (online) call("lock");
   const engine = call<SignerState>("state");
-  return { ...engine, testnet: webDemo || engine.testnet, storage: false, deviceSecure: false,
+  return { ...engine, testnet: webDemo || engine.testnet, storage: webApp && storageOn(), deviceSecure: webApp && canStore(),
+    saved: webApp ? savedKeys().length : 0,
     restrictions: webApp ? [{ id: "network", level: "require" as const, active: online, detail: "" }] : [] };
 }
 // As on the phones, leaving the app wipes the key
@@ -356,11 +358,65 @@ async function checkAddress(): Promise<void> {
 }
 
 // Loads typed words with the passphrase asked for them, then clears the page's copies
+// The engine's pending seed (scanned, typed or opened from storage): its passphrase, loading, and the
+// offer to save it. The engine lets it go whichever way this ends
+async function loadPending(offerToSave: boolean) {
+  try {
+    const passphrase = new TextEncoder().encode(await askPassphrase((p) => call("seed_preview", p)));
+    call("seed_load", passphrase);
+    passphrase.fill(0);
+    if (offerToSave && webApp && storageOn()) await offerSave();
+  } finally {
+    call("seed_wipe");
+  }
+}
+
 async function loadWords(words: Uint8Array) {
-  const passphrase = new TextEncoder().encode(await askPassphrase((p) => call("preview_fingerprint", words, p, 1)));
-  call("load_mnemonic", words, passphrase);
+  call("seed_words", words);
   words.fill(0);
-  passphrase.fill(0);
+  await loadPending(true);
+}
+
+const fingerprintText = (fingerprint: string) => fingerprint.replace(/^(.{4})/, "$1 ");
+
+// Saving is a choice per key: the words or SeedQR are sealed in the engine with the passkey's secret
+async function offerSave() {
+  const fingerprint = call<{ fingerprint: string }>("seed_preview", new Uint8Array()).fingerprint;
+  const view = step(tr("鍵の保存", "Save key"), `<div class="question"><h1>${tr("この鍵をこの端末に保存しますか", "Save this key on this device?")}</h1>
+      <p class="lead">${tr("パスキーで暗号化して保存します。開くたびにFace ID、指紋、または端末のパスコードが必要です。パスフレーズは保存しません。", "It is encrypted with this app's passkey and needs Face ID, a fingerprint or the device passcode each time it opens. The passphrase is not saved.")}</p></div>
+    <div class="card"><div class="field"><span class="field-label">${tr("フィンガープリント(パスフレーズなし)", "FINGERPRINT (NO PASSPHRASE)")}</span><span class="data">${fingerprintText(fingerprint)}</span></div></div>
+    <p class="caption">${tr("ブラウザのデータは消えることがあります。紙のバックアップは必ず残してください。", "Browser data can be cleared. Always keep the paper backup.")}</p>`,
+    button("save-no", tr("保存しない", "Don't save"), "secondary") + button("save-yes", tr("保存する", "Save"), "primary"), () => done(false));
+  let done = (_: boolean) => {};
+  const save = await new Promise<boolean>((resolve) => {
+    done = (choice) => { view.remove(); resolve(choice); };
+    view.querySelector("#save-no")!.addEventListener("click", () => done(false));
+    view.querySelector("#save-yes")!.addEventListener("click", () => done(true));
+  });
+  if (!save) return;
+  const secret = await passkeySecret();
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  try {
+    const sealed = call<{ data: string; mnemonic: boolean }>("seed_seal", secret, nonce);
+    setSavedKeys([...savedKeys(), { mnemonic: sealed.mnemonic, fingerprint, nonce: hex(nonce), data: sealed.data, created: new Date().toISOString() }]);
+  } finally {
+    secret.fill(0);
+  }
+}
+
+// One saved key, picked from a list when there are several
+function chooseSaved() {
+  const keys = savedKeys();
+  if (keys.length === 1) return Promise.resolve(keys[0]);
+  const view = step(tr("保存した鍵", "Saved keys"), `<div class="question"><h1>${tr("開く鍵を選ぶ", "Choose a key to open")}</h1></div>
+    <div class="card">${keys.map((k, i) => `<button class="row" id="saved-${i}"><span class="row-copy"><span class="row-title">${fingerprintText(k.fingerprint)}</span>
+      <span class="row-detail">${k.mnemonic ? tr("シードフレーズ", "Recovery words") : "SeedQR"} · ${new Date(k.created).toLocaleDateString()}</span></span></button>`).join("")}</div>`,
+    "", () => cancel());
+  let cancel = () => {};
+  return new Promise<(typeof keys)[number]>((resolve, reject) => {
+    cancel = () => { view.remove(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); };
+    keys.forEach((k, i) => view.querySelector(`#saved-${i}`)!.addEventListener("click", () => { view.remove(); resolve(k); }));
+  });
 }
 
 export async function webInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -374,17 +430,28 @@ export async function webInvoke<T>(command: string, args?: Record<string, unknow
     case "import_mnemonic":
       await loadWords(await askWords());
       return state() as T;
-    case "scan_seed_qr": {
+    case "scan_seed_qr":
       await scanSeed();
+      await loadPending(true);
+      return state() as T;
+    case "unlock_saved": {
+      const key = await chooseSaved();
+      const secret = await passkeySecret();
       try {
-        const passphrase = new TextEncoder().encode(await askPassphrase((p) => call("qr_seed_preview", p)));
-        call("qr_seed_load", passphrase);
-        passphrase.fill(0);
+        call("seed_open", unhex(key.data), secret, unhex(key.nonce), key.mnemonic ? 1 : 0);
       } finally {
-        call("qr_wipe");
+        secret.fill(0);
       }
+      await loadPending(false);
       return state() as T;
     }
+    case "set_storage":
+      if (args?.enabled === true) await enableStorage();
+      else disableStorage();
+      return state() as T;
+    case "erase_saved":
+      setSavedKeys([]);
+      return state() as T;
     case "parser_info":
       return call("parser_info") as T;
     case "demo_seed": {
