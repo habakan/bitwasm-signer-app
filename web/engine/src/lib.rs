@@ -161,6 +161,64 @@ pub unsafe extern "C" fn bitwasm_ios_engine_seed_load(passphrase: *const u8, len
     })
 }
 
+/// How many words the pending seed has: a SeedQR is 12 or 24, typed words are counted
+#[unsafe(no_mangle)]
+pub extern "C" fn bitwasm_ios_engine_seed_length() -> *mut c_char {
+    let words = with_reader(|reader| {
+        let p = &reader.pending;
+        match (p.mnemonic, p.bytes.len()) {
+            (true, _) => p.bytes.split(|b| *b == b' ').filter(|w| !w.is_empty()).count(),
+            (false, 16 | 48) => 12,
+            (false, 32 | 96) => 24,
+            _ => 0,
+        }
+    });
+    reply(Ok(json!({"words": words})))
+}
+
+/// The pending seed as a Standard (digits) or Compact (entropy) SeedQR, for the passphrase step: the
+/// words are still here then, and leave with the pending seed
+#[unsafe(no_mangle)]
+pub extern "C" fn bitwasm_ios_engine_seed_qr(compact: i32) -> *mut c_char {
+    with_reader(|reader| {
+        let p = &reader.pending;
+        if p.mnemonic {
+            return unsafe { wasmi_host::bitwasm_ios_engine_seedqr_from_mnemonic(p.bytes.as_ptr(), p.bytes.len() as i32, compact) };
+        }
+        let payload = match (p.bytes.len(), compact != 0) {
+            (16 | 32, true) | (48 | 96, false) => Zeroizing::new(p.bytes.to_vec()),
+            (16 | 32, false) => Zeroizing::new(entropy_digits(&p.bytes)),
+            (48 | 96, true) => Zeroizing::new(digits_entropy(&p.bytes)),
+            _ => return reply(Err("Only 12 and 24 word seeds have a SeedQR".to_owned())),
+        };
+        reply(Ok(json!({"payload": payload.as_slice(), "compact": compact != 0})))
+    })
+}
+
+/// Standard SeedQR digits from entropy: its bits and the SHA-256 checksum, as 11-bit word indices
+fn entropy_digits(entropy: &[u8]) -> Vec<u8> {
+    use sha2::Digest;
+    let hash = sha2::Sha256::digest(entropy);
+    let bit = |i: usize| {
+        let byte = if i < entropy.len() * 8 { entropy[i / 8] } else { hash[i / 8 - entropy.len()] };
+        u16::from(byte >> (7 - i % 8) & 1)
+    };
+    let words = entropy.len() * 8 * 33 / 32 / 11;
+    (0..words).flat_map(|w| format!("{:04}", (0..11).fold(0, |n, b| n << 1 | bit(w * 11 + b))).into_bytes()).collect()
+}
+
+/// Entropy from Standard SeedQR digits: the word indices' bits without the checksum
+fn digits_entropy(digits: &[u8]) -> Vec<u8> {
+    let indices: Vec<u16> = digits.chunks(4).map(|d| d.iter().fold(0, |n, c| n * 10 + u16::from(c - b'0'))).collect();
+    let mut entropy = vec![0u8; indices.len() * 11 * 32 / 33 / 8];
+    for i in 0..entropy.len() * 8 {
+        if indices[i / 11] >> (10 - i % 11) & 1 == 1 {
+            entropy[i / 8] |= 0x80 >> (i % 8);
+        }
+    }
+    entropy
+}
+
 /// The key that wraps stored seeds, derived from a passkey's PRF output. The kind of seed is bound
 /// in as associated data, so stored words cannot be opened as a SeedQR or the other way round
 fn wrapping_key(prf: &[u8]) -> Result<Aes256Gcm, String> {

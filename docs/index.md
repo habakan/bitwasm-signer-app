@@ -72,7 +72,9 @@ Words are typed on the signer's own keypad, not the phone's keyboard, so the key
 
 ### Use a passphrase {#passphrase}
 
-A passphrase added to the words makes a different key, and so does a typo in it. The passphrase screen shows the fingerprint without a passphrase and, as you type, with the one you typed. Check that it matches the fingerprint you noted before you tap **Continue**. With the test words, `TREZOR` gives `b4e3 f5ed`.
+A passphrase added to the words makes a different key, and so does a typo in it. The passphrase screen shows the fingerprint without a passphrase and, as you type, with the one you typed. Check that it matches the fingerprint you noted before you tap **Open the wallet**. With the test words, `TREZOR` gives `b4e3 f5ed`.
+
+For 12 or 24 words, **Show SeedQR** on this screen shows the words as a SeedQR. Opening the wallet clears the words from memory, so this screen is the only place to show the SeedQR of a key you load.
 
 ## 4. Connect your wallet app {#connect}
 
@@ -110,7 +112,7 @@ Under **Advanced** on the wallet screen:
 - **Sign a message** (BIP137) to prove you own an address.
 - **Derive a child mnemonic** (BIP85): new words for another wallet, recoverable from the same backup.
 
-In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. Each saved key has a name and can be deleted on its own. The passphrase is never saved; at unlock you type it, and the key opens only if the fingerprint matches.
+In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. Each saved key has a name and can be deleted on its own. The passphrase is never saved; you type it at each unlock, so one saved key can open with different passphrases.
 
 ## Next
 

@@ -442,7 +442,7 @@ private final class BluetoothWatch: NSObject, CBCentralManagerDelegate {
 }
 
 // Saved seeds: BIP39 entropy encrypted to a Secure Enclave key per seed that needs the device owner to decrypt.
-// The passphrase is never stored; the fingerprint it produced is, so a wrong one is caught on unlock
+// The passphrase is never stored; the fingerprint kept is the words' alone, to tell saved seeds apart
 private enum SeedVault {
   struct Entry {
     let id: String
@@ -752,23 +752,11 @@ final class SignerPlugin: Plugin {
   }
 
   private func unlockWithPassphrase(_ entry: SeedVault.Entry, entropy: Data, invoke: Invoke) {
-    askPassphrase(Design.tr("\(entry.name)のパスフレーズ", "Passphrase for \(entry.name)"), seed: (entropy, false), onCancel: { Design.fail(invoke, "Unlock was cancelled") }) { [weak self] passphrase in
+    askPassphrase(Design.tr("\(entry.name)のパスフレーズ", "Passphrase for \(entry.name)"), seed: (entropy, false), seedQr: seedQr(entropy: entropy), onCancel: { Design.fail(invoke, "Unlock was cancelled") }) { [weak self] passphrase in
       self?.worker.async {
         do {
           let result = try SignerBridge.loadSeedQr(entropy, passphrase: passphrase)
-          let got = result["fingerprint"] as? String ?? ""
-          if got == entry.fingerprint {
-            return DispatchQueue.main.async { invoke.resolve(SeedVault.annotate(result)) }
-          }
-          try SignerBridge.lock()
-          DispatchQueue.main.async {
-            let alert = UIAlertController(title: Design.tr("フィンガープリントが一致しません", "Fingerprint does not match"), message: Design.tr("保存した鍵は\(entry.fingerprint)ですが、このパスフレーズでは\(got)になります。パスフレーズを確かめてください。", "The saved seed is \(entry.fingerprint), but this passphrase gives \(got). Check the passphrase."), preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "Unlock was cancelled") })
-            alert.addAction(UIAlertAction(title: Design.tr("やり直す", "Try again"), style: .default) { _ in
-              self?.unlockWithPassphrase(entry, entropy: entropy, invoke: invoke)
-            })
-            self?.present(alert)
-          }
+          DispatchQueue.main.async { invoke.resolve(SeedVault.annotate(result)) }
         } catch {
           DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
         }
@@ -776,9 +764,10 @@ final class SignerPlugin: Plugin {
     }
   }
 
-  // Called once a seed has loaded: offers to keep a 12 or 24 word seed when storage is on
-  private func offerSave(_ entropy: Data?, result: [String: Any], invoke: Invoke) {
-    guard let entropy, SeedVault.enabled, SeedVault.deviceSecure, let fingerprint = result["fingerprint"] as? String else {
+  // Called once a seed has loaded: offers to keep a 12 or 24 word seed when storage is on. The fingerprint
+  // kept is the words' alone, since one seed can open with several passphrases
+  private func offerSave(_ entropy: Data?, fingerprint: String?, result: [String: Any], invoke: Invoke) {
+    guard let entropy, let fingerprint, SeedVault.enabled, SeedVault.deviceSecure else {
       return invoke.resolve(SeedVault.annotate(result))
     }
     let alert = UIAlertController(title: Design.tr("この鍵をこの端末に保存しますか", "Save this seed on this device?"), message: Design.tr("単語は、Face ID、Touch IDかパスコードが必要なSecure Enclaveの鍵で暗号化して保存します。パスフレーズは保存しません。", "The words are encrypted to a Secure Enclave key that needs Face ID, Touch ID, or the passcode. The passphrase is not saved."), preferredStyle: .alert)
@@ -802,10 +791,15 @@ final class SignerPlugin: Plugin {
   private func entropy(seedQr payload: Data) -> Data? {
     guard SeedVault.enabled else { return nil }
     if payload.count == 16 || payload.count == 32 { return payload }
+    return phrase(standardSeedQr: payload).flatMap(entropy(mnemonic:))
+  }
+
+  // The words of a Standard SeedQR: four digits per word index
+  private func phrase(standardSeedQr payload: Data) -> String? {
     guard payload.count == 48 || payload.count == 96, payload.allSatisfy({ (48...57).contains($0) }) else { return nil }
     let indices = stride(from: 0, to: payload.count, by: 4).map { Int(String(decoding: payload[$0..<$0 + 4], as: UTF8.self)) ?? 0 }
     guard indices.allSatisfy({ $0 < SignerBridge.words.count }) else { return nil }
-    return entropy(mnemonic: indices.map { SignerBridge.words[$0] }.joined(separator: " "))
+    return indices.map { SignerBridge.words[$0] }.joined(separator: " ")
   }
 
   private func entropy(mnemonic: String) -> Data? {
@@ -859,7 +853,7 @@ final class SignerPlugin: Plugin {
           if payload.data.count == 64 {
             self.loadSeed(invoke) { try SignerBridge.loadSeedQr(payload.data) }
           } else {
-            self.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (payload.data, false), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+            self.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (payload.data, false), seedQr: self.seedQr(payload: payload.data), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
               self.loadSeed(invoke, saving: self.entropy(seedQr: payload.data)) { try SignerBridge.loadSeedQr(payload.data, passphrase: passphrase) }
             }
           }
@@ -934,16 +928,49 @@ final class SignerPlugin: Plugin {
     let entry = MnemonicEntryViewController(words: SignerBridge.words)
     entry.onCancel = { Design.fail(invoke, "Seed import was cancelled") }
     entry.onPhrase = { [weak self] phrase in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), seedQr: self?.seedQr(phrase: phrase), onCancel: { Design.fail(invoke, "Seed import was cancelled") }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) { try SignerBridge.loadMnemonic(phrase, passphrase: passphrase) }
       }
     }
     present(entry)
   }
 
-  // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads.
-  // seed is a SeedQR payload or, when the flag is set, mnemonic words
-  private func askPassphrase(_ title: String, seed: (Data, Bool), onCancel: @escaping () -> Void, onContinue: @escaping (String) -> Void) {
+  // A pending seed's SeedQR for the passphrase step, while its words are still here: 12 or 24 words only
+  private func seedQr(phrase: String) -> ((Bool) throws -> Data)? {
+    [12, 24].contains(phrase.split(separator: " ").count) ? { try SignerBridge.seedQrFromMnemonic(phrase, compact: $0) } : nil
+  }
+
+  private func seedQr(entropy: Data) -> (Bool) throws -> Data {
+    { compact in compact ? entropy : try SignerBridge.seedQrFromMnemonic(SignerBridge.mnemonicFromEntropy(entropy), compact: false) }
+  }
+
+  private func seedQr(payload: Data) -> ((Bool) throws -> Data)? {
+    if payload.count == 16 || payload.count == 32 { return seedQr(entropy: payload) }
+    return phrase(standardSeedQr: payload).flatMap(seedQr(phrase:))
+  }
+
+  // The SeedQR format chooser, then the secret QR
+  private func showSeedQr(_ payload: @escaping (Bool) throws -> Data, onCancel: @escaping () -> Void, onDone: @escaping () -> Void, onError: @escaping (Error) -> Void) {
+    choose(Design.tr("SeedQRの形式", "SeedQR format"), title: Design.tr("形式を選んでください", "Choose a format"),
+           lead: Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+           options: [(Design.tr("標準のSeedQR", "Standard SeedQR"), Design.tr("多くのウォレットが対応", "Works with most wallets")), ("CompactSeedQR", Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only"))],
+           onCancel: onCancel) { [weak self] which in
+      self?.worker.async {
+        do {
+          let bytes = try payload(which == 1)
+          DispatchQueue.main.async {
+            self?.showQr([""], title: which == 1 ? "CompactSeedQR" : Design.tr("標準のSeedQR", "Standard SeedQR"), interval: 3_600, binaryPayload: bytes, qrName: "SeedQR", onDone: onDone)
+          }
+        } catch {
+          DispatchQueue.main.async { onError(error) }
+        }
+      }
+    }
+  }
+
+  // The pending seed's last screen: the fingerprint with no passphrase and with the typed one, so a typo
+  // shows before the key loads, and with `seedQr` its SeedQR. seed is a SeedQR payload or, when the flag is set, words
+  private func askPassphrase(_ title: String, seed: (Data, Bool), seedQr: ((Bool) throws -> Data)?, onCancel: @escaping () -> Void, onContinue: @escaping (String) -> Void) {
     let p = Design.palette
     let working = Design.tr("計算しています…", "Working…")
     let none = Design.tr("入力すると表示します", "Shown as you type")
@@ -989,21 +1016,35 @@ final class SignerPlugin: Plugin {
     controller.modalPresentationStyle = .fullScreen
     controller.isModalInPresentation = true
     controller.loadViewIfNeeded()
-    let next = Design.button(Design.tr("続ける", "Continue"), primary: true)
+    let next = Design.button(Design.tr("ウォレットを開く", "Open the wallet"), primary: true)
     next.addAction(UIAction { [weak controller] _ in
       stop()
       let passphrase = field.text ?? ""
       field.text = ""
       controller?.dismiss(animated: true) { onContinue(passphrase) }
     }, for: .touchUpInside)
+    let clears = Design.label(seedQr != nil ? Design.tr("ウォレットを開くと、単語はメモリから消えます。SeedQRは、その前にここで表示できます。", "Opening the wallet clears the words from memory. Show the SeedQR here before that.")
+      : Design.tr("ウォレットを開くと、単語はメモリから消えます。", "Opening the wallet clears the words from memory."), .caption, p.inkMuted)
+    var actions: [UIView] = [clears]
+    if let seedQr {
+      let show = Design.button(Design.tr("SeedQRを表示", "Show SeedQR"), primary: false)
+      show.addAction(UIAction { [weak self] _ in
+        self?.showSeedQr(seedQr, onCancel: {}, onDone: {}) { error in
+          let failed = UIAlertController(title: Design.tr("SeedQRを作れませんでした", "Could not encode the SeedQR"), message: error.localizedDescription, preferredStyle: .alert)
+          failed.addAction(UIAlertAction(title: "OK", style: .default))
+          self?.present(failed)
+        }
+      }, for: .touchUpInside)
+      actions.append(show)
+    }
+    actions.append(next)
     let content = Design.stack([
-      Design.label(Design.tr("パスフレーズを入力する", "Enter the passphrase"), .display, p.ink),
-      Design.label(Design.tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue."), .body, p.inkMuted),
+      Design.label(Design.tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), .body, p.inkMuted),
       field,
       Design.label(Design.tr("フィンガープリント", "FINGERPRINT"), .overline, p.inkMuted),
       card,
     ], spacing: DesignTokens.space4)
-    _ = Design.screen(controller, title: title, testnet: SignerBridge.testnet, content: content, actions: [next]) { [weak controller] in
+    _ = Design.screen(controller, title: title, testnet: SignerBridge.testnet, content: content, actions: actions) { [weak controller] in
       stop()
       field.text = ""
       controller?.dismiss(animated: true, completion: onCancel)
@@ -1016,7 +1057,8 @@ final class SignerPlugin: Plugin {
     worker.async {
       do {
         let result = try operation()
-        DispatchQueue.main.async { self.offerSave(entropy, result: result, invoke: invoke) }
+        let fingerprint = entropy.flatMap { try? SignerBridge.previewFingerprint($0, mnemonic: false, passphrase: "") }
+        DispatchQueue.main.async { self.offerSave(entropy, fingerprint: fingerprint, result: result, invoke: invoke) }
       } catch {
         DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
       }
@@ -1529,7 +1571,7 @@ final class SignerPlugin: Plugin {
     forgetOrigin()
     alert.addAction(UIAlertAction(title: Design.tr("完了", "Done"), style: .cancel) { _ in invoke.resolve(["shown": true]) })
     alert.addAction(UIAlertAction(title: Design.tr("読み込む", "Load it"), style: .default) { [weak self] _ in
-      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
+      self?.askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed: (Data(phrase.utf8), true), seedQr: self?.seedQr(phrase: phrase), onCancel: { invoke.resolve(["shown": true]) }) { passphrase in
         self?.loadSeed(invoke, saving: self?.entropy(mnemonic: phrase)) {
           try SignerBridge.loadMnemonic(phrase, passphrase: passphrase).merging(["shown": true]) { $1 }
         }
@@ -1539,26 +1581,7 @@ final class SignerPlugin: Plugin {
   }
 
   private func chooseSeedQrFormat(_ phrase: String, invoke: Invoke) {
-    choose(Design.tr("SeedQRの形式", "SeedQR format"), title: Design.tr("形式を選んでください", "Choose a format"),
-           lead: Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
-           options: [(Design.tr("標準のSeedQR", "Standard SeedQR"), Design.tr("多くのウォレットが対応", "Works with most wallets")), ("CompactSeedQR", Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only"))],
-           onCancel: { invoke.resolve(["shown": false]) }) { [weak self] in self?.displaySeedQr(phrase, compact: $0 == 1, invoke: invoke) }
-  }
-
-  private func displaySeedQr(_ phrase: String, compact: Bool, invoke: Invoke) {
-    worker.async { [weak self] in
-      guard let self else { return }
-      do {
-        let payload = try SignerBridge.seedQrFromMnemonic(phrase, compact: compact)
-        DispatchQueue.main.async {
-          self.showQr([""], title: compact ? "CompactSeedQR" : Design.tr("標準のSeedQR", "Standard SeedQR"), interval: 3_600, binaryPayload: payload, qrName: "SeedQR") {
-            invoke.resolve(["shown": true])
-          }
-        }
-      } catch {
-        DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
-      }
-    }
+    showSeedQr({ try SignerBridge.seedQrFromMnemonic(phrase, compact: $0) }, onCancel: { invoke.resolve(["shown": false]) }, onDone: { invoke.resolve(["shown": true]) }) { invoke.reject($0.localizedDescription) }
   }
 
   private func showInfo(_ title: String, message: String, invoke: Invoke) {

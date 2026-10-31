@@ -455,7 +455,21 @@ function chooseAccount(): Promise<number | null> {
   });
 }
 
-// The fingerprint with no passphrase and with the typed one, as on the phones
+// The SeedQR format chooser, then the secret QR; false when Back leaves the chooser
+export async function showSeedQr(payload: (compact: number) => number[]) {
+  const format = await choose(tr("SeedQRの形式", "SeedQR format"), tr("形式を選んでください", "Choose a format"), tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+    [[tr("標準のSeedQR", "Standard SeedQR"), tr("多くのウォレットが対応", "Works with most wallets")], ["CompactSeedQR", tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")]]);
+  if (format < 0) return false;
+  const bytes = payload(format);
+  const frame = String.fromCharCode(...bytes);
+  bytes.fill(0);
+  await showFrames([frame], { kind: "secret", heading: format ? "CompactSeedQR" : tr("標準のSeedQR", "Standard SeedQR"), name: "SeedQR",
+    description: tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private.") });
+  return true;
+}
+
+// The pending seed's last screen: the fingerprint with no passphrase and with the typed one, as on the
+// phones, and its SeedQR while the words are still here
 function askPassphrase(title = tr("パスフレーズ", "Passphrase")): Promise<string> {
   const none = tr("入力すると表示します", "Shown as you type");
   const fingerprint = (passphrase: string) => {
@@ -464,15 +478,19 @@ function askPassphrase(title = tr("パスフレーズ", "Passphrase")): Promise<
     bytes.fill(0);
     return fingerprint.replace(/^(.{4})/, "$1 ");
   };
-  const view = step(title, `<div class="question"><h1>${tr("パスフレーズを入力する", "Enter the passphrase")}</h1>
-      <p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue.")}</p></div>
+  const words = call<{ words: number }>("seed_length").words;
+  const seedQr = words === 12 || words === 24;
+  const view = step(title, `<p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank.")}</p>
     <input class="input" id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="${tr("パスフレーズ", "Passphrase")}">
     ${webDemo ? `<p class="caption">${tr("テスト用の単語では、TREZOR と入れると b4e3 f5ed になります。", "With the test words, TREZOR gives b4e3 f5ed.")}</p>` : ""}
     <h2 class="overline">${tr("フィンガープリント", "FINGERPRINT")}</h2>
     <div class="card"><div class="field"><span class="field-label">${tr("パスフレーズなし", "WITHOUT A PASSPHRASE")}</span><span class="data">${fingerprint("")}</span></div>
       <div class="field"><span class="field-label">${tr("入力したパスフレーズ", "WITH THIS PASSPHRASE")}</span><span class="data" id="typed-fingerprint">${none}</span>
         <span class="field-note">${tr("控えておいたフィンガープリントと同じか確かめてください。1文字違うだけで別の鍵になります。", "Check it matches the fingerprint you noted. One wrong character makes a different key.")}</span></div></div>`,
-    button("passphrase-continue", tr("続ける", "Continue"), "primary"), () => cancel());
+    `<p class="caption">${seedQr ? tr("ウォレットを開くと、単語はメモリから消えます。SeedQRは、その前にここで表示できます。", "Opening the wallet clears the words from memory. Show the SeedQR here before that.")
+      : tr("ウォレットを開くと、単語はメモリから消えます。", "Opening the wallet clears the words from memory.")}</p>
+    ${seedQr ? button("passphrase-seedqr", tr("SeedQRを表示", "Show SeedQR"), "secondary") : ""}${button("passphrase-continue", tr("ウォレットを開く", "Open the wallet"), "primary")}`, () => cancel());
+  view.querySelector("#passphrase-seedqr")?.addEventListener("click", () => void showSeedQr((compact) => call<{ payload: number[] }>("seed_qr", compact).payload));
   const input = view.querySelector<HTMLInputElement>("#passphrase")!;
   const typed = view.querySelector<HTMLElement>("#typed-fingerprint")!;
   let timer = 0;
@@ -565,9 +583,9 @@ export async function loadWords(words: Uint8Array) {
 const keyName = (key: Saved) => key.name ?? tr(`鍵 ${key.fingerprint}`, `Key ${key.fingerprint}`);
 
 // Saving is a choice per key, under a name: the words or SeedQR are sealed in the engine with the passkey's
-// secret. The fingerprint kept is the loaded one, passphrase and all, so opening can check it
+// secret. The fingerprint kept names the words alone, since one seed can open with several passphrases
 async function offerSave() {
-  const fingerprint = call<SignerState>("state").fingerprint!;
+  const fingerprint = call<{ fingerprint: string }>("seed_preview", new Uint8Array()).fingerprint;
   let name = "";
   const choice = await dialog(tr("この鍵をこの端末に保存しますか", "Save this key on this device?"),
     tr("パスキーで暗号化して保存します。開くたびにFace ID、指紋、または端末のパスコードが必要です。パスフレーズは保存しません。ブラウザのデータは消えることがあるので、紙のバックアップは必ず残してください。",
@@ -610,7 +628,6 @@ async function savedKey(key: Saved): Promise<"open" | "delete" | null> {
   });
 }
 
-// Opens a saved key and asks its passphrase until the fingerprint matches the one saved with it
 async function openSaved(key: Saved) {
   const secret = await passkeySecret();
   try {
@@ -619,19 +636,9 @@ async function openSaved(key: Saved) {
     secret.fill(0);
   }
   try {
-    for (;;) {
-      const passphrase = new TextEncoder().encode(await askPassphrase(tr(`${keyName(key)}のパスフレーズ`, `Passphrase for ${keyName(key)}`)));
-      call("seed_load", passphrase);
-      passphrase.fill(0);
-      const got = call<SignerState>("state").fingerprint;
-      // Keys saved before names were added kept the fingerprint without a passphrase
-      if (!key.name || got === key.fingerprint) return;
-      call("lock");
-      const choice = await dialog(tr("フィンガープリントが一致しません", "Fingerprint does not match"),
-        tr(`保存した鍵は${key.fingerprint}ですが、このパスフレーズでは${got}になります。パスフレーズを確かめてください。`, `The saved key is ${key.fingerprint}, but this passphrase gives ${got}. Check the passphrase.`),
-        [["mismatch-cancel", tr("キャンセル", "Cancel")], ["mismatch-retry", tr("やり直す", "Try again"), true]]);
-      if (choice !== "mismatch-retry") throw tr("鍵を開くのをやめました。", "Unlock was cancelled");
-    }
+    const passphrase = new TextEncoder().encode(await askPassphrase(tr(`${keyName(key)}のパスフレーズ`, `Passphrase for ${keyName(key)}`)));
+    call("seed_load", passphrase);
+    passphrase.fill(0);
   } finally {
     call("seed_wipe");
   }
