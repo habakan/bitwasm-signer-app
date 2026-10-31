@@ -30,7 +30,9 @@ const b64 = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(
 const unb64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 export const storageOn = () => read(STORAGE) === "on" && read(PASSKEY) !== null;
-export const canStore = () => "PublicKeyCredential" in window;
+// Safari has PRF from iOS 18; before it a passkey is made but cannot seal anything, so it is not offered
+const oldIos = Number(/OS (\d+)_\d+(?:_\d+)? like Mac OS X/.exec(navigator.userAgent)?.[1] ?? 99) < 18;
+export const canStore = () => "PublicKeyCredential" in window && !oldIos;
 export const savedKeys = (): Saved[] => JSON.parse(read(SAVED) ?? "[]");
 export const setSavedKeys = (keys: Saved[]) => write(SAVED, keys.length ? JSON.stringify(keys) : null);
 
