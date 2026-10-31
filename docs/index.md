@@ -62,7 +62,7 @@ A five-question quiz asks for words from your paper. A slip of the pen shows up 
 
 ## 3. Load your key {#load}
 
-By default the signer keeps no key. You load it each time you sign, and it is wiped when you lock the signer or leave the app. To keep it on the phone instead, see [More features](#more).
+By default the signer keeps no key. You load it each time you sign, and it is wiped when you close the wallet or leave the app. To keep it on the phone instead, see [More features](#more).
 
 There are three ways to load it: scan your backup as a SeedQR, type the words, or, in the browser demo, tap **Use the test key**. Next comes the passphrase screen; leave it blank if you have none. The wallet screen then shows the key's **fingerprint**. Compare it with the one in your wallet app to check that both use the same key. The test words give `73c5 da0a`.
 
@@ -102,7 +102,7 @@ The signed transaction appears as QR codes. Scan them with the wallet app and se
 
 ## 7. When you are done {#lock}
 
-Tap **Lock**. The key is wiped from memory. The same happens when you leave the app.
+Tap **Close wallet**. The key is wiped from memory. The same happens when you leave the app.
 
 ## More features {#more}
 

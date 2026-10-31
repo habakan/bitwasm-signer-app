@@ -151,11 +151,11 @@ function runNativeTool(command: string, label: string) {
 }
 
 function lockSigner() {
-  return runAction(tr("鍵を消去しています…", "Wiping the key…"), async () => {
+  return runAction(tr("ウォレットを閉じています…", "Closing the wallet…"), async () => {
     await call("lock");
     signerState = { ...signerState, loaded: false, fingerprint: null };
     screen = "home";
-    return tr("鍵を消去しました。", "Key wiped.");
+    return tr("ウォレットを閉じました。鍵はメモリから消えました。", "Wallet closed. The key was wiped from memory.");
   });
 }
 
