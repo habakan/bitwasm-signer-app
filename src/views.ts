@@ -182,7 +182,7 @@ function settingsView({ signer, busy }: View) {
       ${moduleField("parser.wasm", "", "parser-hash")}${moduleField("signer.wasm", moduleHashes.signer)}${moduleField("checker.wasm", moduleHashes.checker)}
     </div><p class="caption">${webDemo || webApp ? tr("起動時にSHA-256で検証し、このページの中のWasmiで動かします。", "Verified with SHA-256 at launch and run in Wasmi inside this page.") : tr("起動時にSHA-256で検証し、この端末のWasmiで動かします。", "Verified with SHA-256 at launch and run locally in Wasmi.")}</p>`)}
     ${webApp ? group(tr("このアプリの版", "THIS BUILD"), `<div class="card"><div class="field"><span class="field-label">${tr("実行中", "RUNNING")}</span><span class="data">${versions.current || "—"}</span>
-      ${versions.next ? `<span class="field-note">${tr(`次に開いたときに ${versions.next} に切り替わります。`, `${versions.next} replaces it at the next launch.`)}</span>` : ""}</div></div>
+      ${versions.next ? `<span class="field-note">${tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`)}</span>` : ""}</div></div>
       <p class="caption">${tr("ビルドしたファイルの一覧から決まる名前です。自分でビルドした dist-web/app/sw.js の CACHE と比べられます。", "Named from the list of built files. Compare it with CACHE in dist-web/app/sw.js from your own build.")}</p>`) : ""}
     <p class="about">bitwasm-signer 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
   };
@@ -225,7 +225,7 @@ function installNotice() {
   if (!navigator.serviceWorker?.controller) return notice("info", tr("オフラインの準備をしています", "Getting ready for offline use"),
     tr("準備ができるまで、ネットにつないだまま開いておいてください。", "Keep it open and online until this goes away."));
   if (versions.next) return notice("warning", tr("新しい版が届いています", "A new build has arrived"),
-    tr(`ネットにつながったときに届き、次に開いたときに ${versions.next} に切り替わります。`, `It came in while the phone was online, and replaces this one as ${versions.next} at the next launch.`));
+    tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`));
   return "";
 }
 
