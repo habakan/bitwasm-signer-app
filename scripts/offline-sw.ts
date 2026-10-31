@@ -26,7 +26,10 @@ self.addEventListener("activate", (e) => {
       .then(() => self.clients.claim()),
   );
 });
-self.addEventListener("message", (e) => e.ports[0]?.postMessage(CACHE));
+self.addEventListener("message", (e) => {
+  if (e.data === "activate") self.skipWaiting();
+  else e.ports[0]?.postMessage(CACHE);
+});
 `;
 
 const LATEST = `

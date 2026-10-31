@@ -8,15 +8,18 @@ const ask = (worker: ServiceWorker) => new Promise<string>((resolve) => {
 });
 
 export async function startPwa(render: () => void) {
+  let registration: ServiceWorkerRegistration | undefined;
   // Typed words and passphrases are JS strings that cannot be wiped, so leaving the app reloads the page.
-  // Covering it first keeps the screen out of the app switcher where the browser allows
+  // iOS seldom ends a home screen app, so that reload is the next launch: a waiting build takes over first
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) document.documentElement.classList.add("covered");
-    else location.reload();
+    if (document.hidden) return document.documentElement.classList.add("covered");
+    if (!registration?.waiting) return location.reload();
+    navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
+    registration.waiting.postMessage("activate");
   });
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
   void navigator.storage?.persist?.();
-  const registration = await navigator.serviceWorker.register("./sw.js");
+  registration = await navigator.serviceWorker.register("./sw.js");
   const update = async () => {
     const { controller } = navigator.serviceWorker;
     versions.current = controller ? await ask(controller) : "";
@@ -24,6 +27,6 @@ export async function startPwa(render: () => void) {
     render();
   };
   navigator.serviceWorker.addEventListener("controllerchange", update);
-  registration.addEventListener("updatefound", () => registration.installing?.addEventListener("statechange", update));
+  registration.addEventListener("updatefound", () => registration?.installing?.addEventListener("statechange", update));
   await update();
 }
