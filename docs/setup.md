@@ -13,6 +13,7 @@ There are several ways to install the signer. Which one to pick depends on what 
 | [Install Lockdown over USB](#lockdown-usb) | The GitHub release, the installer page and your PC | No | Android |
 | [Install Lockdown with the QR code](#lockdown-qr) | The GitHub release | On Wi-Fi only during setup, before any key is on it | Android |
 | [Add the web app to the home screen](#pwa) | GitHub Pages at the time you add it | Only during setup, before any key is on it | iOS, Android |
+| [Add the web app from your own Pages](#pwa-fork) | The source at the commit you choose, and your GitHub account | Only during setup, before any key is on it | iOS, Android |
 
 The APK and the iOS app check the SHA-256 of the WASM modules they load and do not run if they differ. In the web app the checking code comes from the site too, so the check cannot catch a replaced site.
 
@@ -21,7 +22,7 @@ The APK and the iOS app check the SHA-256 of the WASM modules they load and do n
 - **The GitHub release**: release APKs are signed with the author's key, and each release comes with a `SHA256SUMS` file. `SHA256SUMS` shows that the download is intact, but cannot catch a release that was replaced as a whole. Once installed, Android only accepts updates signed with the same key.
 - **The installer page**: the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) writes to the phone over WebUSB from Chrome or Edge. While connected it can do anything adb can do to the phone. The page is built from this repository.
 - **Your PC**: the USB ways also trust your PC and its browser. With the QR code, the PC only shows the QR code.
-- **GitHub Pages**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. After that it runs only that build, but going online lets a new build arrive, which takes over at the next launch. A compromised site cannot be stopped this way, so keep the phone offline once it is installed. Settings › This build shows the running build, which you can compare with `CACHE` in `dist-web/app/sw.js` from your own build.
+- **GitHub Pages**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. After that it runs only that build, but going online lets a new build arrive, which takes over at the next launch. A compromised site cannot be stopped this way, so keep the phone offline once it is installed. Settings › This build shows the running build. The same commit always gives the same build name, so you can compare it with "Web app build" in the release notes or with `CACHE` in `dist-web/app/sw.js` from your own build.
 - **Your build tools**: building it yourself trusts Rust, the Android SDK or Xcode, and the npm dependencies.
 
 ## Build it yourself {#build}
@@ -72,6 +73,19 @@ It differs from the native apps:
 - Before opening it, check that the URL is `habakan.github.io/bitwasm-signer-app/app/`, so you do not install a copy from another site.
 
 It has not been tried on a real iPhone yet, only in the Simulator and in desktop Chrome.
+
+### From your own Pages {#pwa-fork}
+
+Instead of trusting this site, build the same app with your own GitHub account and add it from there. If this site or repository is compromised later, the build you added is not affected.
+
+1. Fork this repository. To add a particular version, make its tag or commit the fork's main
+2. In the fork's Actions tab, enable workflows (they start disabled in a fork)
+3. In the fork's Settings › Pages, set Source to "GitHub Actions"
+4. Under Actions › Pages, Run workflow once. When it finishes, the run summary shows "web app build"
+5. Add `https://<your username>.github.io/bitwasm-signer-app/app/` to the home screen, as in the steps above
+6. Check that Settings › This build matches the name from step 4, and "Web app build" in the release notes for the same commit
+
+You can delete the fork once it is added: the home screen app runs from the files it took. If you keep the fork, note that it shares an origin with your other pages under github.io.
 
 ## After installing {#after}
 

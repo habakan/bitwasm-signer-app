@@ -1,0 +1,5 @@
+# Pinned so that the same commit builds the same engine, and so the same web app build name
+[toolchain]
+channel = "1.95.0"
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
