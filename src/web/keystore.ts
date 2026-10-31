@@ -7,7 +7,7 @@ const PASSKEY = "bitwasm-signer.passkey";
 const STORAGE = "bitwasm-signer.storage";
 const SAVED = "bitwasm-signer.saved";
 
-export type Saved = { mnemonic: boolean; fingerprint: string; nonce: string; data: string; created: string };
+export type Saved = { name?: string; mnemonic: boolean; fingerprint: string; nonce: string; data: string; created: string };
 type Prf = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
 
 const read = (key: string) => {

@@ -101,17 +101,14 @@ function homeView({ signer, busy }: View) {
       ${row("scan", "qr", tr("バックアップのQRを読み取る", "Scan your backup QR"), tr("SeedQR・CompactSeedQR", "SeedQR or CompactSeedQR"), { disabled: blocked })}
       ${row("import-mnemonic", "words", tr("シードフレーズを入力する", "Type your recovery words"), tr("12〜24個の単語", "12 to 24 words"), { disabled: blocked })}
     </div>`)}
-    ${webApp ? "" : group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
+    ${group(tr("新しいウォレット", "NEW WALLET"), `<div class="card">
       ${row("create-mnemonic", "plus", tr("新しいウォレットを作る", "Create a new wallet"), tr("安全な乱数かサイコロで作ります。", "From secure random or dice rolls."), { disabled: blocked })}
     </div>`)}`,
   };
 }
 
 function readyView({ signer, busy }: View) {
-  const rows = webDemo || webApp ? [
-    row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
-    row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
-  ] : [
+  const rows = [
     row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
     row("advanced", "sliders", tr("高度な機能", "Advanced"), tr("マルチシグ、メッセージ署名など", "Multisig, message signing and more"), { disabled: busy }),

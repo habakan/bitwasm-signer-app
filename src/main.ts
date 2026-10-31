@@ -80,6 +80,8 @@ const loadingSeed = {
 function loadSeed(command: keyof typeof loadingSeed) {
   return runAction(loadingSeed[command], async () => {
     signerState = await call<SignerState>(command);
+    // Deleting a saved key also ends here, with nothing loaded
+    if (!signerState.loaded) return tr("保存した鍵を削除しました。", "The saved key was deleted.");
     screen = "ready";
     return tr("鍵を読み込みました。鍵はメモリにだけあります。", "Key loaded. It stays in memory only.");
   });

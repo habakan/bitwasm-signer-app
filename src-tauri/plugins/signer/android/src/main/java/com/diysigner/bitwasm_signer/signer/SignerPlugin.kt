@@ -233,7 +233,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         dialog.show()
     }
 
-    private fun showFrames(invoke: Invoke, title: String, description: String, frames: () -> List<String>) {
+    private fun showFrames(invoke: Invoke, title: String, description: String, qrName: String = "crypto-account", frames: () -> List<String>) {
         worker.execute {
             try {
                 val intent = Intent(activity, SignedQrActivity::class.java)
@@ -241,7 +241,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                     .putExtra("testnet", engine.testnet)
                     .putExtra("heading", title)
                     .putExtra("description", description)
-                    .putExtra("qrName", "crypto-account")
+                    .putExtra("qrName", qrName)
                     .putExtra("accountQr", true)
                 activity.runOnUiThread { startActivityForResult(invoke, intent, "accountQrResult") }
             } catch (e: Exception) {
@@ -304,7 +304,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun exportMultisig(invoke: Invoke) {
         val wallet = engine.multisig ?: run { invoke.fail("Register a multisig first"); return }
-        showFrames(invoke, Design.tr("マルチシグ ${wallet.threshold}/${wallet.fingerprints.size}", "Multisig ${wallet.threshold} of ${wallet.fingerprints.size}"), Design.tr("見るだけのウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig.")) { engine.multisigUr() }
+        showFrames(invoke, Design.tr("マルチシグ ${wallet.threshold}/${wallet.fingerprints.size}", "Multisig ${wallet.threshold} of ${wallet.fingerprints.size}"), Design.tr("見るだけのウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig."), "crypto-output") { engine.multisigUr() }
     }
 
     @Command
