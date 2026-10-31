@@ -75,7 +75,8 @@ unsafe fn bytes<'a>(pointer: *const u8, length: i32) -> Result<&'a [u8], String>
 }
 
 /// Reads one greyscale frame. `kind` 1 reads a SeedQR, which becomes the pending seed; only whether
-/// one was found goes back. `kind` 2 reads a frame of an animated UR, which goes back as text.
+/// one was found goes back. `kind` 2 reads a frame of an animated UR, and 0 any code, such as an
+/// address or a multisig setup; both go back as text.
 /// `code` is the reader's own: 0 nothing found, -1 found but unreadable, -3 a code of another kind
 ///
 /// # Safety
@@ -91,13 +92,14 @@ pub unsafe extern "C" fn bitwasm_ios_engine_qr_frame(pixels: *const u8, length: 
     };
     let kind = match kind {
         1 => qr::Kind::SeedQr,
+        0 => qr::Kind::Any,
         2 => qr::Kind::Animated,
         _ => return reply(Err("Unknown QR kind".to_owned())),
     };
     reply(Ok(with_reader(|reader| {
         let code = qr::read(frame, w, h, kind, &mut reader.out, &mut reader.state);
         let found = code > 0;
-        if kind == qr::Kind::Animated {
+        if kind != qr::Kind::SeedQr {
             let text = found.then(|| String::from_utf8_lossy(&reader.out[..code as usize]).into_owned());
             return json!({"found": found, "code": code, "text": text});
         }

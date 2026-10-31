@@ -1,10 +1,10 @@
-import { icon } from "../design/icons";
+import { webDemo } from "../signer";
 import { tr } from "../views";
-import { button, escape, sheet } from "./demo";
+import { button, choose, dialog, escape, loadWords, sheet, showFrames } from "./demo";
 import { call } from "./engine";
 
-// The new wallet flow of the phones, in the page. The words are real BIP39 words made in a connected browser,
-// so every screen that shows them is stamped as a demo that must never hold funds
+// The new wallet flow of the phones, in the page. In the browser demo the words are made in a connected
+// browser, so every screen that shows them is stamped as a demo that must never hold funds
 const DICE_BIASED = 2;
 const DICE_PATTERN = 4;
 const STEPS: [string, string][] = [["単語を作る", "Make the words"], ["書き写す", "Write them down"], ["確かめる", "Check them"]];
@@ -20,18 +20,12 @@ function steps(current: number) {
 
 // A sheet of this flow: Back in the top bar as on the phones, so the footer keeps only the step's own action
 export function step(title: string, body: string, actions: string, onBack: () => void) {
-  const view = sheet(title, body, actions);
+  const view = sheet(title, body, actions, onBack);
   view.querySelector(".screen-body")!.classList.add("tight");
-  const back = document.createElement("button");
-  back.className = "topbar-back";
-  back.setAttribute("aria-label", tr("戻る", "Back"));
-  back.innerHTML = icon("back");
-  back.addEventListener("click", onBack);
-  view.querySelector(".topbar")!.prepend(back);
   return view;
 }
 
-const stamp = () => `<div class="demo-stamp" aria-hidden="true">${tr("デモ・本物の資金に使わない", "DEMO · NEVER USE FOR FUNDS")}</div>`;
+const stamp = () => !webDemo ? "" : `<div class="demo-stamp" aria-hidden="true">${tr("デモ・本物の資金に使わない", "DEMO · NEVER USE FOR FUNDS")}</div>`;
 
 // The walkthrough's pictures on the same 240 x 160 grid as the phones, in the theme's colors
 function art(scene: number) {
@@ -65,7 +59,7 @@ function walkthrough(): Promise<"random" | "dice"> {
     [tr("始める前に", "Before you start"), tr("紙とペン、サイコロで作るならサイコロを1個用意してください。周りに人やカメラがない場所で、5〜10分ほどかかります。", "Have paper and a pen, and a die if you use dice. Find a place no one and no camera can see; it takes five to ten minutes.")],
   ];
   let leave = () => {};
-  const view = step(tr("新しいウォレット", "New wallet"), `<div class="walk"></div>`, "", () => leave());
+  const view = step(tr("新しいウォレット", "New wallet"), `<div class="walk"></div>`, button("walk-next", tr("次へ", "Next"), "primary"), () => leave());
   const walk = view.querySelector<HTMLElement>(".walk")!;
   const footer = view.querySelector<HTMLElement>(".screen-actions")!;
   let page = 0;
@@ -101,7 +95,6 @@ function chooseWords(dice: boolean): Promise<12 | 24> {
     <p class="lead">${tr("どちらも安全です。24個のほうが余裕がありますが、書き写す量が倍になります。", "Both are safe. 24 words leave more margin but take twice as long to write down.")}</p></div>
     ${option(12, dice ? tr("サイコロを50回振る", "Roll a die 50 times") : tr("いちばんよく使われる長さ", "The most common length"))}
     ${option(24, dice ? tr("サイコロを99回振る", "Roll a die 99 times") : tr("より長く、より強い", "Longer and stronger"))}`, "", () => leave());
-  view.querySelector(".screen-actions")!.remove();
   return new Promise((resolve, reject) => {
     leave = () => { view.remove(); reject(cancelled()); };
     view.addEventListener("click", (event) => {
@@ -172,23 +165,25 @@ function rollDice(count: 12 | 24): Promise<Uint8Array> {
   update();
   return new Promise((resolve, reject) => {
     leave = () => { rolls.fill(0); view.remove(); reject(cancelled()); };
-    view.addEventListener("click", (event) => {
+    view.addEventListener("click", async (event) => {
       const target = (event.target as HTMLElement).closest("button");
       if (!target || target.classList.contains("topbar-back")) return;
       if (target.dataset.face && rolls.length < need) { rolls.push(Number(target.dataset.face)); navigator.vibrate?.(10); }
       if (target.id === "die-undo") rolls.pop();
-      if (target.id === "die-clear" && confirm(tr("入れた目を全部消しますか", "Clear every roll?"))) rolls.length = 0;
+      if (target.id === "die-clear" && await dialog(tr("入れた目を全部消しますか", "Clear every roll?"), "",
+        [["clear-cancel", tr("キャンセル", "Cancel")], ["clear-all", tr("全部消す", "Clear all"), true]]) === "clear-all") rolls.length = 0;
       if (target.id === "die-make") {
         const bytes = new TextEncoder().encode(rolls.join(""));
         const flags = call<{ flags: number }>("dice_check", bytes, count).flags;
-        if (!(flags & (DICE_BIASED | DICE_PATTERN)) || confirm(flags & DICE_BIASED
-          ? tr("出た目に偏りがあります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls are uneven. A fair die almost never gives rolls like these. Use them anyway?")
-          : tr("出た目に規則性があります。公平なサイコロなら、ほとんど起きない並びです。このまま作りますか。", "The rolls follow a pattern. A fair die almost never gives rolls like these. Use them anyway?"))) {
+        if (!(flags & (DICE_BIASED | DICE_PATTERN)) || await dialog(flags & DICE_BIASED ? tr("出た目に偏りがあります", "The rolls are uneven") : tr("出た目に規則性があります", "The rolls follow a pattern"),
+          tr("公平なサイコロなら、ほとんど起きない並びです。目の押し間違いや、偏ったサイコロでないか確かめてください。振り直すことをおすすめします。", "A fair die almost never gives rolls like these. Check for mistyped rolls or a weighted die. Rolling again is recommended."),
+          [["dice-anyway", tr("このまま作る", "Use them anyway")], ["dice-again", tr("振り直す", "Roll again"), true]], { fixed: true }) === "dice-anyway") {
           view.remove();
           resolve(bytes);
           return;
         }
         bytes.fill(0);
+        rolls.length = 0;
       }
       update();
     });
@@ -230,48 +225,68 @@ function derivation(phrase: string[], rolls: Uint8Array | null) {
   view.querySelector("#derive-close")!.addEventListener("click", () => view.remove());
 }
 
-function writeDown(phrase: string[], rolls: Uint8Array | null): Promise<void> {
+type Ended = "wrote" | "seedqr" | "back";
+
+// The write-down step of a new wallet (`made` holds its rolls) and the result of BIP85. The SeedQR, in the
+// format the wallet reads, ends the flow as on Android
+export function showMnemonic(phrase: string[], heading: string, seedQr: boolean, made?: { rolls: Uint8Array | null }): Promise<Ended> {
   const per = Math.ceil(phrase.length / (phrase.length > 12 ? 3 : 2));
   const column = (from: number) => `<ol>${phrase.slice(from, from + per).map((w, i) => `<li><span>${from + i + 1}</span>${escape(w)}</li>`).join("")}</ol>`;
   let leave = () => {};
-  const view = step(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(2)}<div class="question"><h1>${tr(`${phrase.length}個の単語を書き写す`, `Write down your ${phrase.length} words`)}</h1>
+  const view = step(heading, `${stamp()}${made ? steps(2) : ""}<div class="question"><h1>${tr(`${phrase.length}個の単語を書き写す`, `Write down your ${phrase.length} words`)}</h1>
     <p class="lead">${tr("紙に、この順番で書いてください。見た人はビットコインを持ち出せます。", "Write them on paper, in this order. Anyone who sees them can take your bitcoin.")}</p></div>
     <div class="card word-grid${phrase.length > 12 ? " three" : ""}">${[0, per, 2 * per].filter((f) => f < phrase.length).map(column).join("")}</div>
-    <button class="link" id="write-explain">${tr("この単語のでき方を見る", "See how these words were made")}</button>`,
-    button("write-done", tr("書き写しました", "I wrote them down"), "primary"), () => leave());
-  view.querySelector("#write-explain")!.addEventListener("click", () => derivation(phrase, rolls));
-  return new Promise((resolve, reject) => {
-    leave = () => { view.remove(); reject(cancelled()); };
-    view.querySelector("#write-done")!.addEventListener("click", () => { view.remove(); resolve(); });
+    <div class="links">${seedQr ? `<button class="link" id="write-seedqr">${tr("SeedQRを表示", "Show SeedQR")}</button>` : ""}
+      ${made ? `<button class="link" id="write-explain">${tr("この単語のでき方", "How they were made")}</button>` : ""}</div>`,
+    button("write-done", made ? tr("書き写しました", "I wrote them down") : tr("完了", "Done"), "primary"), () => leave());
+  view.querySelector("#write-explain")?.addEventListener("click", () => derivation(phrase, made!.rolls));
+  return new Promise((resolve) => {
+    const end = (how: Ended) => { view.remove(); resolve(how); };
+    leave = () => end("back");
+    view.querySelector("#write-done")!.addEventListener("click", () => end("wrote"));
+    view.querySelector("#write-seedqr")?.addEventListener("click", async () => {
+      view.remove();
+      const format = await choose(tr("SeedQRの形式", "SeedQR format"), tr("形式を選んでください", "Choose a format"), tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+        [[tr("標準のSeedQR", "Standard SeedQR"), tr("多くのウォレットが対応", "Works with most wallets")], ["CompactSeedQR", tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")]]);
+      if (format < 0) return resolve("back");
+      const payload = call<{ payload: number[] }>("seedqr_from_mnemonic", new TextEncoder().encode(phrase.join(" ")), format).payload;
+      const frame = String.fromCharCode(...payload);
+      payload.fill(0);
+      await showFrames([frame], { kind: "secret", heading: format ? "CompactSeedQR" : tr("標準のSeedQR", "Standard SeedQR"), name: "SeedQR",
+        description: tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private.") });
+      resolve("seedqr");
+    });
   });
 }
 
-// Five random positions against three decoys each; a wrong answer goes back to the words
-function quiz(phrase: string[]): Promise<boolean> {
+// Five random positions against three decoys each, as coconut_vault asks before a seed is kept
+function quiz(phrase: string[]): Promise<"passed" | "again" | "back"> {
   const list = words();
   const positions = [...phrase.keys()].sort(() => Math.random() - .5).slice(0, 5);
   let leave = () => {};
-  const view = step(tr("新しいウォレット", "New wallet"), `${stamp()}${steps(3)}<div class="quiz"></div>`, "", () => leave());
-  view.querySelector(".screen-actions")!.remove();
+  const view = step(tr("バックアップの確認", "Check your backup"), `${stamp()}<div class="quiz"></div>`, "", () => leave());
   const body = view.querySelector<HTMLElement>(".quiz")!;
   let round = 0;
-  return new Promise((resolve, reject) => {
-    leave = () => { view.remove(); reject(cancelled()); };
+  return new Promise((resolve) => {
+    const end = (how: "passed" | "again" | "back") => { view.remove(); resolve(how); };
+    leave = () => end("back");
     const ask = () => {
-      if (round === positions.length) { view.remove(); resolve(true); return; }
+      if (round === positions.length) return end("passed");
       const answer = phrase[positions[round]];
       const options = [...list.filter((w) => w !== answer).sort(() => Math.random() - .5).slice(0, 3), answer].sort(() => Math.random() - .5);
-      body.innerHTML = `<div class="question"><h1>${tr(`${positions[round] + 1}番目の単語はどれですか`, `Which is word ${positions[round] + 1}?`)}</h1>
-        <p class="lead">${tr(`バックアップの確認(${round + 1}/${positions.length})`, `Check your backup · ${round + 1}/${positions.length}`)}</p></div>
+      body.innerHTML = `<span class="overline">${tr(`確認 ${round + 1} / ${positions.length}`, `CHECK ${round + 1} OF ${positions.length}`)}</span>
+        <div class="question"><h1>${tr(`${positions[round] + 1}番目の単語はどれですか`, `Which is word ${positions[round] + 1}?`)}</h1>
+        <p class="lead">${tr("紙に書いた単語を見て選んでください。", "Look at your paper and choose it.")}</p></div>
         <div class="quiz-options">${options.map((o) => `<button class="button button-secondary" data-word="${escape(o)}"><span>${escape(o)}</span></button>`).join("")}</div>`;
     };
-    view.addEventListener("click", (event) => {
+    view.addEventListener("click", async (event) => {
       const target = (event.target as HTMLElement).closest("button");
       if (!target?.dataset.word) return;
       if (target.dataset.word === phrase[positions[round]]) { round++; ask(); return; }
-      view.remove();
-      alert(tr(`${positions[round] + 1}番目の単語ではありません。紙に書いた単語と見比べて、もう一度試してください。`, `That is not word ${positions[round] + 1}. Compare your backup with the words and try again.`));
-      resolve(false);
+      const choice = await dialog(tr(`${positions[round] + 1}番目の単語ではありません`, `That is not word ${positions[round] + 1}`),
+        tr("紙に書いた単語と見比べて、もう一度試してください。", "Compare your backup with the words and try again."),
+        [["quiz-again", tr("選び直す", "Choose again")], ["quiz-words", tr("単語をもう一度見る", "Show the words"), true]]);
+      if (choice === "quiz-words") end("again");
     });
     ask();
   });
@@ -292,7 +307,16 @@ export async function createWallet() {
   }
   const phrase = made.split(" ");
   try {
-    do await writeDown(phrase, rolls); while (!(await quiz(phrase)));
+    for (;;) {
+      const shown = await showMnemonic(phrase, tr("新しいウォレット", "New wallet"), true, { rolls });
+      if (shown === "seedqr") return;
+      const checked = shown === "wrote" ? await quiz(phrase) : "back";
+      if (checked === "back") throw cancelled();
+      if (checked === "passed") break;
+    }
+    const load = await dialog(tr("バックアップを確かめました", "Backup checked"), tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"),
+      [["backup-done", tr("完了", "Done")], ["backup-load", tr("読み込む", "Load it"), true]]);
+    if (load === "backup-load") await loadWords(new TextEncoder().encode(phrase.join(" ")));
   } finally {
     rolls?.fill(0);
     phrase.fill("");

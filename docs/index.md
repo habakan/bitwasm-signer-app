@@ -16,6 +16,7 @@ demo:
   review: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test"]
   sign: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test", ".sheet .check input", "scroll:.sheet .screen-body", "#review-sign", "#confirm-sign"]
   lock: ["#demo-seed", "#passphrase-continue", "#lock"]
+  more: ["#demo-seed", "#passphrase-continue", "#advanced"]
 ---
 
 # bitwasm-signer-app
@@ -53,11 +54,11 @@ To make the words from dice, roll a die and tap the face that came up, once per 
 
 ### Write the words down {#write-down}
 
-Write the words on paper, in order. Anyone who sees them can take your bitcoin, and with the paper you can get it back even if you lose the phone.
+Write the words on paper, in order. Anyone who sees them can take your bitcoin, and with the paper you can get it back even if you lose the phone. **Show SeedQR** shows the words as a SeedQR too.
 
 ### Check what you wrote {#quiz}
 
-A five-question quiz asks for words from your paper. A slip of the pen shows up here, while you can still fix it. Only after the quiz can the new words be used to sign.
+A five-question quiz asks for words from your paper. A slip of the pen shows up here, while you can still fix it. Only after the quiz can the new words be used to sign, and passing it offers to load them as the signing key.
 
 ## 3. Load your key {#load}
 
@@ -75,7 +76,7 @@ A passphrase added to the words makes a different key, and so does a typo in it.
 
 ## 4. Connect your wallet app {#connect}
 
-Tap **Connect your wallet app**. The signer shows your public keys as an animated QR code. Scan it with the wallet app to add a watch-only wallet. It holds no private keys. You only need to do this once.
+Tap **Connect your wallet app** and choose the keys to share. Usually you keep **All at once** and tap **Show QR**, and the signer shows your public keys as an animated QR code. Scan it with the wallet app to add a watch-only wallet. It holds no private keys. You only need to do this once. For a wallet app that only reads an xpub, share one kind.
 
 ## 5. Receive {#receive}
 
@@ -103,13 +104,13 @@ Tap **Lock**. The key is wiped from memory. The same happens when you leave the 
 
 ## More features {#more}
 
-Under **Advanced** on the wallet screen, in the app:
+Under **Advanced** on the wallet screen:
 
 - **Register a multisig**: a wallet that needs several keys (up to three) to spend. The signer then shows its change as change and does not sign inputs from other wallets.
 - **Sign a message** (BIP137) to prove you own an address.
 - **Derive a child mnemonic** (BIP85): new words for another wallet, recoverable from the same backup.
 
-In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. The passphrase is never saved; at unlock you type it, and the key opens only if the fingerprint matches.
+In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. Each saved key has a name and can be deleted on its own. The passphrase is never saved; at unlock you type it, and the key opens only if the fingerprint matches.
 
 ## Next
 
