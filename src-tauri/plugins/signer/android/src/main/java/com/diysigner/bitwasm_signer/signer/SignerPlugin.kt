@@ -684,7 +684,6 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         if (compact) entropy.copyOf() else engine.seedQrFromMnemonic(engine.mnemonicFromEntropy(entropy.copyOf()), false)
     }
 
-    // Five random positions against three decoys each, as coconut_vault asks before a seed is kept
     private fun checkBackup(invoke: Invoke, phrase: CharArray, heading: String, seedQrAvailable: Boolean) {
         val random = SecureRandom().asKotlinRandom()
         val words = String(phrase).split(' ')

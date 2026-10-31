@@ -252,7 +252,6 @@ export function showMnemonic(phrase: string[], heading: string, seedQr: boolean,
   });
 }
 
-// Five random positions against three decoys each, as coconut_vault asks before a seed is kept
 function quiz(phrase: string[]): Promise<"passed" | "again" | "back"> {
   const list = words();
   const positions = [...phrase.keys()].sort(() => Math.random() - .5).slice(0, 5);
