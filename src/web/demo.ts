@@ -321,7 +321,7 @@ function qrSvg(frame: string) {
   return code.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
 }
 
-function showFrames(heading: string, name: string, frames: string[], note: string): Promise<void> {
+function showFrames(heading: string, name: string, frames: string[], note: string, interval = 350): Promise<void> {
   const view = sheet(heading, `<div class="question"><h1>${tr("ウォレットアプリで読み取ってください", "Scan this with your wallet app")}</h1></div>
     <div class="qr-card"></div>
     <p class="caption" id="qr-count"></p>
@@ -337,8 +337,46 @@ function showFrames(heading: string, name: string, frames: string[], note: strin
     current = (current + 1) % frames.length;
   };
   show();
-  const timer = setInterval(show, 350);
+  const timer = setInterval(show, interval);
   return new Promise((resolve) => view.querySelector("#qr-done")!.addEventListener("click", () => { clearInterval(timer); view.remove(); resolve(); }));
+}
+
+// As on Android: everything in one UR, or one kind's xpub and descriptor for wallets that read only that
+function chooseAccount(): Promise<number | null> {
+  const t = call<SignerState>("state").testnet;
+  const kinds: [number | null, string, string][] = [
+    [null, "", tr("まとめて渡す・おすすめ", "All at once · recommended")],
+    [84, t ? "tb1q…" : "bc1q…", tr("標準・いちばん一般的", "Standard · most common")],
+    [86, t ? "tb1p…" : "bc1p…", tr("Taproot・新しい形式", "Taproot · newest")],
+    [49, t ? "2…" : "3…", tr("古いウォレット向け", "For older wallets")],
+    [48, t ? "tb1q…" : "bc1q…", tr("マルチシグ用・複数の鍵で管理", "Multisig · several keys")],
+  ];
+  const card = ([purpose, prefix, name]: (typeof kinds)[number], i: number) => {
+    const prefixes = purpose === null ? kinds.slice(1).map((k) => k[1]) : [prefix];
+    return `${i === 1 ? `<span class="overline account-single">${tr("1種類だけ渡す", "ONLY ONE KIND")}</span>` : ""}
+      <button class="account-kind" data-kind="${i}"><span class="account-prefix${prefixes.length > 1 ? " many" : ""}">${prefixes.map((x) => `<span>${x}</span>`).join("")}</span>
+      <span class="row-copy"><span class="row-title">${name}</span><span class="row-detail">${purpose === null ? "BIP84・86・49・48" : `BIP${purpose}`}</span></span><span class="account-mark"></span></button>`;
+  };
+  const view = step(tr("ウォレットアプリと接続する", "Connect your wallet app"), `<div class="question"><h1>${tr("渡す公開鍵を選ぶ", "Choose the keys to share")}</h1>
+      <p class="lead">${tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys.")}</p></div>
+    <div class="account-kinds">${kinds.map(card).join("")}</div>
+    <p id="account-summary"></p>`,
+    button("account-show", tr("QRを表示", "Show QR"), "primary"), () => cancel());
+  let chosen = 0;
+  const refresh = () => {
+    view.querySelectorAll<HTMLElement>("[data-kind]").forEach((b) => b.classList.toggle("selected", Number(b.dataset.kind) === chosen));
+    const purpose = kinds[chosen][0];
+    view.querySelector("#account-summary")!.textContent = purpose === null
+      ? tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+      : tr(`BIP${purpose}のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。`, `Shares the BIP${purpose} xpub and descriptor, which wallets that only read an xpub accept too.`);
+  };
+  view.querySelectorAll<HTMLElement>("[data-kind]").forEach((b) => b.addEventListener("click", () => { chosen = Number(b.dataset.kind); refresh(); }));
+  refresh();
+  let cancel = () => {};
+  return new Promise((resolve, reject) => {
+    cancel = () => { view.remove(); reject(tr("公開鍵の書き出しをやめました。", "Account export was cancelled")); };
+    view.querySelector("#account-show")!.addEventListener("click", () => { view.remove(); resolve(kinds[chosen][0]); });
+  });
 }
 
 // The fingerprint with no passphrase and with the typed one, as on the phones
@@ -541,8 +579,15 @@ export async function webInvoke<T>(command: string, args?: Record<string, unknow
       await createWallet();
       return { ...state(), shown: true } as T;
     case "export_account": {
-      const { frames } = call<{ frames: string[] }>("account_ur", 0);
-      await showFrames(tr("ウォレットアプリと接続する", "Connect your wallet app"), "crypto-account", frames, tr("秘密鍵は含まれていません。", "No private keys are included."));
+      const purpose = await chooseAccount();
+      if (purpose === null) {
+        const { frames } = call<{ frames: string[] }>("account_ur", 0);
+        await showFrames(tr("ウォレットアプリと接続する", "Connect your wallet app"), "crypto-account", frames,
+          tr("BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで渡します。秘密鍵は含まれていません。", "BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR. No private keys are included."));
+      } else {
+        const { frames } = call<{ frames: string[] }>("account", purpose, 0);
+        await showFrames(`BIP${purpose}`, `BIP${purpose}`, frames, tr("xpubとディスクリプターが自動で切り替わります。", "The xpub and descriptor alternate automatically."), 1500);
+      }
       return undefined as T;
     }
     case "lock":

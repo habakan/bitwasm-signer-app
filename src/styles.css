@@ -175,6 +175,14 @@ button:disabled { opacity: .45; cursor: default; }
 .word-key#back { flex: 1.6; }
 .word-key:disabled { border-color: var(--surface-sunken); background: var(--surface-sunken); color: var(--line-strong); opacity: 1; }
 .caption.positive { color: var(--positive); }
+.account-kinds { display: flex; flex-direction: column; gap: var(--space-2); }
+.account-single { margin-top: var(--space-4); }
+.account-kind { display: flex; align-items: center; gap: 14px; padding: 12px 16px 12px 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); text-align: left; cursor: pointer; }
+.account-kind.selected { border-color: var(--primary); background: var(--primary-soft); }
+.account-prefix { display: grid; flex: none; width: 96px; height: 52px; place-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); font: 700 20px var(--font-mono); }
+.account-prefix.many { grid-template-columns: 1fr 1fr; align-content: center; font-size: 13px; line-height: 18px; }
+.account-mark { flex: none; width: 24px; height: 24px; border: 2px solid var(--line-strong); border-radius: 50%; background: var(--surface-raised); }
+.account-kind.selected .account-mark { border: 6px solid var(--primary-soft); background: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
 /* The words are real BIP39 words made in a connected browser: every screen showing them says so */
 .screen-body.tight { gap: var(--space-3); padding-top: var(--space-4); }
 .demo-stamp { position: sticky; top: calc(-1 * var(--space-4)); z-index: 1; margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0; padding: var(--space-2) var(--space-4); background: var(--danger); color: #fff; font: var(--text-label); text-align: center; }
