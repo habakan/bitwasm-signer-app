@@ -1,5 +1,3 @@
-import jsQR from "jsqr";
-import type { QRCode } from "jsqr";
 import qrcode from "qrcode-generator";
 import { icon } from "../design/icons";
 import { webApp, webDemo } from "../signer";
@@ -46,23 +44,32 @@ export function sheet(title: string, body: string, actions: string) {
   return element;
 }
 
-// Reads QR codes with the back camera into the sheet's video until the returned function stops it
-function startCamera(view: HTMLElement, status: HTMLElement, onCode: (code: QRCode) => void) {
+// Hands each frame of the back camera to `onFrame` as greyscale, until it returns true or the returned
+// function stops it. Frames are scaled down to the reader's limit of 1280x720 pixels and 1280 a side
+function startCamera(view: HTMLElement, status: HTMLElement, onFrame: (grey: Uint8Array, w: number, h: number) => boolean) {
   const video = view.querySelector("video")!;
   const canvas = document.createElement("canvas");
   let stream: MediaStream | null = null;
   let stopped = false;
-  let last = "";
   const tick = () => {
     if (!stream) return;
     if (video.readyState >= 2) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const { videoWidth: vw, videoHeight: vh } = video;
+      const scale = Math.min(1, 1280 / vw, 1280 / vh, Math.sqrt((1280 * 720) / (vw * vh)));
+      const [w, h] = [Math.floor(vw * scale), Math.floor(vh * scale)];
+      canvas.width = w;
+      canvas.height = h;
       const context = canvas.getContext("2d", { willReadFrequently: true })!;
-      context.drawImage(video, 0, 0);
-      const code = jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-      const key = code?.binaryData.join() ?? "";
-      if (code && key && key !== last) { last = key; onCode(code); }
+      context.drawImage(video, 0, 0, w, h);
+      const image = context.getImageData(0, 0, w, h);
+      const grey = new Uint8Array(w * h);
+      for (let i = 0; i < grey.length; i++) grey[i] = (image.data[4 * i] * 77 + image.data[4 * i + 1] * 150 + image.data[4 * i + 2] * 29) >> 8;
+      // The frame may show a seed, so no copy of it is left behind in the page
+      image.data.fill(0);
+      context.clearRect(0, 0, w, h);
+      const done = onFrame(grey, w, h);
+      grey.fill(0);
+      if (done) return;
     }
     requestAnimationFrame(tick);
   };
@@ -80,6 +87,8 @@ function startCamera(view: HTMLElement, status: HTMLElement, onCode: (code: QRCo
     stream = null;
   };
 }
+
+type Frame = { found: boolean; code: number; text?: string };
 
 function scanPsbt(): Promise<Review> {
   call("reset_ur");
@@ -106,14 +115,24 @@ function scanPsbt(): Promise<Review> {
         status.textContent = String(error);
       }
     };
-    const stop = startCamera(view, status, (code) => receive(code.data));
+    let last = "";
+    const stop = startCamera(view, status, (grey, w, h) => {
+      const frame = call<Frame>("qr_frame", grey, w, h, 2);
+      if (frame.found && frame.text && frame.text !== last) {
+        last = frame.text;
+        receive(frame.text);
+      } else if (frame.code === -3) {
+        status.textContent = tr("取引のQRではありません", "This is not a transaction QR");
+      }
+      return false;
+    });
     view.querySelector("#scan-test")?.addEventListener("click", () => receive(testPsbt));
     view.querySelector("#scan-cancel")!.addEventListener("click", () => finish(tr("QRの読み取りをやめました。", "QR scan was cancelled")));
   });
 }
 
-// A standard SeedQR is digits and a CompactSeedQR is bytes; the engine takes either as read
-function scanSeed(): Promise<Uint8Array> {
+// The engine reads the SeedQR from the camera's frames and keeps it: the page learns only that one was found
+function scanSeed(): Promise<void> {
   const view = sheet(tr("読み取り", "Scan"), `<div class="question"><h1>${tr("バックアップのQRを読み取る", "Scan your backup QR")}</h1>
       <p class="lead">${tr("SeedQRかCompactSeedQRをカメラに向けてください。", "Point the camera at your SeedQR or CompactSeedQR.")}</p></div>
     <div class="camera"><video playsinline muted></video></div>
@@ -121,7 +140,17 @@ function scanSeed(): Promise<Uint8Array> {
     button("scan-cancel", tr("キャンセル", "Cancel"), "secondary"));
   const status = view.querySelector<HTMLElement>("#scan-status")!;
   return new Promise((resolve, reject) => {
-    const stop = startCamera(view, status, (code) => { stop(); view.remove(); resolve(new Uint8Array(code.binaryData)); });
+    const stop = startCamera(view, status, (grey, w, h) => {
+      const frame = call<Frame>("qr_frame", grey, w, h, 1);
+      if (frame.found) {
+        stop();
+        view.remove();
+        resolve();
+        return true;
+      }
+      if (frame.code === -3) status.textContent = tr("SeedQRではありません", "This is not a SeedQR");
+      return false;
+    });
     view.querySelector("#scan-cancel")!.addEventListener("click", () => { stop(); view.remove(); reject(tr("鍵の読み込みをやめました。", "Seed import was cancelled")); });
   });
 }
@@ -241,10 +270,14 @@ function showFrames(heading: string, name: string, frames: string[], note: strin
 }
 
 // The fingerprint with no passphrase and with the typed one, as on the phones
-function askPassphrase(payload: Uint8Array, mnemonic: boolean): Promise<string> {
+function askPassphrase(preview: (passphrase: Uint8Array) => { fingerprint: string }): Promise<string> {
   const none = tr("入力すると表示します", "Shown as you type");
-  const fingerprint = (passphrase: string) =>
-    call<{ fingerprint: string }>("preview_fingerprint", payload, new TextEncoder().encode(passphrase), mnemonic ? 1 : 0).fingerprint.replace(/^(.{4})/, "$1 ");
+  const fingerprint = (passphrase: string) => {
+    const bytes = new TextEncoder().encode(passphrase);
+    const { fingerprint } = preview(bytes);
+    bytes.fill(0);
+    return fingerprint.replace(/^(.{4})/, "$1 ");
+  };
   const view = step(tr("パスフレーズ", "Passphrase"), `<div class="question"><h1>${tr("パスフレーズを入力する", "Enter the passphrase")}</h1>
       <p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue.")}</p></div>
     <input class="input" id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="${tr("パスフレーズ", "Passphrase")}">
@@ -322,12 +355,12 @@ async function checkAddress(): Promise<void> {
   if (again) return checkAddress();
 }
 
-// Loads a seed with the passphrase asked for it, then clears the page's copy
-function loadSeed(name: string, payload: Uint8Array, passphrase: string) {
-  const bytes = new TextEncoder().encode(passphrase);
-  call(name, payload, bytes);
-  payload.fill(0);
-  bytes.fill(0);
+// Loads typed words with the passphrase asked for them, then clears the page's copies
+async function loadWords(words: Uint8Array) {
+  const passphrase = new TextEncoder().encode(await askPassphrase((p) => call("preview_fingerprint", words, p, 1)));
+  call("load_mnemonic", words, passphrase);
+  words.fill(0);
+  passphrase.fill(0);
 }
 
 export async function webInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -338,21 +371,24 @@ export async function webInvoke<T>(command: string, args?: Record<string, unknow
     case "set_network":
       if (webApp) call("set_network", args?.testnet === true ? 1 : 0);
       return state() as T;
-    case "import_mnemonic": {
-      const words = await askWords();
-      loadSeed("load_mnemonic", words, await askPassphrase(words, true));
+    case "import_mnemonic":
+      await loadWords(await askWords());
       return state() as T;
-    }
     case "scan_seed_qr": {
-      const payload = await scanSeed();
-      loadSeed("load_seed_qr", payload, await askPassphrase(payload, false));
+      await scanSeed();
+      try {
+        const passphrase = new TextEncoder().encode(await askPassphrase((p) => call("qr_seed_preview", p)));
+        call("qr_seed_load", passphrase);
+        passphrase.fill(0);
+      } finally {
+        call("qr_wipe");
+      }
       return state() as T;
     }
     case "parser_info":
       return call("parser_info") as T;
     case "demo_seed": {
-      const words = new TextEncoder().encode(testMnemonic);
-      loadSeed("load_mnemonic", words, await askPassphrase(words, true));
+      await loadWords(new TextEncoder().encode(testMnemonic));
       return state() as T;
     }
     case "find_address":
