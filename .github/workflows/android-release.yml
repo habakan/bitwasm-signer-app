@@ -70,10 +70,18 @@ jobs:
           cp lockdown/out/lockdown.apk "$lockdown"
           cp lockdown/out/provisioning.png "provisioning-$GITHUB_REF_NAME.png"
 
+      # The web app from the same commit, for its build name: a fork's Pages build of this tag shows the same
+      - name: Build the web app
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+          pnpm build:pwa
+          grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + //' > web-build.txt
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           assets="bitwasm-signer-$GITHUB_REF_NAME.apk signer-lockdown-$GITHUB_REF_NAME.apk provisioning-$GITHUB_REF_NAME.png"
           sha256sum $assets > SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" $assets SHA256SUMS --draft --title "$GITHUB_REF_NAME"
+          gh release create "$GITHUB_REF_NAME" $assets SHA256SUMS --draft --title "$GITHUB_REF_NAME" \
+            --notes "Web app build: $(cat web-build.txt) (Settings › This build)"

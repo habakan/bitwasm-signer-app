@@ -25,8 +25,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - uses: dtolnay/rust-toolchain@stable
+      # The web engine's toolchain is pinned (web/engine/rust-toolchain.toml) so a fork builds the same app
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.95.0
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
@@ -37,6 +39,11 @@ jobs:
         run: pnpm tokens && git diff --exit-code
       - run: pnpm build
       - run: pnpm build:web
+      - name: Web app build name, which a build of this commit anywhere should match
+        run: |
+          pnpm build:pwa
+          grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
+          sha256sum web/engine/target/wasm32-unknown-unknown/release/bitwasm_web_engine.wasm dist-web/app/assets/*
 
   plugin:
     runs-on: ubuntu-latest
