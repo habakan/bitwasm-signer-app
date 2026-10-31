@@ -157,7 +157,6 @@ function scanSeed(): Promise<void> {
   });
 }
 
-// Third-party keyboards can record what is typed, which the page cannot block as the native apps do
 // The native apps' entry: an A-Z keypad that only offers letters continuing a BIP39 word, so the words
 // never pass through the system keyboard. Words are kept as indices and joined into bytes the caller wipes
 function askWords(): Promise<Uint8Array> {
