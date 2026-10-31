@@ -1541,7 +1541,6 @@ final class SignerPlugin: Plugin {
     present(controller)
   }
 
-  // Five random positions against three decoys each, as coconut_vault asks before a seed is kept
   private func checkBackup(_ phrase: String, title: String, seedQrAvailable: Bool, invoke: Invoke) {
     let words = phrase.split(separator: " ").map(String.init)
     let positions = Array(words.indices.shuffled().prefix(5))
