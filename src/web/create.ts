@@ -1,6 +1,6 @@
 import { webDemo } from "../signer";
 import { tr } from "../views";
-import { button, choose, dialog, escape, loadWords, sheet, showFrames } from "./demo";
+import { button, dialog, escape, loadWords, sheet, showSeedQr } from "./demo";
 import { call } from "./engine";
 
 // The new wallet flow of the phones, in the page. In the browser demo the words are made in a connected
@@ -246,15 +246,8 @@ export function showMnemonic(phrase: string[], heading: string, seedQr: boolean,
     view.querySelector("#write-done")!.addEventListener("click", () => end("wrote"));
     view.querySelector("#write-seedqr")?.addEventListener("click", async () => {
       view.remove();
-      const format = await choose(tr("SeedQRの形式", "SeedQR format"), tr("形式を選んでください", "Choose a format"), tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
-        [[tr("標準のSeedQR", "Standard SeedQR"), tr("多くのウォレットが対応", "Works with most wallets")], ["CompactSeedQR", tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")]]);
-      if (format < 0) return resolve("back");
-      const payload = call<{ payload: number[] }>("seedqr_from_mnemonic", new TextEncoder().encode(phrase.join(" ")), format).payload;
-      const frame = String.fromCharCode(...payload);
-      payload.fill(0);
-      await showFrames([frame], { kind: "secret", heading: format ? "CompactSeedQR" : tr("標準のSeedQR", "Standard SeedQR"), name: "SeedQR",
-        description: tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private.") });
-      resolve("seedqr");
+      const shown = await showSeedQr((compact) => call<{ payload: number[] }>("seedqr_from_mnemonic", new TextEncoder().encode(phrase.join(" ")), compact).payload);
+      resolve(shown ? "seedqr" : "back");
     });
   });
 }

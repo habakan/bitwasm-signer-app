@@ -20,7 +20,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
 // Saved seeds: BIP39 entropy under a Keystore AES key per seed that needs the device owner for every use.
-// The passphrase is never stored; the fingerprint it produced is, so a wrong one is caught on unlock
+// The passphrase is never stored; the fingerprint kept is the words' alone, to tell saved seeds apart
 internal class KeyVault(private val context: Context) {
     class Entry(val id: String, val name: String, val fingerprint: String, val iv: ByteArray, val data: ByteArray)
 

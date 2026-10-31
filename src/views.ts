@@ -93,8 +93,8 @@ function homeView({ signer, busy }: View) {
   const blocked = busy || restrictionBlocks(signer);
   return {
     body: `${question("bitwasm-signer", signer.storage
-      ? tr("保存した鍵は暗号化され、開くには画面ロックが必要です。ロックするかアプリを離れると、メモリから消去されます。", "Saved keys are encrypted on this phone and need your screen lock to open. Locking or leaving the app wipes the key from memory.")
-      : tr("鍵はこのスマホのメモリにだけあり、ロックするかアプリを離れると消去されます。", "Your key stays in this phone's memory and is wiped when you lock it or leave the app."))}
+      ? tr("保存した鍵は暗号化され、開くには画面ロックが必要です。ウォレットを閉じるかアプリを離れると、メモリから消去されます。", "Saved keys are encrypted on this phone and need your screen lock to open. Closing the wallet or leaving the app wipes the key from memory.")
+      : tr("鍵はこのスマホのメモリにだけあり、ウォレットを閉じるかアプリを離れると消去されます。", "Your key stays in this phone's memory and is wiped when you close the wallet or leave the app."))}
     ${saved ? group(tr("この端末に保存した鍵", "SAVED ON THIS DEVICE"),
       `<div class="card">${row("unlock-saved", "lock", tr("保存した鍵を開く", "Open a saved key"), tr(`${saved}件・画面ロックか生体認証`, `${saved} saved · screen lock or biometrics`), { disabled: blocked })}</div>`) : ""}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"), `<div class="card">
@@ -119,7 +119,7 @@ function readyView({ signer, busy }: View) {
       <span class="field-note">${tr("ウォレットアプリの表示と比べてください。", "Compare it with your wallet app.")}</span>
     </div></div>
     ${group(tr("そのほかの操作", "MORE"), `<div class="card">${rows.join("")}</div>`)}`,
-    actions: `<div class="action-pair">${button("lock", tr("ロック", "Lock"), "danger", { icon: "lock", disabled: busy })}
+    actions: `<div class="action-pair">${button("lock", tr("ウォレットを閉じる", "Close wallet"), "danger", { disabled: busy })}
       ${button("psbt", tr("取引に署名する", "Sign a transaction"), "primary", { icon: "signature", disabled: busy })}</div>`,
   };
 }
@@ -148,7 +148,7 @@ function settingsView({ signer, busy }: View) {
   const saved = signer.saved ?? 0;
   const active = activeRestrictions(signer);
   const networkNote = signer.loaded
-    ? tr("切り替えるには、先に鍵を消去してロックしてください。", "Lock and wipe the key before switching networks.")
+    ? tr("切り替えるには、先にウォレットを閉じてください。", "Close the wallet before switching networks.")
     : tr("鍵を読み込む前に切り替えます。メインネットは本物のビットコインです。", "Switch before loading a key. Mainnet is real bitcoin.");
   const storageNote = webApp
     ? !signer.deviceSecure
@@ -160,7 +160,7 @@ function settingsView({ signer, busy }: View) {
     ? tr("鍵を保存するには、このスマホに画面ロックを設定してください。", "Set a screen lock on this phone to save keys.")
     : signer.storage
       ? tr("12個か24個の単語は、読み込んだ後に保存できます。単語だけを、画面ロックが必要な鍵で暗号化して保存します。パスフレーズは毎回入力します。メモリのみに戻すと消去します。", "12 and 24 word keys can be saved after loading. Only the words are stored, encrypted with a key that needs your screen lock; the passphrase is asked each time. Switching to memory only erases them.")
-      : tr("この端末には何も書き込みません。鍵は、ロックするかアプリを離れるまでメモリにだけあります。", "Nothing is written to this phone. The key stays in memory until you lock or leave the app.");
+      : tr("この端末には何も書き込みません。鍵は、ウォレットを閉じるかアプリを離れるまでメモリにだけあります。", "Nothing is written to this phone. The key stays in memory until you close the wallet or leave the app.");
   return {
     body: `${group(tr("ネットワーク", "NETWORK"), `${segments(tr("ネットワーク", "Network"), [
         { id: "mainnet", label: tr("メインネット", "Mainnet"), selected: !signer.testnet, disabled: busy || signer.loaded || webDemo },

@@ -42,7 +42,7 @@ Mnemonics, SeedQRs, raw seeds and passphrases are never returned to the WebView.
 
 ## Saving on the device
 
-Only the BIP39 entropy is stored (16 / 32 bytes, the same as a CompactSeedQR). The passphrase is not stored; the master fingerprint after applying it is. At unlock you enter the passphrase, and the seed is not loaded unless the fingerprint matches. 64 byte raw seeds and 15 / 18 / 21 word seeds cannot be saved.
+Only the BIP39 entropy is stored (16 / 32 bytes, the same as a CompactSeedQR). The passphrase is not stored, and is entered at each unlock, so one saved seed opens with any passphrase. The fingerprint without a passphrase is stored to tell saved seeds apart. 64 byte raw seeds and 15 / 18 / 21 word seeds cannot be saved.
 
 | | Android | iOS |
 | --- | --- | --- |

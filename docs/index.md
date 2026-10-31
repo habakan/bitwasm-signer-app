@@ -62,7 +62,7 @@ A five-question quiz asks for words from your paper. A slip of the pen shows up 
 
 ## 3. Load your key {#load}
 
-By default the signer keeps no key. You load it each time you sign, and it is wiped when you lock the signer or leave the app. To keep it on the phone instead, see [More features](#more).
+By default the signer keeps no key. You load it each time you sign, and it is wiped when you close the wallet or leave the app. To keep it on the phone instead, see [More features](#more).
 
 There are three ways to load it: scan your backup as a SeedQR, type the words, or, in the browser demo, tap **Use the test key**. Next comes the passphrase screen; leave it blank if you have none. The wallet screen then shows the key's **fingerprint**. Compare it with the one in your wallet app to check that both use the same key. The test words give `73c5 da0a`.
 
@@ -72,7 +72,9 @@ Words are typed on the signer's own keypad, not the phone's keyboard, so the key
 
 ### Use a passphrase {#passphrase}
 
-A passphrase added to the words makes a different key, and so does a typo in it. The passphrase screen shows the fingerprint without a passphrase and, as you type, with the one you typed. Check that it matches the fingerprint you noted before you tap **Continue**. With the test words, `TREZOR` gives `b4e3 f5ed`.
+A passphrase added to the words makes a different key, and so does a typo in it. The passphrase screen shows the fingerprint without a passphrase and, as you type, with the one you typed. Check that it matches the fingerprint you noted before you tap **Open the wallet**. With the test words, `TREZOR` gives `b4e3 f5ed`.
+
+For 12 or 24 words, **Show SeedQR** on this screen shows the words as a SeedQR. Opening the wallet clears the words from memory, so this screen is the only place to show the SeedQR of a key you load.
 
 ## 4. Connect your wallet app {#connect}
 
@@ -100,7 +102,7 @@ The signed transaction appears as QR codes. Scan them with the wallet app and se
 
 ## 7. When you are done {#lock}
 
-Tap **Lock**. The key is wiped from memory. The same happens when you leave the app.
+Tap **Close wallet**. The key is wiped from memory. The same happens when you leave the app.
 
 ## More features {#more}
 
@@ -110,7 +112,7 @@ Under **Advanced** on the wallet screen:
 - **Sign a message** (BIP137) to prove you own an address.
 - **Derive a child mnemonic** (BIP85): new words for another wallet, recoverable from the same backup.
 
-In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. Each saved key has a name and can be deleted on its own. The passphrase is never saved; at unlock you type it, and the key opens only if the fingerprint matches.
+In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on the phone, opened with the screen lock or biometrics. Each saved key has a name and can be deleted on its own. The passphrase is never saved; you type it at each unlock, so one saved key can open with different passphrases.
 
 ## Next
 

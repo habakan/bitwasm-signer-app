@@ -639,33 +639,49 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         seedQr.setOnClickListener {
             blank()
             dialog.dismiss()
-            choose(Design.tr("SeedQRの形式", "SeedQR format"), Design.tr("形式を選んでください", "Choose a format"),
-                Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
-                listOf(Design.tr("標準のSeedQR", "Standard SeedQR") to Design.tr("多くのウォレットが対応", "Works with most wallets"), "CompactSeedQR" to Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")),
-                { clearAndResolve(false) }) { which ->
-                worker.execute {
-                    try {
-                        val payload = engine.seedQrFromMnemonic(phrase, compact = which == 1)
-                        val intent = Intent(activity, SignedQrActivity::class.java)
-                            .putExtra(SignedQrActivity.QR_BYTES, payload.copyOf())
-                            .putExtra("testnet", engine.testnet)
-                            .putExtra("binaryQr", which == 1)
-                            .putExtra("secretQr", true)
-                            .putExtra("heading", if (which == 1) "CompactSeedQR" else Design.tr("標準のSeedQR", "Standard SeedQR"))
-                            .putExtra("description", Design.tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private."))
-                            .putExtra("qrName", "SeedQR")
-                        activity.runOnUiThread {
-                            startActivityForResult(invoke, intent, "secretQrResult")
-                            payload.fill(0)
-                        }
-                    } catch (e: Exception) {
-                        forget(phrase)
-                        activity.runOnUiThread { invoke.fail(e.message ?: "Could not encode the SeedQR") }
-                    }
-                }
+            showSeedQr({ engine.seedQrFromMnemonic(phrase, compact = it) }, { clearAndResolve(false) }, { startActivityForResult(invoke, it, "secretQrResult") }) {
+                forget(phrase)
+                invoke.fail(it.message ?: "Could not encode the SeedQR")
             }
         }
         dialog.show()
+    }
+
+    // The SeedQR format chooser, then the secret QR screen, which `start` opens so a flow can wait for it or not
+    private fun showSeedQr(payload: (Boolean) -> ByteArray, onCancel: () -> Unit, start: (Intent) -> Unit, onError: (Exception) -> Unit) {
+        choose(Design.tr("SeedQRの形式", "SeedQR format"), Design.tr("形式を選んでください", "Choose a format"),
+            Design.tr("読み取るウォレットが対応している形式を選んでください。", "Pick the format your wallet can scan."),
+            listOf(Design.tr("標準のSeedQR", "Standard SeedQR") to Design.tr("多くのウォレットが対応", "Works with most wallets"), "CompactSeedQR" to Design.tr("小さいQR・対応するウォレットのみ", "Smaller QR · supported wallets only")),
+            onCancel) { which ->
+            worker.execute {
+                try {
+                    val bytes = payload(which == 1)
+                    val intent = Intent(activity, SignedQrActivity::class.java)
+                        .putExtra(SignedQrActivity.QR_BYTES, bytes.copyOf())
+                        .putExtra("testnet", engine.testnet)
+                        .putExtra("binaryQr", which == 1)
+                        .putExtra("secretQr", true)
+                        .putExtra("heading", if (which == 1) "CompactSeedQR" else Design.tr("標準のSeedQR", "Standard SeedQR"))
+                        .putExtra("description", Design.tr("対応するウォレットで読み取ってください。このQRは人に見せないでください。", "Scan this QR with a compatible wallet and keep it private."))
+                        .putExtra("qrName", "SeedQR")
+                    activity.runOnUiThread {
+                        start(intent)
+                        bytes.fill(0)
+                    }
+                } catch (e: Exception) {
+                    activity.runOnUiThread { onError(e) }
+                }
+            }
+        }
+    }
+
+    // A pending seed's SeedQR for the passphrase step, from its words or its 12 or 24 word entropy; each call
+    // works on a copy, since the encoder wipes what it is given
+    private fun mnemonicSeedQr(mnemonic: CharArray): ((Boolean) -> ByteArray)? =
+        if (mnemonic.count { it == ' ' } + 1 in listOf(12, 24)) { compact -> engine.seedQrFromMnemonic(mnemonic.copyOf(), compact) } else null
+
+    private fun entropySeedQr(entropy: ByteArray): (Boolean) -> ByteArray = { compact ->
+        if (compact) entropy.copyOf() else engine.seedQrFromMnemonic(engine.mnemonicFromEntropy(entropy.copyOf()), false)
     }
 
     // Five random positions against three decoys each, as coconut_vault asks before a seed is kept
@@ -728,7 +744,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             .setMessage(Design.tr("このシードフレーズを、署名に使う鍵として今読み込みますか。", "Load these words as the signing key now?"))
             .setNegativeButton(Design.tr("完了", "Done")) { _, _ -> done() }
             .setPositiveButton(Design.tr("読み込む", "Load it")) { _, _ ->
-                askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(phrase.copyOf(), p) }, ::done) { passphrase ->
+                askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(phrase.copyOf(), p) }, mnemonicSeedQr(phrase), ::done) { passphrase ->
                     worker.execute {
                         try {
                             val entropy = if (vault.enabled) engine.mnemonicEntropy(phrase) else null
@@ -750,7 +766,8 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     }
 
     // Shows the fingerprint with no passphrase and with the typed one, so a typo shows before the key loads
-    private fun askPassphrase(title: String, seed: (Signer, CharArray) -> Unit, onCancel: () -> Unit, onContinue: (CharArray) -> Unit) {
+    // The pending seed's last screen: with `seedQr`, its SeedQR can be shown while the words are still here
+    private fun askPassphrase(title: String, seed: (Signer, CharArray) -> Unit, seedQr: ((Boolean) -> ByteArray)?, onCancel: () -> Unit, onContinue: (CharArray) -> Unit) {
         val p = Design.palette(activity)
         val tr = Design::tr
         val working = tr("計算しています…", "Working…")
@@ -786,7 +803,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         }
         lateinit var dialog: android.app.Dialog
         fun stop() { waiting.removeCallbacksAndMessages(null); generation++ }
-        val next = Design.button(activity, tr("続ける", "Continue"), true, p).apply {
+        val next = Design.button(activity, tr("ウォレットを開く", "Open the wallet"), true, p).apply {
             setOnClickListener {
                 val chars = passphrase.text.toString().toCharArray()
                 passphrase.text.clear()
@@ -796,13 +813,23 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             }
         }
         val content = page(
-            Design.text(activity, tr("パスフレーズを入力する", "Enter the passphrase"), Design.Style.DISPLAY, p.ink),
-            Design.text(activity, tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のまま続けてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank and continue."), Design.Style.BODY, p.inkMuted),
+            Design.text(activity, tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), Design.Style.BODY, p.inkMuted),
             passphrase,
             Design.text(activity, tr("フィンガープリント", "FINGERPRINT"), Design.Style.OVERLINE, p.inkMuted),
             fingerprints,
         )
-        dialog = Design.screen(activity, title, engine.testnet, content, listOf(next)) { stop(); passphrase.text.clear(); onCancel() }
+        val clears = Design.text(activity, if (seedQr != null) tr("ウォレットを開くと、単語はメモリから消えます。SeedQRは、その前にここで表示できます。", "Opening the wallet clears the words from memory. Show the SeedQR here before that.")
+            else tr("ウォレットを開くと、単語はメモリから消えます。", "Opening the wallet clears the words from memory."), Design.Style.CAPTION, p.inkMuted)
+        val show = seedQr?.let { make ->
+            Design.button(activity, tr("SeedQRを表示", "Show SeedQR"), false, p).apply {
+                setOnClickListener {
+                    showSeedQr(make, {}, { activity.startActivity(it) }) { e ->
+                        Design.alert(activity).setTitle(tr("SeedQRを作れませんでした", "Could not encode the SeedQR")).setMessage(e.message).setPositiveButton("OK", null).show()
+                    }
+                }
+            }
+        }
+        dialog = Design.screen(activity, title, engine.testnet, content, listOfNotNull(clears, show, next)) { stop(); passphrase.text.clear(); onCancel() }
         dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         dialog.show()
@@ -952,41 +979,36 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     }
 
     private fun unlockWithPassphrase(invoke: Invoke, entry: KeyVault.Entry, entropy: ByteArray) {
-        askPassphrase(Design.tr("${entry.name}のパスフレーズ", "Passphrase for ${entry.name}"), { s, p -> s.seedFromSeedQr(entropy.copyOf(), p) }, { entropy.fill(0); invoke.fail("Unlock was cancelled") }) { passphrase ->
+        askPassphrase(Design.tr("${entry.name}のパスフレーズ", "Passphrase for ${entry.name}"), { s, p -> s.seedFromSeedQr(entropy.copyOf(), p) }, entropySeedQr(entropy),
+            { entropy.fill(0); invoke.fail("Unlock was cancelled") }) { passphrase ->
             worker.execute {
                 try {
                     engine.loadSeedQr(listOf("vault" to entropy.copyOf()), "saved seed", passphrase).fill(0)
-                    val got = engine.fingerprint
-                    if (got == entry.fingerprint) {
-                        entropy.fill(0)
-                        activity.runOnUiThread { invoke.resolve(stateObject()) }
-                        return@execute
-                    }
-                    engine.lock()
-                    activity.runOnUiThread {
-                        Design.alert(activity).setTitle(Design.tr("フィンガープリントが一致しません", "Fingerprint does not match"))
-                            .setMessage(Design.tr("保存した鍵は${entry.fingerprint}ですが、このパスフレーズでは${got}になります。パスフレーズを確かめてください。", "The saved seed is ${entry.fingerprint}, but this passphrase gives $got. Check the passphrase."))
-                            .setPositiveButton(Design.tr("やり直す", "Try again")) { _, _ -> unlockWithPassphrase(invoke, entry, entropy) }
-                            .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> entropy.fill(0); invoke.fail("Unlock was cancelled") }
-                            .setOnCancelListener { entropy.fill(0); invoke.fail("Unlock was cancelled") }
-                            .show()
-                    }
+                    activity.runOnUiThread { invoke.resolve(stateObject()) }
                 } catch (e: Exception) {
-                    entropy.fill(0)
                     activity.runOnUiThread { invoke.fail(e.message ?: "Could not unlock the seed") }
+                } finally {
+                    entropy.fill(0)
                 }
             }
         }
     }
 
     // Called once a seed has loaded: offers to keep a 12 or 24 word seed when storage is on
+    // The fingerprint kept is the words' alone, since one seed can open with several passphrases
     private fun offerSave(entropy: ByteArray?, done: (JSObject) -> Unit) {
-        val fingerprint = engine.fingerprint
-        if (entropy == null || fingerprint == null || !vault.enabled || !vault.deviceSecure) {
+        if (entropy == null || !engine.isLoaded || !vault.enabled || !vault.deviceSecure) {
             entropy?.fill(0)
             done(stateObject())
             return
         }
+        worker.execute {
+            val fingerprint = runCatching { engine.previewFingerprint({ s, p -> s.seedFromSeedQr(entropy.copyOf(), p) }, charArrayOf()) }.getOrNull()
+            activity.runOnUiThread { if (fingerprint == null) { entropy.fill(0); done(stateObject()) } else askToSave(entropy, fingerprint, done) }
+        }
+    }
+
+    private fun askToSave(entropy: ByteArray, fingerprint: String, done: (JSObject) -> Unit) {
         val name = EditText(activity).apply { hint = Design.tr("名前", "Name"); setText(Design.tr("鍵 $fingerprint", "Seed $fingerprint")) }
         val dialog = Design.alert(activity).setTitle(Design.tr("この鍵をこの端末に保存しますか", "Save this seed on this device?"))
             .setMessage(Design.tr("単語は、画面ロックか生体認証が必要な鍵で暗号化して保存します。パスフレーズは保存しません。", "The words are encrypted with a key that needs your screen lock or biometrics. The passphrase is not saved."))
@@ -1135,7 +1157,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun importMnemonic(invoke: Invoke) {
         MnemonicKeypad(activity, engine.testnet, engine.words, engine.wordEntry(), { invoke.fail("Seed import was cancelled") }) { mnemonic ->
-            askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(mnemonic.copyOf(), p) }, {
+            askPassphrase(Design.tr("パスフレーズ", "Passphrase"), { s, p -> s.seedFromMnemonic(mnemonic.copyOf(), p) }, mnemonicSeedQr(mnemonic), {
                 mnemonic.fill('\u0000')
                 invoke.fail("Seed import was cancelled")
             }) { passphrase ->
@@ -1221,7 +1243,9 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             candidates.firstNotNullOf { (_, payload) -> runCatching { s.seedFromSeedQr(payload.copyOf(), p.copyOf()) }.getOrNull() }
             p.fill('\u0000')
         }
-        askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed, {
+        val scanned = candidates.firstNotNullOfOrNull { runCatching { engine.compactEntropy(it.second) }.getOrNull() }
+        askPassphrase(Design.tr("パスフレーズ", "Passphrase"), seed, scanned?.let(::entropySeedQr), {
+            scanned?.fill(0)
             candidates.forEach { it.second.fill(0) }
             invoke.fail("Seed import was cancelled")
         }) { passphraseChars ->
@@ -1235,6 +1259,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                     activity.runOnUiThread { invoke.fail(e.message ?: "Could not load the SeedQR") }
                 } finally {
                     passphraseChars.fill('\u0000')
+                    scanned?.fill(0)
                     candidates.forEach { it.second.fill(0) }
                 }
             }
