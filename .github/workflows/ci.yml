@@ -43,6 +43,7 @@ jobs:
         run: |
           pnpm build:pwa
           grep -o 'NAME + "[0-9a-f]*"' dist-web/app/sw.js | tr -d '"' | sed 's/NAME + /web app build: /' | tee -a "$GITHUB_STEP_SUMMARY"
+          sha256sum web/engine/target/wasm32-unknown-unknown/release/bitwasm_web_engine.wasm dist-web/app/assets/*
 
   plugin:
     runs-on: ubuntu-latest
