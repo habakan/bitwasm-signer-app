@@ -81,6 +81,11 @@ export async function passkeySecret(): Promise<Uint8Array> {
       userVerification: "required",
       extensions: { prf: { eval: { first: SALT } } } as AuthenticationExtensionsClientInputs,
     },
+  }).catch((error) => {
+    // As when creating it, and also after the device signs out, even with the keychain kept
+    throw error instanceof DOMException && error.name === "NotAllowedError"
+      ? tr("パスキーを使えませんでした。iPhoneでは、AppleアカウントにサインインしてiCloudキーチェーンをオンにしておく必要があります。", "The passkey could not be used. On iPhone this needs an Apple Account with iCloud Keychain on.")
+      : error;
   })) as PublicKeyCredential;
   const secret = (credential.getClientExtensionResults() as Prf).prf?.results?.first;
   if (!secret) throw tr("パスキーから鍵を開くための値を得られませんでした。", "The passkey did not give the secret that opens saved keys.");
