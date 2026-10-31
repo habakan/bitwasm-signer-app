@@ -68,6 +68,7 @@ It differs from the native apps:
 
 - It cannot block third-party keyboards. Use the keyboard that came with the phone, or load the key from a SeedQR.
 - Keys can be saved once Settings › Key storage is on. They are encrypted with this app's passkey, and opening one asks for Face ID, a fingerprint or the device passcode. Anyone who knows the device passcode can open them, and browser data can be cleared, so the paper backup stays essential. Creating a new wallet is not available.
+- On iPhone, creating the passkey needs an Apple Account with iCloud Keychain sync on, and the passkey syncs to that account's devices. The encrypted keys stay in this device's browser, so the passkey alone on another device cannot open them, but the signing iPhone has to be signed in to the account. To avoid that, keep keys in memory only.
 - Saving keys is mainly for iPhone. Passkeys on Android normally need a Google account, which Signer Lockdown, blocking new accounts, rules out. On Android, use the native app: it saves keys in the Android Keystore behind the screen lock, with no Google account.
 - It knows whether the phone is online only as far as the browser tells it.
 - It cannot block screenshots or screen recording. Leaving the app covers and reloads it, but whether the app switcher keeps a snapshot is up to the browser.

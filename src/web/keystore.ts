@@ -47,6 +47,11 @@ export async function enableStorage() {
         authenticatorSelection: { authenticatorAttachment: "platform", residentKey: "required", userVerification: "required" },
         extensions: { prf: { eval: { first: SALT } } } as AuthenticationExtensionsClientInputs,
       },
+    }).catch((error) => {
+      // iOS turns the request down without a sheet when no Apple Account with iCloud Keychain is signed in
+      throw error instanceof DOMException && error.name === "NotAllowedError"
+        ? tr("パスキーを作れませんでした。iPhoneでは、AppleアカウントにサインインしてiCloudキーチェーンをオンにする必要があります。鍵を保存しなくても、メモリのみで使えます。", "The passkey could not be created. On iPhone this needs an Apple Account with iCloud Keychain on. Without saving, keys stay in memory only.")
+        : error;
     })) as PublicKeyCredential;
     if (!(credential.getClientExtensionResults() as Prf).prf?.enabled) {
       throw tr("この端末のパスキーでは鍵を保護できないため、保存できません。", "This device's passkeys cannot protect saved keys, so keys cannot be saved.");

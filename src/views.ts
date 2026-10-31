@@ -158,7 +158,7 @@ function settingsView({ signer, busy }: View) {
       ? tr("このブラウザではパスキーを使えないため、鍵を保存できません。", "Passkeys are not available in this browser, so keys cannot be saved.")
       : signer.storage
         ? tr("読み込んだ鍵ごとに、保存するか選べます。単語かSeedQRだけを、このアプリのパスキーから導いた鍵で暗号化して保存し、開くたびにFace ID、指紋、または端末のパスコードを求めます。パスフレーズは毎回入力します。端末のパスコードを知る人は開けるので、推測されにくいパスコードにしてください。ブラウザのデータは消えることがあるので、紙のバックアップは必ず残してください。メモリのみに戻すと消去します。", "You choose whether to save each key you load. Only the words or the SeedQR are stored, encrypted with a key this app's passkey derives, and opening one asks for Face ID, a fingerprint or the device passcode. The passphrase is asked each time. Anyone who knows the device passcode can open them, so use one that is hard to guess. Browser data can be cleared, so always keep the paper backup. Switching to memory only erases them.")
-        : tr("この端末には何も書き込みません。保存をオンにすると、このアプリのパスキーを作ります。", "Nothing is written to this device. Turning saving on creates a passkey for this app.")
+        : tr("この端末には何も書き込みません。保存をオンにすると、このアプリのパスキーを作ります。iPhoneでは、AppleアカウントへのサインインとiCloudキーチェーンが必要で、パスキーは同じアカウントの端末に同期されます。", "Nothing is written to this device. Turning saving on creates a passkey for this app. On iPhone this needs an Apple Account and iCloud Keychain, and the passkey syncs to that account's devices.")
     : !signer.deviceSecure
     ? tr("鍵を保存するには、このスマホに画面ロックを設定してください。", "Set a screen lock on this phone to save keys.")
     : signer.storage
