@@ -1,4 +1,5 @@
-# Pinned so that the same commit builds the same engine, and so the same web app build name
+# Pinned so that the same commit builds the same engine, and so the same web app build name, on the
+# same kind of machine: the order of the output still follows symbol hashes that include the host
 [toolchain]
 channel = "1.95.0"
 targets = ["wasm32-unknown-unknown"]

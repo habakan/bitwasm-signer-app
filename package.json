@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "engine:web": "cd web/engine && RUSTFLAGS=\"--remap-path-prefix=$HOME=~ --remap-path-prefix=$PWD=.\" cargo build --release --target wasm32-unknown-unknown",
+    "engine:web": "cd web/engine && RUSTFLAGS=\"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=cargo --remap-path-prefix=$PWD=.\" cargo build --release --target wasm32-unknown-unknown",
     "dev:web": "pnpm engine:web && vite --mode web",
     "build:web": "pnpm engine:web && tsc && vite build --mode web --outDir dist-web",
     "build:pwa": "pnpm engine:web && tsc && vite build --mode pwa --outDir dist-web/app",
