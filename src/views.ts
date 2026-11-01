@@ -109,7 +109,7 @@ function homeView({ signer, busy }: View) {
 
 function readyView({ signer, busy }: View) {
   const rows = [
-    row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで渡す", "Share public keys as a QR"), { disabled: busy }),
+    row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで書き出す", "Share public keys as a QR"), { disabled: busy }),
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
     row("advanced", "sliders", tr("高度な機能", "Advanced"), tr("マルチシグ、メッセージ署名など", "Multisig, message signing and more"), { disabled: busy }),
   ];
@@ -128,11 +128,11 @@ function readyView({ signer, busy }: View) {
 function advancedView({ signer, busy }: View) {
   const rows = [
     signer.multisig
-      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}をQRで渡す`, `Share multisig ${signer.multisig} as a QR`), "", { disabled: busy })
+      ? row("export-multisig", "shield", tr(`マルチシグ ${signer.multisig}をQRで書き出す`, `Share multisig ${signer.multisig} as a QR`), "", { disabled: busy })
       : row("multisig", "shield", tr("マルチシグを登録する", "Register a multisig"), tr("コーディネーターの設定を読み取る", "Scan the setup from your coordinator"), { disabled: busy }),
     signer.multisig ? row("forget-multisig", "alert", tr("マルチシグの登録を解除する", "Forget the multisig"), "", { disabled: busy }) : "",
     row("sign-message", "signature", tr("メッセージに署名する", "Sign a message"), "", { value: "BIP137", disabled: busy }),
-    row("bip85", "words", tr("子ニーモニックを作る", "Derive a child mnemonic"), "", { value: "BIP85", disabled: busy }),
+    row("bip85", "words", tr("BIP85でニーモニックを作る", "Derive a child mnemonic"), "", { value: "BIP85", disabled: busy }),
   ];
   return {
     body: `<p class="lead">${tr("ふだんの送金と受け取りには使いません。必要なときだけ開いてください。", "Everyday sending and receiving does not need these. Open them only when you need one.")}</p>
@@ -154,7 +154,7 @@ function settingsView({ signer, busy }: View) {
     ? !signer.deviceSecure
       ? tr("このブラウザでは、鍵を保護できるパスキーを使えないため、保存できません。iPhoneでは iOS 18 以降が必要です。", "This browser has no passkey that can protect keys, so keys cannot be saved. On iPhone this needs iOS 18 or later.")
       : signer.storage
-        ? tr("読み込んだ鍵ごとに、保存するか選べます。単語かSeedQRだけを、このアプリのパスキーから導いた鍵で暗号化して保存し、開くたびにFace ID、指紋、または端末のパスコードを求めます。パスフレーズは毎回入力します。端末のパスコードを知る人は開けるので、推測されにくいパスコードにしてください。ブラウザのデータは消えることがあるので、紙のバックアップは必ず残してください。メモリのみに戻すと消去します。", "You choose whether to save each key you load. Only the words or the SeedQR are stored, encrypted with a key this app's passkey derives, and opening one asks for Face ID, a fingerprint or the device passcode. The passphrase is asked each time. Anyone who knows the device passcode can open them, so use one that is hard to guess. Browser data can be cleared, so always keep the paper backup. Switching to memory only erases them.")
+        ? tr("読み込んだ鍵ごとに、保存するか選べます。単語かSeedQRだけを、このアプリのパスキーから導出した鍵で暗号化して保存し、開くたびにFace ID、指紋、または端末のパスコードを求めます。パスフレーズは毎回入力します。端末のパスコードを知る人は開けるので、推測されにくいパスコードにしてください。ブラウザのデータは消えることがあるので、紙のバックアップは必ず残してください。メモリのみに戻すと消去します。", "You choose whether to save each key you load. Only the words or the SeedQR are stored, encrypted with a key this app's passkey derives, and opening one asks for Face ID, a fingerprint or the device passcode. The passphrase is asked each time. Anyone who knows the device passcode can open them, so use one that is hard to guess. Browser data can be cleared, so always keep the paper backup. Switching to memory only erases them.")
         : tr("この端末には何も書き込みません。保存をオンにすると、このアプリのパスキーを作ります。iPhoneでは、AppleアカウントへのサインインとiCloudキーチェーンが必要で、パスキーは同じアカウントの端末に同期されます。サインアウトすると、保存した鍵を開けなくなります。", "Nothing is written to this device. Turning saving on creates a passkey for this app. On iPhone this needs an Apple Account and iCloud Keychain, and the passkey syncs to that account's devices. After signing out, saved keys cannot be opened.")
     : !signer.deviceSecure
     ? tr("鍵を保存するには、このスマホに画面ロックを設定してください。", "Set a screen lock on this phone to save keys.")
@@ -181,7 +181,7 @@ function settingsView({ signer, busy }: View) {
     ${group(tr("署名モジュール", "SIGNING MODULES"), `<div class="card">
       ${moduleField("parser.wasm", "", "parser-hash")}${moduleField("signer.wasm", moduleHashes.signer)}${moduleField("checker.wasm", moduleHashes.checker)}
     </div><p class="caption">${webDemo || webApp ? tr("起動時にSHA-256で検証し、このページの中のWasmiで動かします。", "Verified with SHA-256 at launch and run in Wasmi inside this page.") : tr("起動時にSHA-256で検証し、この端末のWasmiで動かします。", "Verified with SHA-256 at launch and run locally in Wasmi.")}</p>`)}
-    ${webApp ? group(tr("このアプリの版", "THIS BUILD"), `<div class="card"><div class="field"><span class="field-label">${tr("実行中", "RUNNING")}</span><span class="data">${versions.current || "—"}</span>
+    ${webApp ? group(tr("このアプリのバージョン", "THIS BUILD"), `<div class="card"><div class="field"><span class="field-label">${tr("実行中", "RUNNING")}</span><span class="data">${versions.current || "—"}</span>
       ${versions.next ? `<span class="field-note">${tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`)}</span>` : ""}</div></div>
       <p class="caption">${tr("ビルドしたファイルの一覧から決まる名前です。自分でビルドした dist-web/app/sw.js の CACHE と比べられます。", "Named from the list of built files. Compare it with CACHE in dist-web/app/sw.js from your own build.")}</p>`) : ""}
     <p class="about">bitwasm-signer 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
@@ -224,7 +224,7 @@ function installNotice() {
     tr("ブラウザの共有メニューかメニューから「ホーム画面に追加」を選び、ホーム画面から開いてください。", "Choose Add to Home Screen in the browser's share menu or menu, then open it from the home screen."));
   if (!navigator.serviceWorker?.controller) return notice("info", tr("オフラインの準備をしています", "Getting ready for offline use"),
     tr("準備ができるまで、ネットにつないだまま開いておいてください。", "Keep it open and online until this goes away."));
-  if (versions.next) return notice("warning", tr("新しい版が届いています", "A new build has arrived"),
+  if (versions.next) return notice("warning", tr("新しいバージョンが届いています", "A new build has arrived"),
     tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`));
   return "";
 }

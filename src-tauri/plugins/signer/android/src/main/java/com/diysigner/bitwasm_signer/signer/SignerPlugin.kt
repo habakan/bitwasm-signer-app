@@ -153,14 +153,14 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         val p = Design.palette(activity)
         val t = engine.testnet
         val kinds = listOf(
-            Triple(null, "", Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+            Triple(null, "", Design.tr("まとめて書き出す・おすすめ", "All at once · recommended")),
             Triple(84, if (t) "tb1q…" else "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
             Triple(86, if (t) "tb1p…" else "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
             Triple(49, if (t) "2…" else "3…", Design.tr("古いウォレット向け", "For older wallets")),
             Triple(48, if (t) "tb1q…" else "bc1q…", Design.tr("マルチシグ用・複数の鍵で管理", "Multisig · several keys")),
         )
         var chosen: Int? = null
-        val single = Design.text(activity, Design.tr("1種類だけ渡す", "ONLY ONE KIND"), Design.Style.CAPTION, p.inkMuted).apply { setTypeface(typeface, Typeface.BOLD) }
+        val single = Design.text(activity, Design.tr("1種類だけ書き出す", "ONLY ONE KIND"), Design.Style.CAPTION, p.inkMuted).apply { setTypeface(typeface, Typeface.BOLD) }
         val heading = Design.tr("ウォレットアプリと接続する", "Connect your wallet app")
         val show = Design.button(activity, Design.tr("QRを表示", "Show QR"), true, p)
         val summary = Design.text(activity, "", Design.Style.BODY, p.ink)
@@ -176,8 +176,8 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                     setStroke(dp(if (on) 6 else 2), if (on) p.primarySoft else p.lineStrong)
                 }
             }
-            summary.text = chosen?.let { Design.tr("BIP${it}のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。", "Shares the BIP$it xpub and descriptor, which wallets that only read an xpub accept too.") }
-                ?: Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+            summary.text = chosen?.let { Design.tr("BIP${it}のxpubとディスクリプターを書き出します。xpubだけを読むアプリにも使えます。", "Shares the BIP$it xpub and descriptor, which wallets that only read an xpub accept too.") }
+                ?: Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で書き出します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
         }
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         kinds.forEachIndexed { i, (purpose, prefix, name) ->
@@ -217,7 +217,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             list.addView(card, LinearLayout.LayoutParams(-1, -2).apply { if (i > 0) topMargin = dp(DesignTokens.SPACE_2) })
         }
         val content = page(
-            Design.text(activity, Design.tr("渡す公開鍵を選ぶ", "Choose the keys to share"), Design.Style.DISPLAY, p.ink),
+            Design.text(activity, Design.tr("書き出す公開鍵を選ぶ", "Choose the keys to share"), Design.Style.DISPLAY, p.ink),
             Design.text(activity, Design.tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys."), Design.Style.BODY, p.inkMuted),
             list,
             summary,
@@ -226,7 +226,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         show.setOnClickListener {
             dialog.dismiss()
             chosen?.let { exportAccountKey(invoke, it) }
-                ?: showFrames(invoke, heading, Design.tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで渡します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.")) { engine.accountUr() }
+                ?: showFrames(invoke, heading, Design.tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで書き出します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.")) { engine.accountUr() }
         }
         dialog = Design.screen(activity, heading, t, content, listOf(show)) { invoke.fail("Account export was cancelled") }
         refresh()
@@ -304,7 +304,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
     @Command
     fun exportMultisig(invoke: Invoke) {
         val wallet = engine.multisig ?: run { invoke.fail("Register a multisig first"); return }
-        showFrames(invoke, Design.tr("マルチシグ ${wallet.threshold}/${wallet.fingerprints.size}", "Multisig ${wallet.threshold} of ${wallet.fingerprints.size}"), Design.tr("見るだけのウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig."), "crypto-output") { engine.multisigUr() }
+        showFrames(invoke, Design.tr("マルチシグ ${wallet.threshold}/${wallet.fingerprints.size}", "Multisig ${wallet.threshold} of ${wallet.fingerprints.size}"), Design.tr("ウォッチオンリーウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig."), "crypto-output") { engine.multisigUr() }
     }
 
     @Command
@@ -392,7 +392,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             addView(words)
             addView(index)
         }
-        val dialog = Design.alert(activity).setTitle(Design.tr("子ニーモニックを作る", "Derive a child mnemonic"))
+        val dialog = Design.alert(activity).setTitle(Design.tr("BIP85でニーモニックを作る", "Derive a child mnemonic"))
             .setMessage(Design.tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."))
             .setView(form)
             .setNegativeButton(Design.tr("キャンセル", "Cancel")) { _, _ -> invoke.fail("BIP85 derivation was cancelled") }
@@ -412,7 +412,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
                 worker.execute {
                     try {
                         val mnemonic = engine.bip85Mnemonic(wordCount!!, childIndex)
-                        activity.runOnUiThread { showMnemonic(invoke, mnemonic, Design.tr("子ニーモニック", "Child mnemonic"), wordCount in listOf(12, 24)) }
+                        activity.runOnUiThread { showMnemonic(invoke, mnemonic, Design.tr("BIP85で作るニーモニック", "Child mnemonic"), wordCount in listOf(12, 24)) }
                     } catch (e: Exception) {
                         activity.runOnUiThread { invoke.fail(e.message ?: "Could not derive BIP85 mnemonic") }
                     }
@@ -812,7 +812,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             }
         }
         val content = page(
-            Design.text(activity, tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), Design.Style.BODY, p.inkMuted),
+            Design.text(activity, tr("単語にパスフレーズを付けると、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), Design.Style.BODY, p.inkMuted),
             passphrase,
             Design.text(activity, tr("フィンガープリント", "FINGERPRINT"), Design.Style.OVERLINE, p.inkMuted),
             fingerprints,

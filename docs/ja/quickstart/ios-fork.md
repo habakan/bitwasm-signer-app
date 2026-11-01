@@ -2,11 +2,11 @@
 
 <sup>[English](../../quickstart/ios-fork.md)</sup>
 
-このパターンで信頼するのは、選んだコミット、自分のGitHubアカウント、WebKitです。失う利便性として、開くたびにシードかSeedQRを読み込みます。後でこのサイトやリポジトリが乗っ取られても、入れた版には関係しません。
+このパターンで信頼するのは、選んだコミット、自分のGitHubアカウント、WebKitです。失う利便性として、開くたびにシードかSeedQRを読み込みます。後でこのサイトやリポジトリが乗っ取られても、入れたバージョンには関係しません。
 
 ## 1. forkして、自分のPagesでビルドする {#ios-fork-build}
 
-1. このリポジトリをforkする。入れたい版があれば、そのタグかコミットをforkのmainにする
+1. このリポジトリをforkする。入れたいバージョンがあれば、そのタグかコミットをforkのmainにする
 2. forkのActionsタブで、ワークフローを有効にする(forkでは最初は無効です)
 3. forkのSettings › Pagesで、Sourceを「GitHub Actions」にする
 4. Actions › Pages › Run workflowで一度ビルドする。終わると、実行結果の要約に「web app build」が出ます
@@ -17,9 +17,9 @@
 
 <Shot name="preparing" />
 
-## 3. 版を確かめて、機内モードにする {#ios-fork-version}
+## 3. バージョンを確かめて、機内モードにする {#ios-fork-version}
 
-設定の「このアプリの版」が、1の「web app build」や、同じコミットのリリースノートの「Web app build」と同じか確かめます。
+設定の「このアプリのバージョン」が、1の「web app build」や、同じコミットのリリースノートの「Web app build」と同じか確かめます。
 
 <Shot name="version" />
 

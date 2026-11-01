@@ -26,7 +26,7 @@ enum Design {
     "Registration was cancelled": "マルチシグの登録をやめました。",
     "Dice entry was cancelled": "サイコロの入力をやめました。",
     "Deletion was cancelled": "削除をやめました。",
-    "BIP85 derivation was cancelled": "子ニーモニックの作成をやめました。",
+    "BIP85 derivation was cancelled": "BIP85でのニーモニックの作成をやめました。",
     "Address search was cancelled": "アドレスの確認をやめました。",
     "Erase was cancelled": "消去をやめました。",
     "Key storage was left on": "鍵の保存はオンのままです。",

@@ -43,7 +43,7 @@ internal object Design {
         "Registration was cancelled" to "マルチシグの登録をやめました。",
         "Dice entry was cancelled" to "サイコロの入力をやめました。",
         "Deletion was cancelled" to "削除をやめました。",
-        "BIP85 derivation was cancelled" to "子ニーモニックの作成をやめました。",
+        "BIP85 derivation was cancelled" to "BIP85でのニーモニックの作成をやめました。",
         "Address search was cancelled" to "アドレスの確認をやめました。",
         "Erase was cancelled" to "消去をやめました。",
         "Key storage was left on" to "鍵の保存はオンのままです。",
@@ -64,7 +64,7 @@ internal object Design {
         "Could not load the seed" to "鍵を読み込めませんでした。",
         "Could not unlock the seed" to "鍵を開けませんでした。",
         "Could not create a mnemonic" to "シードフレーズを作れませんでした。",
-        "Could not derive BIP85 mnemonic" to "子ニーモニックを作れませんでした。",
+        "Could not derive BIP85 mnemonic" to "BIP85でニーモニックを作れませんでした。",
         "Could not encode the SeedQR" to "SeedQRを作れませんでした。",
         "Could not export the public keys" to "公開鍵を書き出せませんでした。",
         "Could not export account information" to "公開鍵を書き出せませんでした。",
@@ -75,7 +75,7 @@ internal object Design {
         "Message signing failed" to "メッセージに署名できませんでした。",
         "Message review failed" to "メッセージを確認できませんでした。",
         "Address search failed" to "アドレスを確認できませんでした。",
-        "The device key store refused the operation" to "端末の鍵の保管庫が操作を受け付けませんでした。",
+        "The device key store refused the operation" to "Android Keystore が操作を受け付けませんでした。",
     )
 
     fun Invoke.fail(message: String) = reject(if (japanese) messages[message] ?: message else message)

@@ -94,7 +94,7 @@ function chooseWords(dice: boolean): Promise<12 | 24> {
   const view = step(tr("新しいウォレット", "New wallet"), `${steps(1)}<div class="question"><h1>${tr("単語の数を選ぶ", "Choose how many words")}</h1>
     <p class="lead">${tr("どちらも安全です。24個のほうが余裕がありますが、書き写す量が倍になります。", "Both are safe. 24 words leave more margin but take twice as long to write down.")}</p></div>
     ${option(12, dice ? tr("サイコロを50回振る", "Roll a die 50 times") : tr("いちばんよく使われる長さ", "The most common length"))}
-    ${option(24, dice ? tr("サイコロを99回振る", "Roll a die 99 times") : tr("より長く、より強い", "Longer and stronger"))}`, "", () => leave());
+    ${option(24, dice ? tr("サイコロを99回振る", "Roll a die 99 times") : tr("単語が多いぶん、より安全", "Longer and stronger"))}`, "", () => leave());
   return new Promise((resolve, reject) => {
     leave = () => { view.remove(); reject(cancelled()); };
     view.addEventListener("click", (event) => {
@@ -201,7 +201,7 @@ function derivation(phrase: string[], rolls: Uint8Array | null) {
     return `${String(i + 1).padStart(2, " ")}  ${shown}  ${String(index).padStart(4, " ")}  ${escape(word)}`;
   }).join("\n");
   const view = step(tr("単語のでき方", "How it was made"), `${stamp()}<div class="question"><h1>${tr("この単語のでき方", "How these words were made")}</h1>
-    <p class="lead">${tr("あなたの単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words.")}</p></div>
+    <p class="lead">${tr("この単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words.")}</p></div>
     ${rolls ? `<h2 class="heading">1  ${tr(`サイコロの目(${rolls.length}回)`, `The rolls (${rolls.length})`)}</h2>
       <pre class="well" id="derive-rolls">${cleared ? tr("メモリから消しました。", "Cleared from memory.") : new TextDecoder().decode(rolls).match(/.{1,10}/g)!.join("\n")}</pre>
       ${button("derive-forget", tr("サイコロの目をメモリから消す", "Clear the rolls from memory"), "secondary")}

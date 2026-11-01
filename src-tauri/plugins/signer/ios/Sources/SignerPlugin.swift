@@ -1039,7 +1039,7 @@ final class SignerPlugin: Plugin {
     }
     actions.append(next)
     let content = Design.stack([
-      Design.label(Design.tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), .body, p.inkMuted),
+      Design.label(Design.tr("単語にパスフレーズを付けると、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank."), .body, p.inkMuted),
       field,
       Design.label(Design.tr("フィンガープリント", "FINGERPRINT"), .overline, p.inkMuted),
       card,
@@ -1077,7 +1077,7 @@ final class SignerPlugin: Plugin {
     let p = Design.palette
     let t = SignerBridge.testnet
     let kinds: [(Int?, String, String)] = [
-      (nil, "", Design.tr("まとめて渡す・おすすめ", "All at once · recommended")),
+      (nil, "", Design.tr("まとめて書き出す・おすすめ", "All at once · recommended")),
       (84, t ? "tb1q…" : "bc1q…", Design.tr("標準・いちばん一般的", "Standard · most common")),
       (86, t ? "tb1p…" : "bc1p…", Design.tr("Taproot・新しい形式", "Taproot · newest")),
       (49, t ? "2…" : "3…", Design.tr("古いウォレット向け", "For older wallets")),
@@ -1101,8 +1101,8 @@ final class SignerPlugin: Plugin {
         marks[i].layer.borderWidth = on ? 6 : 2
         marks[i].layer.borderColor = (on ? p.primarySoft : p.lineStrong).cgColor
       }
-      summary.text = chosen.map { Design.tr("BIP\($0)のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。", "Shares the BIP\($0) xpub and descriptor, which wallets that only read an xpub accept too.") }
-        ?? Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+      summary.text = chosen.map { Design.tr("BIP\($0)のxpubとディスクリプターを書き出します。xpubだけを読むアプリにも使えます。", "Shares the BIP\($0) xpub and descriptor, which wallets that only read an xpub accept too.") }
+        ?? Design.tr("4種類を1つのアニメーションQR(UR crypto-account)で書き出します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
     }
     for (purpose, prefix, name) in kinds {
       let card = UIControl()
@@ -1149,10 +1149,10 @@ final class SignerPlugin: Plugin {
       cards.append(card)
       marks.append(mark)
     }
-    let list = Design.stack([cards[0], Design.label(Design.tr("1種類だけ渡す", "ONLY ONE KIND"), .overline, p.inkMuted)] + cards.dropFirst().map { $0 as UIView }, spacing: DesignTokens.space2)
+    let list = Design.stack([cards[0], Design.label(Design.tr("1種類だけ書き出す", "ONLY ONE KIND"), .overline, p.inkMuted)] + cards.dropFirst().map { $0 as UIView }, spacing: DesignTokens.space2)
     list.setCustomSpacing(DesignTokens.space6, after: cards[0])
     let content = Design.stack([
-      Design.label(Design.tr("渡す公開鍵を選ぶ", "Choose the keys to share"), .display, p.ink),
+      Design.label(Design.tr("書き出す公開鍵を選ぶ", "Choose the keys to share"), .display, p.ink),
       Design.label(Design.tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys."), .body, p.inkMuted),
       list,
       summary,
@@ -1345,7 +1345,7 @@ final class SignerPlugin: Plugin {
       Design.fail(invoke, "Load a seed first")
       return
     }
-    let alert = UIAlertController(title: Design.tr("子ニーモニックを作る", "Derive a child mnemonic"), message: Design.tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."), preferredStyle: .alert)
+    let alert = UIAlertController(title: Design.tr("BIP85でニーモニックを作る", "Derive a child mnemonic"), message: Design.tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."), preferredStyle: .alert)
     alert.addTextField { field in field.text = "24"; field.keyboardType = .numberPad; field.placeholder = Design.tr("単語の数(12、18、24)", "12, 18, or 24 words") }
     alert.addTextField { field in field.text = "0"; field.keyboardType = .numberPad; field.placeholder = Design.tr("番号(BIP85のインデックス)", "BIP85 index") }
     alert.addAction(UIAlertAction(title: Design.tr("キャンセル", "Cancel"), style: .cancel) { _ in Design.fail(invoke, "BIP85 derivation was cancelled") })
@@ -1359,7 +1359,7 @@ final class SignerPlugin: Plugin {
       self.worker.async {
         do {
           let phrase = try SignerBridge.bip85Mnemonic(words: words, index: index)
-          DispatchQueue.main.async { self.showMnemonic(phrase, title: Design.tr("子ニーモニック", "Child mnemonic"), seedQrAvailable: words == 12 || words == 24, invoke: invoke) }
+          DispatchQueue.main.async { self.showMnemonic(phrase, title: Design.tr("BIP85で作るニーモニック", "Child mnemonic"), seedQrAvailable: words == 12 || words == 24, invoke: invoke) }
         } catch {
           DispatchQueue.main.async { invoke.reject(error.localizedDescription) }
         }
@@ -2424,7 +2424,7 @@ private final class NewWalletController: UINavigationController {
 
   private func wordCount(dice: Bool) -> UIViewController {
     let options = [(12, dice ? Design.tr("サイコロを50回振る", "Roll a die 50 times") : Design.tr("いちばんよく使われる長さ", "The most common length")),
-                   (24, dice ? Design.tr("サイコロを99回振る", "Roll a die 99 times") : Design.tr("より長く、より強い", "Longer and stronger"))]
+                   (24, dice ? Design.tr("サイコロを99回振る", "Roll a die 99 times") : Design.tr("単語が多いぶん、より安全", "Longer and stronger"))]
       .map { words, detail -> UIView in
         let button = UIButton(type: .system)
         let text = Design.stack([Design.label(Design.tr("\(words)個の単語", "\(words) words"), .heading, p.ink), Design.label(detail, .caption, p.inkMuted)], spacing: 4)
@@ -2575,7 +2575,7 @@ private final class DerivationViewController: UIViewController {
     let count = words.count == 12 ? 50 : 99
     var items: [UIView] = [
       Design.label(Design.tr("この単語のでき方", "How these words were made"), .display, p.ink),
-      Design.label(Design.tr("あなたの単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words."), .body, p.inkMuted),
+      Design.label(Design.tr("この単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words."), .body, p.inkMuted),
     ]
     if dice {
       let shown = Design.label(rolls.map { r in stride(from: 0, to: r.count, by: 10).map { String(decoding: r[$0..<min($0 + 10, r.count)], as: UTF8.self) }.joined(separator: "\n") } ?? Design.tr("メモリから消しました。", "Cleared from memory."), .data, p.ink)
