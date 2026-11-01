@@ -33,6 +33,7 @@ export default defineConfig({
         nav: [
           { text: "Guide", link: "/" },
           { text: "Web app", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
+          { text: "Demo (testnet)", link: "https://habakan.github.io/bitwasm-signer-app/" },
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
@@ -51,6 +52,7 @@ export default defineConfig({
         nav: [
           { text: "使い方", link: "/ja/" },
           { text: "Webアプリ", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
+          { text: "デモ(テストネット)", link: "https://habakan.github.io/bitwasm-signer-app/" },
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
