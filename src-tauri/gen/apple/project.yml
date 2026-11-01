@@ -1,6 +1,6 @@
 name: bitwasm-signer-app
 options:
-  bundleIdPrefix: com.habakan.bitwasm-signer
+  bundleIdPrefix: app.bithanko
   deploymentTarget:
     iOS: 15.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: bitwasm-signer
-      PRODUCT_BUNDLE_IDENTIFIER: com.habakan.bitwasm-signer
+      PRODUCT_NAME: BitHanko
+      PRODUCT_BUNDLE_IDENTIFIER: app.bithanko
 targetTemplates:
   app:
     type: application

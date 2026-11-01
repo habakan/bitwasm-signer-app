@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Installs the signer over adb and, if asked, makes Signer Lockdown the device owner. The phone stays offline.
-# Usage: ./install.sh <bitwasm-signer.apk> [lockdown.apk]
+# Usage: ./install.sh <bithanko.apk> [lockdown.apk]
 set -eu
 
-SIGNER_APK=${1:?"usage: ./install.sh <bitwasm-signer.apk> [lockdown.apk]"}
+SIGNER_APK=${1:?"usage: ./install.sh <bithanko.apk> [lockdown.apk]"}
 LOCKDOWN_APK=${2:-$(dirname "$0")/build/outputs/apk/debug/signer-lockdown-debug.apk}
-LOCKDOWN_ADMIN=com.habakan.signer_lockdown/.AdminReceiver
+LOCKDOWN_ADMIN=app.bithanko.lockdown/.AdminReceiver
 
 sh_() { adb shell "$@" </dev/null | tr -d '\r'; }
 ask() { read -r -p "$1 [y/N] " answer && [ "$answer" = y ]; }

@@ -1,4 +1,4 @@
-package com.diysigner.bitwasm_signer.signer
+package app.bithanko.signer
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity

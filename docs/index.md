@@ -18,19 +18,19 @@ demo:
   more: ["#demo-seed", "#passphrase-continue", "#advanced"]
 ---
 
-# bitwasm-signer-app
+# BitHanko
 
 <sup>[日本語](ja/index.md)</sup>
 
-bitwasm-signer is an app for air-gapped signing. It passes Bitcoin transactions as PSBTs (BIP174) in QR codes, so the private key that signs them stays on a device that never connects to anything.
-bitwasm-signer-app brings what air-gapped signing needs to a phone: loading the private key, signing, and showing the signed PSBT as a QR code.
+BitHanko is an app for air-gapped signing. It passes Bitcoin transactions as PSBTs (BIP174) in QR codes, so the private key that signs them stays on a device that never connects to anything.
+It brings what air-gapped signing needs to a phone: loading the private key, signing, and showing the signed PSBT as a QR code.
 
 ## How it works {#overview}
 
-The app runs [bitwasm-signer](https://github.com/habakan/bitwasm-signer), a set of WebAssembly modules made for signing bitcoin.
-![bitwasm-signer runs the same WebAssembly modules everywhere](https://github.com/habakan/bitwasm-signer/raw/main/docs/everywhere.svg)
+The app runs [bitwasm-signer](https://github.com/bitwasm-project/bitwasm-signer), a set of WebAssembly modules made for signing bitcoin.
+![bitwasm-signer runs the same WebAssembly modules everywhere](https://github.com/bitwasm-project/bitwasm-signer/raw/main/docs/everywhere.svg)
 
-With WebAssembly, **byte-for-byte the same signing logic runs in every environment**, including [a dedicated signing device built on a microcontroller](https://github.com/habakan/bitwasm-signer-pico). The aim is signing software that is easy to run and maintain because it is portable.
+With WebAssembly, **byte-for-byte the same signing logic runs in every environment**, including [a dedicated signing device built on a microcontroller](https://github.com/bitwasm-project/bitwasm-signer-pico). The aim is signing software that is easy to run and maintain because it is portable.
 
 The phone on the right of this page also runs **the real WebAssembly modules**, so **you can try the app's screens and steps on testnet.**
 As you scroll, the phone moves to the screen each section talks about. With **Follow app** above the phone, tap through it yourself and the text moves to the section for whatever you tap. A few screens, such as the keypad for typing words, are only in the app; for those the phone stays on the previous step. Never send real bitcoin to the demo's addresses.
@@ -112,5 +112,5 @@ In **Settings**, **Save on this device** keeps 12 or 24 word keys encrypted on t
 ## Next
 
 - [Signer Lockdown](lockdown.md): turn an Android phone into a signer only.
-- [Install over USB](https://habakan.github.io/bitwasm-signer-app/install/) without connecting the phone to a network.
+- [Install over USB](https://bitwasm-project.github.io/bit-hanko/install/) without connecting the phone to a network.
 - [FAQ](faq.md)

@@ -12,7 +12,7 @@
 
 ## 2. 導入ページでAPKを入れる {#android-apk-install}
 
-PCで[リリース](https://github.com/habakan/bitwasm-signer-app/releases)からAPKと`SHA256SUMS`をダウンロードし、[導入ページ](https://habakan.github.io/bitwasm-signer-app/install/#apk)を「APK だけ入れる」で開いて両方を選びます。一致したときだけ入れられます。入れ終わったらUSBデバッグをオフにし、機内モードにします。
+PCで[リリース](https://github.com/bitwasm-project/bit-hanko/releases)からAPKと`SHA256SUMS`をダウンロードし、[導入ページ](https://bitwasm-project.github.io/bit-hanko/install/#apk)を「APK だけ入れる」で開いて両方を選びます。一致したときだけ入れられます。入れ終わったらUSBデバッグをオフにし、機内モードにします。
 
 <Shot name="installer" wide />
 

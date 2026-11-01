@@ -4,7 +4,7 @@ import { useData, withBase } from "vitepress";
 
 // The browser demo is published one level above the docs; `pnpm dev:docs` uses the live one
 const { lang, isDark, frontmatter } = useData();
-const home = import.meta.env.DEV ? "https://habakan.github.io/bitwasm-signer-app/" : withBase("/../");
+const home = import.meta.env.DEV ? "https://bitwasm-project.github.io/bit-hanko/" : withBase("/../");
 // Switching the docs' language does not reload the page, so the demo follows it here
 const src = computed(() => `${home}?lang=${lang.value}`);
 const key = ref(0);

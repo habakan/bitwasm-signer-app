@@ -1,4 +1,4 @@
-package com.diysigner.bitwasm_signer.signer
+package app.bithanko.signer
 
 internal object WasmiNative {
     init { System.loadLibrary("bitwasm_signer_app_lib") }

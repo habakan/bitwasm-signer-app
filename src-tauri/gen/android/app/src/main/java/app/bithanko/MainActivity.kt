@@ -1,4 +1,4 @@
-package com.habakan.bitwasm_signer
+package app.bithanko
 
 import android.graphics.Color
 import android.os.Build

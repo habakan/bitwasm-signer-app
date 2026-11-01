@@ -39,7 +39,7 @@ Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING
 続けて、PC の Chrome か Edge で次の手順を進めます。
 
 1. リリースから `signer-lockdown-<version>.apk` をダウンロードする
-2. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)を開き、APK と同じリリースの `SHA256SUMS` を選ぶ。ページが照合し、一致したときだけ入れられる
+2. [導入ページ](https://bitwasm-project.github.io/bit-hanko/install/)を開き、APK と同じリリースの `SHA256SUMS` を選ぶ。ページが照合し、一致したときだけ入れられる
 3. 端末をつなぎ、ブラウザのダイアログで端末を選び、端末で USB デバッグを許可する。PC で adb が動いていると USB を取り合うので、先に止める（`adb kill-server`）
 4. ページが Lockdown を入れて Device Owner にする。上の手順5から続ける。制限を適用すると USB デバッグは止まる
 
@@ -49,7 +49,7 @@ Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING
 
 Lockdown なしで APK だけを入れるとき（署名アプリだけを使う場合など）は、ページ上部で「APK だけ入れる」を選んでください（URL の末尾に `#apk` を付けて開いても同じです）。APK を入れるだけで、Device Owner は設定しません。
 
-Android の platform-tools が入っていれば、`lockdown/install.sh <bitwasm-signer.apk> <signer-lockdown.apk>` でも同じことができます。各手順の前に確認を求めます。
+Android の platform-tools が入っていれば、`lockdown/install.sh <bithanko.apk> <signer-lockdown.apk>` でも同じことができます。各手順の前に確認を求めます。
 
 ## PC もネットワークも使わずに更新する
 
@@ -75,6 +75,6 @@ Android の platform-tools が入っていれば、`lockdown/install.sh <bitwasm
 
 ## 開発
 
-- `lockdown/provision.sh <bitwasm-signer.apk>` は debug の Lockdown をビルドし、QR を表示して APK を LAN に配信する。リリース workflow はリリースの URL を渡して同じスクリプトを使う
+- `lockdown/provision.sh <bithanko.apk>` は debug の Lockdown をビルドし、QR を表示して APK を LAN に配信する。リリース workflow はリリースの URL を渡して同じスクリプトを使う
 - ビルドには JDK 25 と Android SDK が要る（`cd lockdown && ./gradlew assembleDebug`）
 - メーカー独自のアプリは `lockdown/profiles/hide.txt` に足す。署名アプリの画面を描く `com.google.android.webview` は残す

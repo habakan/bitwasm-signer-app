@@ -1,4 +1,4 @@
-package com.diysigner.bitwasm_signer.signer
+package app.bithanko.signer
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer

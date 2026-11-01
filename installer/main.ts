@@ -5,7 +5,7 @@ import { PackageManager } from "@yume-chan/android-bin";
 
 declare const __BUILD__: string;
 
-const LOCKDOWN = "com.habakan.signer_lockdown";
+const LOCKDOWN = "app.bithanko.lockdown";
 const ADMIN = `${LOCKDOWN}/.AdminReceiver`;
 
 // The browser's language first; the choice in the top bar is kept in this browser
@@ -220,7 +220,7 @@ async function install(apk: File) {
   const transport = await AdbDaemonTransport.authenticate({
     serial: device.serial,
     connection,
-    credentialStore: new AdbWebCredentialStore("bitwasm-signer lockdown installer"),
+    credentialStore: new AdbWebCredentialStore("BitHanko lockdown installer"),
   }).catch(async (e) => {
     // Lets go of the phone, or a retry and other tools would find it held by this page
     await device.raw.close().catch(() => undefined);

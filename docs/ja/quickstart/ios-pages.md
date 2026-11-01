@@ -6,7 +6,7 @@
 
 ## 1. Safariで開く {#ios-pages-open}
 
-鍵を入れる前のiPhoneで、[Webアプリ](https://habakan.github.io/bitwasm-signer-app/app/)をSafariで開きます。偽のサイトから入れないよう、URLが`habakan.github.io/bitwasm-signer-app/app/`か確かめてください。
+鍵を入れる前のiPhoneで、[Webアプリ](https://bitwasm-project.github.io/bit-hanko/app/)をSafariで開きます。偽のサイトから入れないよう、URLが`bitwasm-project.github.io/bit-hanko/app/`か確かめてください。
 
 <Shot name="ios-open" />
 

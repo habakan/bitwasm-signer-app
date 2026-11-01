@@ -13,10 +13,10 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.habakan.signer_lockdown"
+    namespace = "app.bithanko.lockdown"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.habakan.signer_lockdown"
+        applicationId = "app.bithanko.lockdown"
         // DISALLOW_AIRPLANE_MODE and DISALLOW_CONFIG_LOCATION need API 28
         minSdk = 28
         targetSdk = 36

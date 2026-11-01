@@ -1,6 +1,6 @@
 {
-  "name": "bitwasm-signer",
-  "short_name": "bitwasm-signer",
+  "name": "BitHanko",
+  "short_name": "BitHanko",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

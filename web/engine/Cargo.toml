@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # The QR reader of bitwasm-signer, linked in so a SeedQR is decoded and loaded without reaching the page
-bitwasm-signer-qr = { git = "https://github.com/habakan/bitwasm-signer", rev = "04e12c8057824d7231057b3ea45f215890beea87", default-features = false }
+bitwasm-signer-qr = { git = "https://github.com/bitwasm-project/bitwasm-signer", rev = "04e12c8057824d7231057b3ea45f215890beea87", default-features = false }
 aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
 hkdf = "0.12"
 serde = "1.0"

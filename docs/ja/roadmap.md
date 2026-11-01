@@ -4,7 +4,7 @@
 
 ## スマートカード（Satochip / JavaCard）対応
 
-鍵をカードの中に置き、アプリは取引の確認と署名の依頼だけをする形を目指します。カードには画面がないので、確認はこれまでどおりアプリの画面で行います（[#22](https://github.com/habakan/bitwasm-signer-app/issues/22)）。
+鍵をカードの中に置き、アプリは取引の確認と署名の依頼だけをする形を目指します。カードには画面がないので、確認はこれまでどおりアプリの画面で行います（[#22](https://github.com/bitwasm-project/bit-hanko/issues/22)）。
 
 ### 段階
 

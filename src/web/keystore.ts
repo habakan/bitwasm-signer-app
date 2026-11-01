@@ -3,9 +3,9 @@ import { tr } from "../views";
 // Keys saved by the installed app are sealed in the engine with a secret this app's passkey derives
 // (WebAuthn PRF), which takes Face ID, a fingerprint or the device passcode each time
 const SALT = new TextEncoder().encode("bitwasm-signer stored seed v1");
-const PASSKEY = "bitwasm-signer.passkey";
-const STORAGE = "bitwasm-signer.storage";
-const SAVED = "bitwasm-signer.saved";
+const PASSKEY = "bithanko.passkey";
+const STORAGE = "bithanko.storage";
+const SAVED = "bithanko.saved";
 
 export type Saved = { name?: string; mnemonic: boolean; fingerprint: string; nonce: string; data: string; created: string };
 type Prf = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
@@ -43,8 +43,8 @@ export async function enableStorage() {
     const credential = (await navigator.credentials.create({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rp: { id: location.hostname, name: "bitwasm-signer" },
-        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "bitwasm-signer", displayName: "bitwasm-signer" },
+        rp: { id: location.hostname, name: "BitHanko" },
+        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "BitHanko", displayName: "BitHanko" },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: "platform", residentKey: "required", userVerification: "required" },
         extensions: { prf: { eval: { first: SALT } } } as AuthenticationExtensionsClientInputs,

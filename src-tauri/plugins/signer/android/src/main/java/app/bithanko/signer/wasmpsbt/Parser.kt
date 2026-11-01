@@ -1,6 +1,6 @@
 package wasmpsbt
 
-import com.diysigner.bitwasm_signer.signer.WasmiModule
+import app.bithanko.signer.WasmiModule
 
 private const val MAGIC = 0x4e4c5042           // "BPLN"
 private const val ABI_VERSION = 2

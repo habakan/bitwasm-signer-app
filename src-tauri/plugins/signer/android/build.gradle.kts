@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.diysigner.bitwasm_signer.signer"
+    namespace = "app.bithanko.signer"
     compileSdk = 36
 
     defaultConfig {

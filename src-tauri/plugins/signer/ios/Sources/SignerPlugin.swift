@@ -451,7 +451,7 @@ private enum SeedVault {
     let sealed: Data
   }
 
-  private static let service = "com.diysigner.bitwasm-signer.vault"
+  private static let service = "app.bithanko.vault"
   private static let algorithm = SecKeyAlgorithm.eciesEncryptionStandardVariableIVX963SHA256AESGCM
 
   static var enabled: Bool {
@@ -573,12 +573,12 @@ private enum SeedVault {
     SecItemDelete([kSecClass as String: kSecClassKey, kSecAttrApplicationTag as String: tag(id)] as CFDictionary)
   }
 
-  private static func tag(_ id: String) -> Data { Data("com.diysigner.bitwasm-signer.seed.\(id)".utf8) }
+  private static func tag(_ id: String) -> Data { Data("app.bithanko.seed.\(id)".utf8) }
 }
 
 final class SignerPlugin: Plugin {
   private var engineError: String?
-  private let worker = DispatchQueue(label: "com.diysigner.bitwasm-signer.signer")
+  private let worker = DispatchQueue(label: "app.bithanko.signer")
   private var privacyCover: UIView?
 
   @objc public override func load(webview: WKWebView) {
@@ -1784,7 +1784,7 @@ private func decodeQrPayload(_ descriptor: CIQRCodeDescriptor) -> Data? {
 private final class QRScannerViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
   private let mode: ScanMode
   private let session = AVCaptureSession()
-  private let sessionQueue = DispatchQueue(label: "com.diysigner.bitwasm-signer.camera")
+  private let sessionQueue = DispatchQueue(label: "app.bithanko.camera")
   private let status = UILabel()
   private let progress = UIProgressView(progressViewStyle: .default)
   private let preview = AVCaptureVideoPreviewLayer()

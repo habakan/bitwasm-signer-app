@@ -47,7 +47,7 @@ Every way trusts this repository's code and the OS. ● trusted, △ trusted in 
 - *2 When installing with "Install an APK only" on the installer page.
 - *3 The native apps draw their screens and take input in a WebView (WKWebView on iOS), so they trust the browser engine in part. The key and the signing engine stay on the native side. In the web app, the key and the engine run in the browser.
 
-- **The installer page**: the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) writes to the phone over WebUSB from Chrome or Edge. While connected it can do anything adb can do to the phone. The page is built from this repository.
+- **The installer page**: the [installer page](https://bitwasm-project.github.io/bit-hanko/install/) writes to the phone over WebUSB from Chrome or Edge. While connected it can do anything adb can do to the phone. The page is built from this repository.
 - **This site**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. Going online lets a new build arrive, which takes over when you go to the home screen and open the app again, so keep the phone offline once it is installed.
 - **An APK you build yourself** is signed with a different key from the author's release, so it cannot update a release install.
 

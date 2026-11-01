@@ -6,7 +6,7 @@
 
 ## 1. ビルドする {#build-build}
 
-ソースを読み、READMEの[ビルド](https://github.com/habakan/bitwasm-signer-app#build)の手順に従います。Androidはリリースビルドにしてください(デバッグビルドはスマホではとても遅い)。
+ソースを読み、READMEの[ビルド](https://github.com/bitwasm-project/bit-hanko#build)の手順に従います。Androidはリリースビルドにしてください(デバッグビルドはスマホではとても遅い)。
 
 ## 2. 入れる {#build-install}
 

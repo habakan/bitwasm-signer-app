@@ -1,4 +1,4 @@
-package com.diysigner.bitwasm_signer.signer
+package app.bithanko.signer
 
 import android.Manifest
 import android.app.Activity
@@ -38,7 +38,7 @@ import app.tauri.annotation.Permission
 import app.tauri.annotation.PermissionCallback
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
-import com.diysigner.bitwasm_signer.signer.Design.fail
+import app.bithanko.signer.Design.fail
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import java.util.concurrent.Executors

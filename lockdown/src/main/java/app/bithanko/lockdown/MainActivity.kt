@@ -1,4 +1,4 @@
-package com.habakan.signer_lockdown
+package app.bithanko.lockdown
 
 import android.app.Activity
 import android.app.AlertDialog

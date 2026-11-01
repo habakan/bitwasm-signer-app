@@ -6,7 +6,7 @@ Trusts this site (at install time), WebKit and your Apple Account. Costs little 
 
 ## 1. Open it in Safari {#ios-pages-open}
 
-On the iPhone, before any key is on it, open the [web app](https://habakan.github.io/bitwasm-signer-app/app/) in Safari. So that you do not install a copy from another site, check that the URL is `habakan.github.io/bitwasm-signer-app/app/`.
+On the iPhone, before any key is on it, open the [web app](https://bitwasm-project.github.io/bit-hanko/app/) in Safari. So that you do not install a copy from another site, check that the URL is `bitwasm-project.github.io/bit-hanko/app/`.
 
 <Shot name="ios-open" />
 
