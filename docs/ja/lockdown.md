@@ -36,7 +36,7 @@ Android 12 以降は、Lockdown にまだない2つの画面（`GET_PROVISIONING
 
 上の手順1と4と同じように端末を準備し、開発者向けオプションを出して（端末情報のビルド番号を7回タップ）、USB デバッグをオンにします。
 
-続けて PC の Chrome か Edge で:
+続けて、PC の Chrome か Edge で次の手順を進めます。
 
 1. リリースから `signer-lockdown-<version>.apk` をダウンロードする
 2. [導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)を開き、APK と同じリリースの `SHA256SUMS` を選ぶ。ページが照合し、一致したときだけ入れられる
