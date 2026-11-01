@@ -36,7 +36,8 @@ export default defineConfig({
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "Use", items: [{ text: "Setup", link: "/setup" }, { text: "Using the signer", link: "/", items: chapters("../index.md", "/") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
+          { text: "Setup", items: [{ text: "Overview", link: "/setup" }, { text: "Installing the app", link: "/install" }, { text: "Using the app", link: "/use" }, { text: "Setups step by step", link: "/recipes" }, { text: "Security", link: "/security" }] },
+          { text: "Use", items: [{ text: "Using the signer", link: "/", items: chapters("../index.md", "/") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
           { text: "Develop", items: [{ text: "Design", link: "/design" }, { text: "Roadmap", link: "/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "Edit this page on GitHub" },
@@ -53,7 +54,8 @@ export default defineConfig({
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "使う", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "署名アプリの使い方", link: "/ja/", items: chapters("../ja/index.md", "/ja/") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
+          { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "どうアプリを入れるか", link: "/ja/install" }, { text: "どうアプリを使うか", link: "/ja/use" }, { text: "組み合わせ別の手順", link: "/ja/recipes" }, { text: "セキュリティ仕様", link: "/ja/security" }] },
+          { text: "使う", items: [{ text: "署名アプリの使い方", link: "/ja/", items: chapters("../ja/index.md", "/ja/") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
           { text: "開発", items: [{ text: "デザイン", link: "/ja/design" }, { text: "ロードマップ", link: "/ja/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "GitHubでこのページを編集" },
