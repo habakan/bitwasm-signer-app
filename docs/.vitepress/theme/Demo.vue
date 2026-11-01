@@ -132,7 +132,7 @@ const reset = () => {
       <p :class="{ off: mode !== 'app' }">{{ ja ? "スマホの操作に合わせて説明が移ります" : "The text follows your taps on the phone" }}</p>
     </div>
     <div class="screen" :style="{ height: `${height * scale}px` }">
-      <iframe v-for="f in frames" :key="f.key" :src="f.src" :class="{ loading: f !== frames[0] }" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera" @load="loaded($event, f.key)" :style="{ transform: `scale(${scale})` }"></iframe>
+      <iframe v-for="f in frames" :key="f.key" :src="f.src" :class="{ loading: f !== frames[0] }" :title="ja ? 'ブラウザ版のデモ' : 'Browser demo'" allow="camera 'none'" @load="loaded($event, f.key)" :style="{ transform: `scale(${scale})` }"></iframe>
     </div>
     <figcaption>
       <button type="button" @click="reset">{{ mode === "app" ? (ja ? "最初からやり直す" : "Start over") : (ja ? "この画面に戻す" : "Reset this screen") }}</button>

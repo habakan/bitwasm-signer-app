@@ -11,7 +11,6 @@ demo:
   load: ["#demo-seed", "#passphrase-continue"]
   passphrase: ["#demo-seed", "type:#passphrase=TREZOR"]
   connect: ["#demo-seed", "#passphrase-continue", "#account"]
-  receive: ["#demo-seed", "#passphrase-continue", "#find-address", "#address-test"]
   scan: ["#demo-seed", "#passphrase-continue", "#psbt"]
   review: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test"]
   sign: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test", ".sheet .check input", "scroll:.sheet .screen-body", "#review-sign", "#confirm-sign"]
@@ -80,11 +79,7 @@ For 12 or 24 words, **Show SeedQR** on this screen shows the words as a SeedQR. 
 
 Tap **Register in your wallet app** and choose the keys to share. Usually you keep **All at once** and tap **Show QR**, and the signer shows your public keys as an animated QR code. Scan it with the wallet app to add a watch-only wallet. It holds no private keys. You only need to do this once. For a wallet app that only reads an xpub, share one kind.
 
-## 5. Receive {#receive}
-
-The wallet app shows receive addresses. Before you hand one out, check that it really belongs to your key with **Check an address**. Scan the QR on the wallet app's receive screen, or type the address. The signer searches the first receive and change addresses, 1000 of each unless you change the range, and shows whether the address is yours and where it is. The browser demo has **Use the test address** in place of the camera.
-
-## 6. Send {#send}
+## 5. Send {#send}
 
 The wallet app builds the transaction, and the signer checks and signs it.
 
@@ -100,7 +95,7 @@ The review shows the amount, the network fee and every output: where the bitcoin
 
 The signed transaction appears as QR codes. Scan them with the wallet app and send the payment from there. The signer never goes online.
 
-## 7. When you are done {#lock}
+## 6. When you are done {#lock}
 
 Tap **Close wallet**. The key is wiped from memory. The same happens when you leave the app.
 

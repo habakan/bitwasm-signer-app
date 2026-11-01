@@ -1,4 +1,4 @@
-# Android ・ 専用機
+# Android(lockdown build)
 
 <sup>[English](../../quickstart/android-lockdown.md)</sup>
 

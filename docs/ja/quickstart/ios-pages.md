@@ -1,4 +1,4 @@
-# iPhone ・ すぐ使う
+# iPhone(PWA)
 
 <sup>[English](../../quickstart/ios-pages.md)</sup>
 
