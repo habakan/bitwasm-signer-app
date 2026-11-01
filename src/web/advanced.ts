@@ -52,7 +52,7 @@ export function exportMultisig() {
   const [m, n] = (call<SignerState>("state").multisig ?? "").split(" of ");
   const { frames } = call<{ frames: string[] }>("multisig_ur");
   return showFrames(frames, { kind: "account", heading: tr(`マルチシグ ${m}/${n}`, `Multisig ${m} of ${n}`), name: "crypto-output",
-    description: tr("見るだけのウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig.") });
+    description: tr("ウォッチオンリーウォレットで読み取ると、マルチシグを取り込めます。", "Scan with a watch-only wallet to import the multisig.") });
 }
 
 export async function signMessage() {
@@ -88,7 +88,7 @@ export async function signMessage() {
 
 export async function bip85() {
   let words = 0, index = 0;
-  const choice = await dialog(tr("子ニーモニックを作る", "Derive a child mnemonic"),
+  const choice = await dialog(tr("BIP85でニーモニックを作る", "Derive a child mnemonic"),
     tr("この鍵から、別のシードフレーズを作ります(m/83696968'/39'/0'/単語数'/番号')。", "Derived at m/83696968'/39'/0'/words'/index'."),
     [["bip85-cancel", tr("キャンセル", "Cancel")], ["bip85-make", tr("作る", "Show phrase"), true]], {
       body: `<input class="input" id="bip85-words" inputmode="numeric" placeholder="${tr("単語の数(12、18、24)", "Words: 12, 18, or 24")}" value="24">
@@ -101,8 +101,8 @@ export async function bip85() {
           : formError(box, "bip85-problem", tr("単語の数は12、18、24、番号は0以上にしてください", "Use 12, 18, or 24 words and a valid index"));
       },
     });
-  if (choice !== "bip85-make") throw tr("子ニーモニックの作成をやめました。", "BIP85 derivation was cancelled");
+  if (choice !== "bip85-make") throw tr("BIP85でのニーモニックの作成をやめました。", "BIP85 derivation was cancelled");
   const phrase = call<{ mnemonic: string }>("bip85_mnemonic", words, index).mnemonic.split(" ");
-  await showMnemonic(phrase, tr("子ニーモニック", "Child mnemonic"), words !== 18);
+  await showMnemonic(phrase, tr("BIP85で作るニーモニック", "Child mnemonic"), words !== 18);
   phrase.fill("");
 }

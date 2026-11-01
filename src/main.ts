@@ -202,7 +202,7 @@ const actions: Record<string, () => void> = {
   "multisig": () => multisig("register_multisig"),
   "export-multisig": () => multisig("export_multisig"),
   "forget-multisig": () => multisig("forget_multisig"),
-  "bip85": () => runNativeTool("bip85_mnemonic", tr("子ニーモニックを作る", "Derive a child mnemonic")),
+  "bip85": () => runNativeTool("bip85_mnemonic", tr("BIP85でニーモニックを作る", "Derive a child mnemonic")),
   "find-address": () => runNativeTool("find_address", tr("アドレスを確認する", "Check an address")),
   "sign-message": () => runNativeTool("sign_message", tr("メッセージに署名する", "Sign a message")),
   "lock": lockSigner,

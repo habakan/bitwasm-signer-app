@@ -421,7 +421,7 @@ export function showFrames(frames: string[], { kind, heading, description, name,
 function chooseAccount(): Promise<number | null> {
   const t = call<SignerState>("state").testnet;
   const kinds: [number | null, string, string][] = [
-    [null, "", tr("まとめて渡す・おすすめ", "All at once · recommended")],
+    [null, "", tr("まとめて書き出す・おすすめ", "All at once · recommended")],
     [84, t ? "tb1q…" : "bc1q…", tr("標準・いちばん一般的", "Standard · most common")],
     [86, t ? "tb1p…" : "bc1p…", tr("Taproot・新しい形式", "Taproot · newest")],
     [49, t ? "2…" : "3…", tr("古いウォレット向け", "For older wallets")],
@@ -429,11 +429,11 @@ function chooseAccount(): Promise<number | null> {
   ];
   const card = ([purpose, prefix, name]: (typeof kinds)[number], i: number) => {
     const prefixes = purpose === null ? kinds.slice(1).map((k) => k[1]) : [prefix];
-    return `${i === 1 ? `<span class="overline account-single">${tr("1種類だけ渡す", "ONLY ONE KIND")}</span>` : ""}
+    return `${i === 1 ? `<span class="overline account-single">${tr("1種類だけ書き出す", "ONLY ONE KIND")}</span>` : ""}
       <button class="account-kind" data-kind="${i}"><span class="account-prefix${prefixes.length > 1 ? " many" : ""}">${prefixes.map((x) => `<span>${x}</span>`).join("")}</span>
       <span class="row-copy"><span class="row-title">${name}</span><span class="row-detail">${purpose === null ? "BIP84・86・49・48" : `BIP${purpose}`}</span></span><span class="account-mark"></span></button>`;
   };
-  const view = step(tr("ウォレットアプリと接続する", "Connect your wallet app"), `<div class="question"><h1>${tr("渡す公開鍵を選ぶ", "Choose the keys to share")}</h1>
+  const view = step(tr("ウォレットアプリに登録する", "Register in your wallet app"), `<div class="question"><h1>${tr("書き出す公開鍵を選ぶ", "Choose the keys to share")}</h1>
       <p class="lead">${tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys.")}</p></div>
     <div class="account-kinds">${kinds.map(card).join("")}</div>
     <p id="account-summary"></p>`,
@@ -443,14 +443,14 @@ function chooseAccount(): Promise<number | null> {
     view.querySelectorAll<HTMLElement>("[data-kind]").forEach((b) => b.classList.toggle("selected", Number(b.dataset.kind) === chosen));
     const purpose = kinds[chosen][0];
     view.querySelector("#account-summary")!.textContent = purpose === null
-      ? tr("4種類を1つのアニメーションQR(UR crypto-account)で渡します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
-      : tr(`BIP${purpose}のxpubとディスクリプターを渡します。xpubだけを読むアプリにも使えます。`, `Shares the BIP${purpose} xpub and descriptor, which wallets that only read an xpub accept too.`);
+      ? tr("4種類を1つのアニメーションQR(UR crypto-account)で書き出します。Sparrow、Nunchuk、Keystoneなどで読めます。", "All four go in one animated QR (UR crypto-account) for Sparrow, Nunchuk, Keystone and similar wallets.")
+      : tr(`BIP${purpose}のxpubとディスクリプターを書き出します。xpubだけを読むアプリにも使えます。`, `Shares the BIP${purpose} xpub and descriptor, which wallets that only read an xpub accept too.`);
   };
   view.querySelectorAll<HTMLElement>("[data-kind]").forEach((b) => b.addEventListener("click", () => { chosen = Number(b.dataset.kind); refresh(); }));
   refresh();
   let cancel = () => {};
   return new Promise((resolve, reject) => {
-    cancel = () => { view.remove(); reject(tr("ウォレットアプリとの接続をやめました。", "Account export was cancelled")); };
+    cancel = () => { view.remove(); reject(tr("ウォレットアプリへの登録をやめました。", "Wallet app registration was cancelled")); };
     view.querySelector("#account-show")!.addEventListener("click", () => { view.remove(); resolve(kinds[chosen][0]); });
   });
 }
@@ -480,7 +480,7 @@ function askPassphrase(title = tr("パスフレーズ", "Passphrase")): Promise<
   };
   const words = call<{ words: number }>("seed_length").words;
   const seedQr = words === 12 || words === 24;
-  const view = step(title, `<p class="lead">${tr("単語にパスフレーズを足すと、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank.")}</p>
+  const view = step(title, `<p class="lead">${tr("単語にパスフレーズを付けると、別の鍵になります。付けていない場合は、空のままにしてください。", "A passphrase added to the words makes a different key. If this seed has none, leave it blank.")}</p>
     <input class="input" id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="${tr("パスフレーズ", "Passphrase")}">
     ${webDemo ? `<p class="caption">${tr("テスト用の単語では、TREZOR と入れると b4e3 f5ed になります。", "With the test words, TREZOR gives b4e3 f5ed.")}</p>` : ""}
     <h2 class="overline">${tr("フィンガープリント", "FINGERPRINT")}</h2>
@@ -719,8 +719,8 @@ export async function webInvoke<T>(command: string, args?: Record<string, unknow
       const purpose = await chooseAccount();
       if (purpose === null) {
         const { frames } = call<{ frames: string[] }>("account_ur", 0);
-        await showFrames(frames, { kind: "account", heading: tr("ウォレットアプリと接続する", "Connect your wallet app"), name: "crypto-account",
-          description: tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで渡します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.") });
+        await showFrames(frames, { kind: "account", heading: tr("ウォレットアプリに登録する", "Register in your wallet app"), name: "crypto-account",
+          description: tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで書き出します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.") });
       } else {
         const { frames } = call<{ frames: string[] }>("account", purpose, 0);
         await showFrames(frames, { kind: "account", heading: `BIP${purpose}`, interval: 1500,

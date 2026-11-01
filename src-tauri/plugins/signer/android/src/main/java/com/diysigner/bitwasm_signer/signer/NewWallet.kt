@@ -119,7 +119,7 @@ internal class NewWallet(
             Design.text(activity, tr("どちらも安全です。24個のほうが余裕がありますが、書き写す量が倍になります。", "Both are safe. 24 words leave more margin but take twice as long to write down."),
                 Design.Style.BODY, p.inkMuted).spaced(8),
             option(12, if (withDice) tr("サイコロを50回振る", "Roll a die 50 times") else tr("いちばんよく使われる長さ", "The most common length")).spaced(24),
-            option(24, if (withDice) tr("サイコロを99回振る", "Roll a die 99 times") else tr("より長く、より強い", "Longer and stronger")).spaced(12),
+            option(24, if (withDice) tr("サイコロを99回振る", "Roll a die 99 times") else tr("単語が多いぶん、より安全", "Longer and stronger")).spaced(12),
         )
         push(tr("新しいウォレット", "New wallet"), content, emptyList()) {}.show()
     }
@@ -439,7 +439,7 @@ internal fun showDerivation(activity: Activity, testnet: Boolean, words: List<St
         setPadding(dp(16), dp(24), dp(16), dp(24))
         fun add(v: View, top: Int) = addView(v, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(top) })
         add(Design.text(activity, tr("この単語のでき方", "How these words were made"), Design.Style.DISPLAY, p.ink), 0)
-        add(Design.text(activity, tr("あなたの単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words."), Design.Style.BODY, p.inkMuted), 8)
+        add(Design.text(activity, tr("この単語が、どの値から、どう計算されたかを順に示します。どれも単語と同じく秘密です。", "Step by step, the values your words were computed from. Every one of them is as secret as the words."), Design.Style.BODY, p.inkMuted), 8)
         if (dice) {
             add(step("1", tr("サイコロの目(${rolls?.size ?: if (words.size == 12) 50 else 99}回)", "The rolls (${rolls?.size ?: if (words.size == 12) 50 else 99})")), 24)
             add(rollsView, 8)
