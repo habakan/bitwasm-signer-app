@@ -109,7 +109,7 @@ function homeView({ signer, busy }: View) {
 
 function readyView({ signer, busy }: View) {
   const rows = [
-    row("account", "key", tr("ウォレットアプリと接続する", "Connect your wallet app"), tr("公開鍵をQRで書き出す", "Share public keys as a QR"), { disabled: busy }),
+    row("account", "key", tr("ウォレットアプリに登録する", "Register in your wallet app"), tr("公開鍵をQRで書き出す", "Share public keys as a QR"), { disabled: busy }),
     row("find-address", "qr", tr("アドレスを確認する", "Check an address"), "", { disabled: busy }),
     row("advanced", "sliders", tr("高度な機能", "Advanced"), tr("マルチシグ、メッセージ署名など", "Multisig, message signing and more"), { disabled: busy }),
   ];

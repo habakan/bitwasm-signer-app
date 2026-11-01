@@ -433,7 +433,7 @@ function chooseAccount(): Promise<number | null> {
       <button class="account-kind" data-kind="${i}"><span class="account-prefix${prefixes.length > 1 ? " many" : ""}">${prefixes.map((x) => `<span>${x}</span>`).join("")}</span>
       <span class="row-copy"><span class="row-title">${name}</span><span class="row-detail">${purpose === null ? "BIP84・86・49・48" : `BIP${purpose}`}</span></span><span class="account-mark"></span></button>`;
   };
-  const view = step(tr("ウォレットアプリと接続する", "Connect your wallet app"), `<div class="question"><h1>${tr("書き出す公開鍵を選ぶ", "Choose the keys to share")}</h1>
+  const view = step(tr("ウォレットアプリに登録する", "Register in your wallet app"), `<div class="question"><h1>${tr("書き出す公開鍵を選ぶ", "Choose the keys to share")}</h1>
       <p class="lead">${tr("左の文字は、受け取りアドレスの始まり方です。公開鍵だけを渡し、秘密鍵は含まれていません。", "On the left is how each kind of receive address starts. Only public keys are shared, never private keys.")}</p></div>
     <div class="account-kinds">${kinds.map(card).join("")}</div>
     <p id="account-summary"></p>`,
@@ -450,7 +450,7 @@ function chooseAccount(): Promise<number | null> {
   refresh();
   let cancel = () => {};
   return new Promise((resolve, reject) => {
-    cancel = () => { view.remove(); reject(tr("ウォレットアプリとの接続をやめました。", "Account export was cancelled")); };
+    cancel = () => { view.remove(); reject(tr("ウォレットアプリへの登録をやめました。", "Wallet app registration was cancelled")); };
     view.querySelector("#account-show")!.addEventListener("click", () => { view.remove(); resolve(kinds[chosen][0]); });
   });
 }
@@ -719,7 +719,7 @@ export async function webInvoke<T>(command: string, args?: Record<string, unknow
       const purpose = await chooseAccount();
       if (purpose === null) {
         const { frames } = call<{ frames: string[] }>("account_ur", 0);
-        await showFrames(frames, { kind: "account", heading: tr("ウォレットアプリと接続する", "Connect your wallet app"), name: "crypto-account",
+        await showFrames(frames, { kind: "account", heading: tr("ウォレットアプリに登録する", "Register in your wallet app"), name: "crypto-account",
           description: tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで書き出します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.") });
       } else {
         const { frames } = call<{ frames: string[] }>("account", purpose, 0);

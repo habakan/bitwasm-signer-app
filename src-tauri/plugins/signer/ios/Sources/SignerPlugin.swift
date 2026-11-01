@@ -1084,7 +1084,7 @@ final class SignerPlugin: Plugin {
       (48, t ? "tb1q…" : "bc1q…", Design.tr("マルチシグ用・複数の鍵で管理", "Multisig · several keys")),
     ]
     var chosen: Int? = nil
-    let heading = Design.tr("ウォレットアプリと接続する", "Connect your wallet app")
+    let heading = Design.tr("ウォレットアプリに登録する", "Register in your wallet app")
     let controller = UIViewController()
     controller.modalPresentationStyle = .fullScreen
     controller.isModalInPresentation = true
@@ -1165,7 +1165,7 @@ final class SignerPlugin: Plugin {
       }
     }, for: .touchUpInside)
     _ = Design.screen(controller, title: heading, testnet: t, content: content, actions: [show]) { [weak controller] in
-      controller?.dismiss(animated: true) { Design.fail(invoke, "Account export was cancelled") }
+      controller?.dismiss(animated: true) { Design.fail(invoke, "Wallet app registration was cancelled") }
     }
     refresh()
     present(controller)

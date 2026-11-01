@@ -36,7 +36,7 @@ internal object Design {
         "Unlock was cancelled" to "鍵を開くのをやめました。",
         "Mnemonic creation was cancelled" to "新しいウォレットの作成をやめました。",
         "Message signing was cancelled" to "メッセージへの署名をやめました。",
-        "Account export was cancelled" to "ウォレットアプリとの接続をやめました。",
+        "Wallet app registration was cancelled" to "ウォレットアプリへの登録をやめました。",
         "Signing was cancelled" to "署名をやめました。",
         "Seed import was cancelled" to "鍵の読み込みをやめました。",
         "QR scan was cancelled" to "QRの読み取りをやめました。",

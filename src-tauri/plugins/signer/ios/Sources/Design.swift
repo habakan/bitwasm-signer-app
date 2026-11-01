@@ -19,7 +19,7 @@ enum Design {
     "Unlock was cancelled": "鍵を開くのをやめました。",
     "Mnemonic creation was cancelled": "新しいウォレットの作成をやめました。",
     "Message signing was cancelled": "メッセージへの署名をやめました。",
-    "Account export was cancelled": "ウォレットアプリとの接続をやめました。",
+    "Wallet app registration was cancelled": "ウォレットアプリへの登録をやめました。",
     "Signing was cancelled": "署名をやめました。",
     "Seed import was cancelled": "鍵の読み込みをやめました。",
     "QR scan was cancelled": "QRの読み取りをやめました。",

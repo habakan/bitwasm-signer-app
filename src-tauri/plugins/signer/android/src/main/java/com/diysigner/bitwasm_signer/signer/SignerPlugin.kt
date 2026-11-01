@@ -161,7 +161,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
         )
         var chosen: Int? = null
         val single = Design.text(activity, Design.tr("1種類だけ書き出す", "ONLY ONE KIND"), Design.Style.CAPTION, p.inkMuted).apply { setTypeface(typeface, Typeface.BOLD) }
-        val heading = Design.tr("ウォレットアプリと接続する", "Connect your wallet app")
+        val heading = Design.tr("ウォレットアプリに登録する", "Register in your wallet app")
         val show = Design.button(activity, Design.tr("QRを表示", "Show QR"), true, p)
         val summary = Design.text(activity, "", Design.Style.BODY, p.ink)
         val cards = mutableListOf<LinearLayout>()
@@ -228,7 +228,7 @@ class SignerPlugin(launched: Activity) : Plugin(launched) {
             chosen?.let { exportAccountKey(invoke, it) }
                 ?: showFrames(invoke, heading, Design.tr("ウォレットアプリで読み取ってください。BIP49、BIP84、BIP86とBIP48のマルチシグ用の公開鍵を、1つのアニメーションQRで書き出します。", "Scan with your wallet: BIP49, BIP84, BIP86 and the BIP48 multisig key in one animated QR.")) { engine.accountUr() }
         }
-        dialog = Design.screen(activity, heading, t, content, listOf(show)) { invoke.fail("Account export was cancelled") }
+        dialog = Design.screen(activity, heading, t, content, listOf(show)) { invoke.fail("Wallet app registration was cancelled") }
         refresh()
         dialog.show()
     }

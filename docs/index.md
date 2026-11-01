@@ -76,9 +76,9 @@ A passphrase added to the words makes a different key, and so does a typo in it.
 
 For 12 or 24 words, **Show SeedQR** on this screen shows the words as a SeedQR. Opening the wallet clears the words from memory, so this screen is the only place to show the SeedQR of a key you load.
 
-## 4. Connect your wallet app {#connect}
+## 4. Register in your wallet app {#connect}
 
-Tap **Connect your wallet app** and choose the keys to share. Usually you keep **All at once** and tap **Show QR**, and the signer shows your public keys as an animated QR code. Scan it with the wallet app to add a watch-only wallet. It holds no private keys. You only need to do this once. For a wallet app that only reads an xpub, share one kind.
+Tap **Register in your wallet app** and choose the keys to share. Usually you keep **All at once** and tap **Show QR**, and the signer shows your public keys as an animated QR code. Scan it with the wallet app to add a watch-only wallet. It holds no private keys. You only need to do this once. For a wallet app that only reads an xpub, share one kind.
 
 ## 5. Receive {#receive}
 
