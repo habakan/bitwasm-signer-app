@@ -184,7 +184,7 @@ function settingsView({ signer, busy }: View) {
     ${webApp ? group(tr("このアプリのバージョン", "THIS BUILD"), `<div class="card"><div class="field"><span class="field-label">${tr("実行中", "RUNNING")}</span><span class="data">${versions.current || "—"}</span>
       ${versions.next ? `<span class="field-note">${tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`)}</span>` : ""}</div></div>
       <p class="caption">${tr("ビルドしたファイルの一覧から決まる名前です。自分でビルドした dist-web/app/sw.js の CACHE と比べられます。", "Named from the list of built files. Compare it with CACHE in dist-web/app/sw.js from your own build.")}</p>`) : ""}
-    <p class="about">BitHanko 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
+    <p class="about">BitHanko 0.2 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
   };
 }
 
