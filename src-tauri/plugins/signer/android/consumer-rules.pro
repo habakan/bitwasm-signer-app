@@ -20,4 +20,4 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class com.diysigner.bitwasm_signer.signer.WasmiNative { *; }
+-keep class app.bithanko.signer.WasmiNative { *; }

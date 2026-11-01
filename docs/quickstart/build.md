@@ -6,7 +6,7 @@ Trusts the source and your build tools. Costs the build itself, and on iOS signi
 
 ## 1. Build it {#build-build}
 
-Read the source and follow [Build](https://github.com/habakan/bitwasm-signer-app#build) in the README. On Android, make a release build (debug builds are very slow on a phone).
+Read the source and follow [Build](https://github.com/bitwasm-project/bit-hanko#build) in the README. On Android, make a release build (debug builds are very slow on a phone).
 
 ## 2. Install it {#build-install}
 

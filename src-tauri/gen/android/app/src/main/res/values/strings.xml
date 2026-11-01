@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">"bitwasm-signer"</string>
-    <string name="main_activity_title">"bitwasm-signer"</string>
+    <string name="app_name">"BitHanko"</string>
+    <string name="main_activity_title">"BitHanko"</string>
 </resources>

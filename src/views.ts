@@ -83,7 +83,7 @@ const question = (title: string, lead?: string) => `<div class="question"><h1>${
 
 function homeView({ signer, busy }: View) {
   if (webDemo) return {
-    body: `${question("bitwasm-signer", tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
+    body: `${question("BitHanko", tr("ブラウザ版では、公開されたテスト用の単語だけを使います。単語やSeedQRの入力はできません。", "The browser version only uses published test words. Typing words or scanning a SeedQR is turned off."))}
     ${group(tr("ウォレットを読み込む", "IMPORT WALLET"),
       tile("demo-seed", "words", tr("テスト用の鍵を使う", "Use the test key"), tr("abandon を11回と about・BIP39のテスト用の単語", "abandon ×11 + about · the BIP39 test words"), busy))}
     ${group(tr("新しいウォレット", "NEW WALLET"),
@@ -92,7 +92,7 @@ function homeView({ signer, busy }: View) {
   const saved = signer.saved ?? 0;
   const blocked = busy || restrictionBlocks(signer);
   return {
-    body: `${question("bitwasm-signer", signer.storage
+    body: `${question("BitHanko", signer.storage
       ? tr("保存した鍵は暗号化され、開くには画面ロックが必要です。ウォレットを閉じるかアプリを離れると、メモリから消去されます。", "Saved keys are encrypted on this phone and need your screen lock to open. Closing the wallet or leaving the app wipes the key from memory.")
       : tr("鍵はこのスマホのメモリにだけあり、ウォレットを閉じるかアプリを離れると消去されます。", "Your key stays in this phone's memory and is wiped when you close the wallet or leave the app."))}
     ${saved ? group(tr("この端末に保存した鍵", "SAVED ON THIS DEVICE"),
@@ -184,7 +184,7 @@ function settingsView({ signer, busy }: View) {
     ${webApp ? group(tr("このアプリのバージョン", "THIS BUILD"), `<div class="card"><div class="field"><span class="field-label">${tr("実行中", "RUNNING")}</span><span class="data">${versions.current || "—"}</span>
       ${versions.next ? `<span class="field-note">${tr(`ホーム画面に戻ってから開き直すと、${versions.next} に切り替わります。`, `Go to the home screen and open it again to switch to ${versions.next}.`)}</span>` : ""}</div></div>
       <p class="caption">${tr("ビルドしたファイルの一覧から決まる名前です。自分でビルドした dist-web/app/sw.js の CACHE と比べられます。", "Named from the list of built files. Compare it with CACHE in dist-web/app/sw.js from your own build.")}</p>`) : ""}
-    <p class="about">bitwasm-signer 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
+    <p class="about">BitHanko 0.1 · ${tr("第三者の監査は受けていません", "Not audited by a third party")} · MIT</p>`,
   };
 }
 
@@ -258,7 +258,7 @@ export function appView(view: View) {
   return `<div class="app-shell" lang="${lang}">
     <header class="topbar">
       ${title ? `<button class="topbar-back" id="back" aria-label="${tr("戻る", "Back")}">${icon("back")}</button>
-      <span class="topbar-title topbar-title-page">${title}</span>` : `<img class="topbar-icon" src="${appIcon}" alt="bitwasm-signer">`}
+      <span class="topbar-title topbar-title-page">${title}</span>` : `<img class="topbar-icon" src="${appIcon}" alt="BitHanko">`}
       <span class="topbar-status">${status}</span>
       ${view.screen === "home" || view.screen === "ready" ? `<button class="topbar-back topbar-end" id="settings" aria-label="${tr("設定", "Settings")}">${icon("settings")}</button>` : ""}
     </header>

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Builds Lockdown with the signer bundled and writes the provisioning QR code to out/.
-# Usage: ./provision.sh <bitwasm-signer.apk> [download URL]
+# Usage: ./provision.sh <bithanko.apk> [download URL]
 #   without a URL: a debug build served to this LAN, for development
 #   with a URL:    a release build that will be uploaded there (the release workflow)
 set -eu
-SIGNER_APK=$(realpath "${1:?"usage: ./provision.sh <bitwasm-signer.apk> [download URL]"}")
+SIGNER_APK=$(realpath "${1:?"usage: ./provision.sh <bithanko.apk> [download URL]"}")
 cd "$(dirname "$0")"
 
 URL=${2:-}
 PORT=8000
 
 mkdir -p signer out
-cp "$SIGNER_APK" signer/bitwasm-signer.apk
+cp "$SIGNER_APK" signer/bithanko.apk
 if [ -n "$URL" ]; then
   [ -f keystore.properties ] || { echo "A release build needs keystore.properties" >&2; exit 1; }
   ./gradlew -q assembleRelease
@@ -28,7 +28,7 @@ checksum=$(openssl dgst -binary -sha256 out/lockdown.apk | openssl base64 -A | t
 
 cat >out/provisioning.json <<EOF
 {
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.habakan.signer_lockdown/com.habakan.signer_lockdown.AdminReceiver",
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "app.bithanko.lockdown/app.bithanko.lockdown.AdminReceiver",
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "$URL",
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "$checksum",
   "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true,

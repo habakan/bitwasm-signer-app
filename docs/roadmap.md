@@ -4,7 +4,7 @@
 
 ## Smartcards (Satochip / JavaCard)
 
-The goal is to keep the key on a card, with the app only reviewing the transaction and asking the card to sign. The card has no screen, so the review stays on the app's screen as it is today ([#22](https://github.com/habakan/bitwasm-signer-app/issues/22)).
+The goal is to keep the key on a card, with the app only reviewing the transaction and asking the card to sign. The card has no screen, so the review stays on the app's screen as it is today ([#22](https://github.com/bitwasm-project/bit-hanko/issues/22)).
 
 ### Stages
 

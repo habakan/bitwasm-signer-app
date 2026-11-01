@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { defineConfig, type DefaultTheme } from "vitepress";
 
-const repo = "https://github.com/habakan/bitwasm-signer-app";
+const repo = "https://github.com/bitwasm-project/bit-hanko";
 
 // The guide's sections for the sidebar, read from its headings so the two stay the same
 function chapters(file: string, page: string) {
@@ -16,8 +16,8 @@ function chapters(file: string, page: string) {
 
 // Published at <pages>/docs/, next to the browser demo and the installer
 export default defineConfig({
-  title: "bitwasm-signer",
-  base: "/bitwasm-signer-app/docs/",
+  title: "BitHanko",
+  base: "/bit-hanko/docs/",
   outDir: "../dist-web/docs",
   srcExclude: ["ja/README.md"],
   themeConfig: {
@@ -32,9 +32,9 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/" },
-          { text: "Web app", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
-          { text: "Demo (testnet)", link: "https://habakan.github.io/bitwasm-signer-app/" },
-          { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
+          { text: "Web app", link: "https://bitwasm-project.github.io/bit-hanko/app/" },
+          { text: "Demo (testnet)", link: "https://bitwasm-project.github.io/bit-hanko/" },
+          { text: "Install", link: "https://bitwasm-project.github.io/bit-hanko/install/" },
         ],
         sidebar: [
           { text: "Setup", items: [{ text: "Overview", link: "/setup" }, { text: "Installing the app", link: "/install" }, { text: "Using the app", link: "/use" }, { text: "Device restrictions", link: "/use#device" }, { text: "Quick start", link: "/quickstart/", items: [{ text: "iPhone, quick start", link: "/quickstart/ios-pages" }, { text: "Android, easy", link: "/quickstart/android-apk" }, { text: "Android, dedicated phone", link: "/quickstart/android-lockdown" }, { text: "Build it yourself", link: "/quickstart/build" }] }, { text: "Security", link: "/security" }] },
@@ -51,9 +51,9 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "使い方", link: "/ja/" },
-          { text: "Webアプリ", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
-          { text: "デモ(テストネット)", link: "https://habakan.github.io/bitwasm-signer-app/" },
-          { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
+          { text: "Webアプリ", link: "https://bitwasm-project.github.io/bit-hanko/app/" },
+          { text: "デモ(テストネット)", link: "https://bitwasm-project.github.io/bit-hanko/" },
+          { text: "USBで入れる", link: "https://bitwasm-project.github.io/bit-hanko/install/" },
         ],
         sidebar: [
           { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "アプリのインストール方法", link: "/ja/install" }, { text: "アプリの設定方法", link: "/ja/use" }, { text: "端末の機能制限", link: "/ja/use#device" }, { text: "クイックスタート", link: "/ja/quickstart/", items: [{ text: "iPhone(PWA)", link: "/ja/quickstart/ios-pages" }, { text: "Android(WebUSB build)", link: "/ja/quickstart/android-apk" }, { text: "Android(lockdown build)", link: "/ja/quickstart/android-lockdown" }, { text: "自分でビルド", link: "/ja/quickstart/build" }] }, { text: "セキュリティ仕様", link: "/ja/security" }] },

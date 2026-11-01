@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "bitwasm-signer",
+  "productName": "BitHanko",
   "version": "0.1.1",
-  "identifier": "com.habakan.bitwasm-signer",
+  "identifier": "app.bithanko",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "bitwasm-signer",
+        "title": "BitHanko",
         "width": 800,
         "height": 600
       }

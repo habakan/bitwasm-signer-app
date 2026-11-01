@@ -1,4 +1,4 @@
-package com.habakan.signer_lockdown
+package app.bithanko.lockdown
 
 import android.Manifest
 import android.app.PendingIntent
@@ -150,9 +150,9 @@ class Policy(private val context: Context) {
     }
 
     companion object {
-        const val SIGNER = "com.habakan.bitwasm_signer"
-        const val SIGNER_APK = "bitwasm-signer.apk"
-        const val INSTALL_RESULT = "com.habakan.signer_lockdown.INSTALL_RESULT"
+        const val SIGNER = "app.bithanko"
+        const val SIGNER_APK = "bithanko.apk"
+        const val INSTALL_RESULT = "app.bithanko.lockdown.INSTALL_RESULT"
         private const val USB_OPEN = "usbOpen"
 
         val RESTRICTIONS = listOf(

@@ -39,7 +39,7 @@ Prepare the phone as in steps 1 and 4 above, then enable Developer options (tap 
 Then, in Chrome or Edge on the PC:
 
 1. Download `signer-lockdown-<version>.apk` from the release
-2. Open the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) and choose the APK and `SHA256SUMS` from the same release. The page checks the APK against it and enables Install only when they match
+2. Open the [installer page](https://bitwasm-project.github.io/bit-hanko/install/) and choose the APK and `SHA256SUMS` from the same release. The page checks the APK against it and enables Install only when they match
 3. Connect the phone, pick it in the browser's dialog and allow USB debugging on the phone. If adb runs on the PC, stop it first (`adb kill-server`), or the browser cannot claim the phone
 4. The page installs Lockdown and makes it the device owner. Continue from step 5 above; applying the restrictions turns USB debugging off
 
@@ -49,7 +49,7 @@ To use it on a PC that stays offline, open the page once while online and instal
 
 To install an APK without Lockdown, such as the signer on its own, choose Install an APK only at the top of the page (or open it with `#apk`). It only installs the APK and does not set a device owner.
 
-With the Android platform tools installed, `lockdown/install.sh <bitwasm-signer.apk> <signer-lockdown.apk>` does the same from a terminal and asks before each step.
+With the Android platform tools installed, `lockdown/install.sh <bithanko.apk> <signer-lockdown.apk>` does the same from a terminal and asks before each step.
 
 ## Update without a PC or a network
 
@@ -75,6 +75,6 @@ Only file transfer is allowed, and only while that dialog is open. USB debugging
 
 ## Development
 
-- `lockdown/provision.sh <bitwasm-signer.apk>` builds a debug Lockdown, shows the QR code and serves the APK to the LAN. The release workflow runs it with the release URL instead
+- `lockdown/provision.sh <bithanko.apk>` builds a debug Lockdown, shows the QR code and serves the APK to the LAN. The release workflow runs it with the release URL instead
 - Building needs JDK 25 and the Android SDK (`cd lockdown && ./gradlew assembleDebug`)
 - Add a phone maker's own apps to `lockdown/profiles/hide.txt`. Keep `com.google.android.webview`, which draws the signer's screens

@@ -153,7 +153,7 @@ fn throw(env: &mut JNIEnv, message: impl AsRef<str>) {
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_create(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_create(
     mut env: JNIEnv,
     _this: JObject,
     wasm: JByteArray,
@@ -177,7 +177,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_cre
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_close(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_close(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -196,7 +196,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_clo
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_memorySize(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_memorySize(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -216,7 +216,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_mem
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_hasExport(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_hasExport(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -242,7 +242,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_has
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_call(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_call(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -274,7 +274,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_cal
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_read(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_read(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -308,7 +308,7 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_rea
 
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_write(
+pub extern "system" fn Java_app_bithanko_signer_WasmiNative_write(
     mut env: JNIEnv,
     _this: JObject,
     handle: jlong,
@@ -334,12 +334,12 @@ pub extern "system" fn Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_wri
 
 pub fn keep_exports_linked() {
     std::hint::black_box([
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_create as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_close as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_memorySize as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_hasExport as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_call as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_read as *const (),
-        Java_com_diysigner_bitwasm_1signer_signer_WasmiNative_write as *const (),
+        Java_app_bithanko_signer_WasmiNative_create as *const (),
+        Java_app_bithanko_signer_WasmiNative_close as *const (),
+        Java_app_bithanko_signer_WasmiNative_memorySize as *const (),
+        Java_app_bithanko_signer_WasmiNative_hasExport as *const (),
+        Java_app_bithanko_signer_WasmiNative_call as *const (),
+        Java_app_bithanko_signer_WasmiNative_read as *const (),
+        Java_app_bithanko_signer_WasmiNative_write as *const (),
     ]);
 }

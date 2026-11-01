@@ -29,8 +29,8 @@ ${vars(Object.entries(dark))}
 const kotlinPalette = (p) => names.map((n) => `        ${camel(n)} = 0xff${p[n].slice(1)}.toInt(),`).join("\n");
 // Signer Lockdown draws its screen from the same palette
 for (const [file, pkg] of [
-  ["src-tauri/plugins/signer/android/src/main/java/com/diysigner/bitwasm_signer/signer/DesignTokens.kt", "com.diysigner.bitwasm_signer.signer"],
-  ["lockdown/src/main/java/com/habakan/signer_lockdown/DesignTokens.kt", "com.habakan.signer_lockdown"],
+  ["src-tauri/plugins/signer/android/src/main/java/app/bithanko/signer/DesignTokens.kt", "app.bithanko.signer"],
+  ["lockdown/src/main/java/app/bithanko/lockdown/DesignTokens.kt", "app.bithanko.lockdown"],
 ]) writeFileSync(file, `// ${header}
 package ${pkg}
 

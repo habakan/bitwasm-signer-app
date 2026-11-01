@@ -1,6 +1,6 @@
 package wasmsigner
 
-import com.diysigner.bitwasm_signer.signer.WasmiModule
+import app.bithanko.signer.WasmiModule
 private object L {
     const val PLAN_SIZE = 6712
     const val PLAN_N_INPUTS = 16

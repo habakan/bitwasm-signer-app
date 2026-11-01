@@ -18,21 +18,21 @@ demo:
   more: ["#demo-seed", "#passphrase-continue", "#advanced"]
 ---
 
-# bitwasm-signer-app
+# BitHanko
 
 <sup>[English](../index.md)</sup>
 
-bitwasm-signerはエアギャップ署名できるアプリケーションです。  
+BitHankoはエアギャップ署名できるアプリケーションです。  
 BitcoinトランザクションをPSBT形式（BIP174）のQRコードでやりとりすることによって、セキュアな秘密鍵での署名を実現します。
-bitwasm-signer-appは、スマートフォンで、秘密鍵の読み込み、署名、署名済みPSBTのQRコードの表示など、エアギャップ署名に必要な機能を提供します。
+スマートフォンで、秘密鍵の読み込み、署名、署名済みPSBTのQRコードの表示など、エアギャップ署名に必要な機能を提供します。
 
 ## 技術スタック {#overview}
 
 このアプリはビットコインの署名に特化したWebAssemblyモジュール群である
-[bitwasm-signer](https://github.com/habakan/bitwasm-signer)を利用しています。
-![](https://github.com/habakan/bitwasm-signer/raw/main/docs/everywhere.svg)
+[bitwasm-signer](https://github.com/bitwasm-project/bitwasm-signer)を利用しています。
+![](https://github.com/bitwasm-project/bitwasm-signer/raw/main/docs/everywhere.svg)
 
-WebAssemblyを利用することによって、[マイコンで実装された署名専用デバイス](https://github.com/habakan/bitwasm-signer-pico)など**どのような環境においてもバイトレベルで同一な署名ロジック**を利用することができ、WebAssemblyによるポータビリティ性を活かした運用・管理しやすい署名ソフトウェアの構築を目指します。
+WebAssemblyを利用することによって、[マイコンで実装された署名専用デバイス](https://github.com/bitwasm-project/bitwasm-signer-pico)など**どのような環境においてもバイトレベルで同一な署名ロジック**を利用することができ、WebAssemblyによるポータビリティ性を活かした運用・管理しやすい署名ソフトウェアの構築を目指します。
 
 本ドキュメントの右側に表示されているモバイルアプリケーションも、**実際のWebAssemblyモジュール**を使用して表示されており、**実アプリと同じ画面と操作を、テストネットで試せます。**
 スクロールすると、スマホが各節の画面に切り替わります。スマホの上で **Follow app** に切り替えると、自分で操作でき、押したボタンに合わせて説明がその節へ移ります。単語を入力するキーパッドなど一部の画面はアプリにだけあり、その節ではスマホは前の画面のままです。デモのアドレスに本物のビットコインを送らないでください。
@@ -117,5 +117,5 @@ Android、iOSのどちらでも使えます。入れ方は何を信頼するか�
 ## 次に読む
 
 - [Signer Lockdown](lockdown.md): Androidのスマホを署名専用にする
-- [USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/): スマホをネットにつながずに入れる
+- [USBで入れる](https://bitwasm-project.github.io/bit-hanko/install/): スマホをネットにつながずに入れる
 - [FAQ](faq.md)

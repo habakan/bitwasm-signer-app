@@ -12,7 +12,7 @@ On the phone, show Developer options (tap Build number in About phone seven time
 
 ## 2. Install the APK with the installer page {#android-apk-install}
 
-On the PC, download the APK and `SHA256SUMS` from the [releases](https://github.com/habakan/bitwasm-signer-app/releases), open the [installer page](https://habakan.github.io/bitwasm-signer-app/install/#apk) with "Install an APK only" and pick both. It installs only if they match. Then turn off USB debugging and turn on airplane mode.
+On the PC, download the APK and `SHA256SUMS` from the [releases](https://github.com/bitwasm-project/bit-hanko/releases), open the [installer page](https://bitwasm-project.github.io/bit-hanko/install/#apk) with "Install an APK only" and pick both. It installs only if they match. Then turn off USB debugging and turn on airplane mode.
 
 <Shot name="installer" wide />
 

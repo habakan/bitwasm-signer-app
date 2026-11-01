@@ -38,7 +38,7 @@ Webアプリでは、鍵も署名エンジンもブラウザ(iPhoneではWebKit)
 | signer.wasm | 鍵を持つ | C(libsecp256k1)、import 0 | 計画をもう一度確かめて、画面に出す内容を作り、署名する。ニーモニック、SeedQR、BIP32、BIP85、BIP137、xpub、マルチシグも扱う。PSBTそのものは読まない |
 | checker.wasm | もう一つの確認をする。鍵を持たない | Lean 4 のモデルをCにしてWASMへ、import 0 | signer.wasmとは別に書いた、署名前の判断のモデル。合計、手数料、署名する入力、出力の持ち主、画面の表示を計算し直し、signer.wasmと1バイトでも違えば署名しない |
 
-parser.wasm と signer.wasm は [bitwasm-signer](https://github.com/habakan/bitwasm-signer)、checker.wasm は bitwasm-signer-lean でビルドしています。checker.wasm のモデルは btcsigner-spec で、何を保証するかの証明が付いています。
+parser.wasm と signer.wasm は [bitwasm-signer](https://github.com/bitwasm-project/bitwasm-signer)、checker.wasm は bitwasm-signer-lean でビルドしています。checker.wasm のモデルは btcsigner-spec で、何を保証するかの証明が付いています。
 
 <Diagram name="engine" :width="460" alt="署名エンジンの3つのモジュールとデータの流れ" />
 

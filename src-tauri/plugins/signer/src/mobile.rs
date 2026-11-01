@@ -21,7 +21,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     crate::wasmi_host::keep_exports_linked();
     #[cfg(target_os = "android")]
     let handle =
-        api.register_android_plugin("com.diysigner.bitwasm_signer.signer", "SignerPlugin")?;
+        api.register_android_plugin("app.bithanko.signer", "SignerPlugin")?;
     #[cfg(target_os = "ios")]
     let handle = api.register_ios_plugin(init_plugin_signer)?;
     Ok(Signer {

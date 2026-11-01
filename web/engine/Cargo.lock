@@ -46,7 +46,7 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 [[package]]
 name = "bitwasm-signer-qr"
 version = "0.1.0"
-source = "git+https://github.com/habakan/bitwasm-signer?rev=04e12c8057824d7231057b3ea45f215890beea87#04e12c8057824d7231057b3ea45f215890beea87"
+source = "git+https://github.com/bitwasm-project/bitwasm-signer?rev=04e12c8057824d7231057b3ea45f215890beea87#04e12c8057824d7231057b3ea45f215890beea87"
 
 [[package]]
 name = "bitwasm-web-engine"

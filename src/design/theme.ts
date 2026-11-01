@@ -3,7 +3,7 @@ import { isPreview, signerInvoke } from "../signer";
 export type Theme = "system" | "light" | "dark";
 
 const dark = window.matchMedia("(prefers-color-scheme: dark)");
-const key = "bitwasm-signer-theme";
+const key = "bithanko-theme";
 // Storage can be unavailable in previews; the choice then lasts until the app closes
 let saved: string | null = null;
 try { saved = localStorage.getItem(key); } catch {}

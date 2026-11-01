@@ -1,4 +1,4 @@
-package com.diysigner.bitwasm_signer.signer
+package app.bithanko.signer
 
 import android.content.Context
 import wasmsigner.Multisig

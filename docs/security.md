@@ -38,7 +38,7 @@ The signing engine is three WASM modules, each limited to as little input and ou
 | signer.wasm | Holds the key | C (libsecp256k1), no imports | Checks the plan again, builds what the screen shows, and signs. Also mnemonics, SeedQR, BIP32, BIP85, BIP137, xpubs and multisig. Never reads the PSBT itself |
 | checker.wasm | A second review. Holds no key | A Lean 4 model compiled to C, then WASM, no imports | A model of what a signer decides before signing, written separately from signer.wasm. Works out the totals, fee, inputs to sign, owner of each output and what the screen shows, and nothing is signed if it differs from signer.wasm by a single byte |
 
-parser.wasm and signer.wasm are built in [bitwasm-signer](https://github.com/habakan/bitwasm-signer), and checker.wasm in bitwasm-signer-lean. checker.wasm's model is btcsigner-spec, with proofs of what it guarantees.
+parser.wasm and signer.wasm are built in [bitwasm-signer](https://github.com/bitwasm-project/bitwasm-signer), and checker.wasm in bitwasm-signer-lean. checker.wasm's model is btcsigner-spec, with proofs of what it guarantees.
 
 <Diagram name="engine" :width="460" alt="The signing engine's three modules and how data moves between them" />
 

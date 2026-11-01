@@ -1,12 +1,12 @@
-# bitwasm-signer-app
+# BitHanko
 
 <sup>[日本語](docs/ja/README.md)</sup>
 
 An Android / iOS signing app built on the `bitwasm-signer` parser and signer WASM modules. By default the app keeps no key: it loads the key for each signing and erases it when you are done.
 
-**[Read the guide](https://habakan.github.io/bitwasm-signer-app/docs/)**: how to set up and use the signer, from making a key to signing a transaction, with the browser demo running beside the text.
+**[Read the guide](https://bitwasm-project.github.io/bit-hanko/docs/)**: how to set up and use the signer, from making a key to signing a transaction, with the browser demo running beside the text.
 
-**[Try the testnet demo in your browser](https://habakan.github.io/bitwasm-signer-app/)** · **[Install over USB](https://habakan.github.io/bitwasm-signer-app/install/)**
+**[Try the testnet demo in your browser](https://bitwasm-project.github.io/bit-hanko/)** · **[Install over USB](https://bitwasm-project.github.io/bit-hanko/install/)**
 
 > **Warning:** This is experimental software. It has not been audited and comes with no warranty. The author is not responsible for lost funds or any other damage from using it. Keep amounts small.
 
@@ -56,7 +56,7 @@ Keyboard learning and autofill are covered in [docs/faq.md](docs/faq.md).
 
 ## A phone that only signs
 
-On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB from the [installer page](https://habakan.github.io/bitwasm-signer-app/install/) to keep the phone off every network. The same page can also install just the signer, without Lockdown. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card or a PC over USB. See [docs/lockdown.md](docs/lockdown.md).
+On Android, Signer Lockdown (`lockdown/`) makes a factory-reset phone a dedicated signer. Scan the QR code from a release on the welcome screen, or install it over USB from the [installer page](https://bitwasm-project.github.io/bit-hanko/install/) to keep the phone off every network. The same page can also install just the signer, without Lockdown. It installs the signer, keeps airplane mode on, blocks USB debugging, new apps and accounts, hides apps the signer does not need, and updates the signer from an SD card or a PC over USB. See [docs/lockdown.md](docs/lockdown.md).
 
 ## WASM
 
@@ -95,8 +95,8 @@ JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/android-sdk NDK_HOME=/path/to/ndk p
 BT=$ANDROID_HOME/build-tools/<version>
 $BT/zipalign -f -p 4 src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk aligned.apk
 $BT/apksigner sign --ks ~/.android/debug.keystore --ks-pass pass:android --key-pass pass:android \
-  --ks-key-alias androiddebugkey --out bitwasm-signer-release.apk aligned.apk
-adb install -r bitwasm-signer-release.apk
+  --ks-key-alias androiddebugkey --out bithanko-release.apk aligned.apk
+adb install -r bithanko-release.apk
 ```
 
 Match `--target` to the device's ABI (`adb shell getprop ro.product.cpu.abilist`; `arm64-v8a` means `aarch64`).
@@ -116,7 +116,7 @@ With a different release key the app cannot be installed over the old one, and u
 
 ## Browser demo
 
-Try it at https://habakan.github.io/bitwasm-signer-app/ (deployed from `main` by GitHub Actions).
+Try it at https://bitwasm-project.github.io/bit-hanko/ (deployed from `main` by GitHub Actions).
 
 The same engine as iOS (`wasmi_host.rs`) is built for wasm32 and runs inside the page. It is testnet only, and the key is limited to the BIP39 test words (`abandon` eleven times and `about`). Words and SeedQRs cannot be entered. The new wallet flow (walkthrough, dice, write-down and quiz) can be tried too; the words it makes are real BIP39 words made in a connected browser, so every screen showing them is stamped as a demo. It runs on a device that is online, so never use it with real keys or funds.
 
@@ -129,7 +129,7 @@ To try signing, scan a QR from a wallet app with the camera, or use the test tra
 
 ## Documentation
 
-The Markdown in `docs/` (English) and `docs/ja/` (Japanese) is published with VitePress at https://habakan.github.io/bitwasm-signer-app/docs/. A page with `demo:` in its frontmatter shows the browser demo in the right column; it maps section ids to the buttons to tap, so the phone moves to that screen when the section scrolls into view (see `docs/index.md`).
+The Markdown in `docs/` (English) and `docs/ja/` (Japanese) is published with VitePress at https://bitwasm-project.github.io/bit-hanko/docs/. A page with `demo:` in its frontmatter shows the browser demo in the right column; it maps section ids to the buttons to tap, so the phone moves to that screen when the section scrolls into view (see `docs/index.md`).
 
 ```sh
 pnpm dev:docs    # the demo comes from the published site

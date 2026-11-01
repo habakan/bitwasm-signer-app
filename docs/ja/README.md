@@ -1,12 +1,12 @@
-# bitwasm-signer-app
+# BitHanko
 
 <sup>[English](../../README.md)</sup>
 
 `bitwasm-signer` の parser / signer WASM を使うAndroid / iOSの署名アプリです。初めの設定ではアプリは鍵を持たず、署名のたびに読み込み、使い終わったら消します。
 
-**[使い方ガイドを読む](https://habakan.github.io/bitwasm-signer-app/docs/ja/)**: 鍵の作成から取引の署名まで、署名アプリの準備と使い方を、横で動くブラウザ版のデモと一緒に説明しています。
+**[使い方ガイドを読む](https://bitwasm-project.github.io/bit-hanko/docs/ja/)**: 鍵の作成から取引の署名まで、署名アプリの準備と使い方を、横で動くブラウザ版のデモと一緒に説明しています。
 
-**[ブラウザでテストネットのデモを試す](https://habakan.github.io/bitwasm-signer-app/)** · **[USBで入れる](https://habakan.github.io/bitwasm-signer-app/install/)**
+**[ブラウザでテストネットのデモを試す](https://bitwasm-project.github.io/bit-hanko/)** · **[USBで入れる](https://bitwasm-project.github.io/bit-hanko/install/)**
 
 > **注意:** 実験的なソフトウェアです。監査を受けておらず、無保証です。使用によって生じた資金の損失やその他の損害について、作者は責任を負いません。使う場合は少額にとどめてください。
 
@@ -56,7 +56,7 @@ Android（Android 10）とiOSシミュレーターの画面です。テストネ
 
 ## 署名専用機にする
 
-Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに[導入ページ](https://habakan.github.io/bitwasm-signer-app/install/)から USB で入れます。同じページで、Lockdown なしで署名アプリだけを入れることもできます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードか、PC との USB 接続でできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
+Android では、Signer Lockdown（`lockdown/`）で工場出荷リセットした端末を署名専用機にできます。ようこそ画面でリリースの QR を読むか、端末をネットワークにつながずに[導入ページ](https://bitwasm-project.github.io/bit-hanko/install/)から USB で入れます。同じページで、Lockdown なしで署名アプリだけを入れることもできます。署名アプリを入れ、機内モードを固定し、USB デバッグ・アプリやアカウントの追加を禁止し、署名に要らないアプリを隠します。署名アプリの更新は SD カードか、PC との USB 接続でできます。詳しくは[lockdown.md](lockdown.md)にまとめています。
 
 ## WASM
 
@@ -95,8 +95,8 @@ JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/android-sdk NDK_HOME=/path/to/ndk p
 BT=$ANDROID_HOME/build-tools/<version>
 $BT/zipalign -f -p 4 src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk aligned.apk
 $BT/apksigner sign --ks ~/.android/debug.keystore --ks-pass pass:android --key-pass pass:android \
-  --ks-key-alias androiddebugkey --out bitwasm-signer-release.apk aligned.apk
-adb install -r bitwasm-signer-release.apk
+  --ks-key-alias androiddebugkey --out bithanko-release.apk aligned.apk
+adb install -r bithanko-release.apk
 ```
 
 `--target`は端末のABIに合わせます（`adb shell getprop ro.product.cpu.abilist`。`arm64-v8a`なら`aarch64`）。
@@ -116,7 +116,7 @@ release鍵を変えると上書きインストールできず、アンインス�
 
 ## ブラウザ版のデモ
 
-https://habakan.github.io/bitwasm-signer-app/ で試せます（`main`からGitHub Actionsで公開）。
+https://bitwasm-project.github.io/bit-hanko/ で試せます（`main`からGitHub Actionsで公開）。
 
 iOSと同じエンジン(`wasmi_host.rs`)をwasm32向けにビルドし、ページの中で動かします。テストネットだけで、鍵はBIP39のテスト用の単語(`abandon`を11回と`about`)に限ります。単語やSeedQRの入力はできません。新しいウォレットを作る流れ(ウォークスルー、サイコロ、書き写し、確認のクイズ)も試せます。作った単語はネットにつながったブラウザで作った本物のBIP39の単語なので、単語を表示する画面にはデモである旨を大きく表示します。ネットにつながった端末で動くので、本物の鍵やお金には使わないでください。
 
@@ -129,7 +129,7 @@ pnpm build:web   # dist-web に出力
 
 ## ドキュメント
 
-`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://habakan.github.io/bitwasm-signer-app/docs/ に公開しています。フロントマターに `demo:` があるページは、右の欄にブラウザ版のデモを出します。`demo:` には節のIDと押すボタンを書き、その節までスクロールするとスマホがその画面に進みます(`docs/ja/index.md` を参照)。
+`docs/`(英語)と `docs/ja/`(日本語)のMarkdownを、VitePressで https://bitwasm-project.github.io/bit-hanko/docs/ に公開しています。フロントマターに `demo:` があるページは、右の欄にブラウザ版のデモを出します。`demo:` には節のIDと押すボタンを書き、その節までスクロールするとスマホがその画面に進みます(`docs/ja/index.md` を参照)。
 
 ```sh
 pnpm dev:docs    # デモは公開中のサイトのものを使う

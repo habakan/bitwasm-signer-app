@@ -3,8 +3,8 @@
 set -eu
 cd "$(dirname "$0")"
 
-SIGNER=com.habakan.bitwasm_signer
-LOCKDOWN=com.habakan.signer_lockdown
+SIGNER=app.bithanko
+LOCKDOWN=app.bithanko.lockdown
 sh_() { adb shell "$@" </dev/null 2>/dev/null | tr -d '\r'; }
 prop() { sh_ getprop "$1"; }
 list() { grep -v -e '^#' -e '^$' "$1"; }
