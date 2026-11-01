@@ -36,9 +36,9 @@ export default defineConfig({
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "Setup", items: [{ text: "Overview", link: "/setup" }, { text: "Installing the app", link: "/install" }, { text: "Using the app", link: "/use" }, { text: "Device restrictions", link: "/use#device" }, { text: "Quick start", link: "/quickstart/", items: [{ text: "iPhone, quick start", link: "/quickstart/ios-pages" }, { text: "iPhone, served by you", link: "/quickstart/ios-fork" }, { text: "Android, easy", link: "/quickstart/android-apk" }, { text: "Android, dedicated phone", link: "/quickstart/android-lockdown" }, { text: "Build it yourself", link: "/quickstart/build" }] }, { text: "Security", link: "/security" }] },
+          { text: "Setup", items: [{ text: "Overview", link: "/setup" }, { text: "Installing the app", link: "/install" }, { text: "Using the app", link: "/use" }, { text: "Device restrictions", link: "/use#device" }, { text: "Quick start", link: "/quickstart/", items: [{ text: "iPhone, quick start", link: "/quickstart/ios-pages" }, { text: "Android, easy", link: "/quickstart/android-apk" }, { text: "Android, dedicated phone", link: "/quickstart/android-lockdown" }, { text: "Build it yourself", link: "/quickstart/build" }] }, { text: "Security", link: "/security" }] },
           { text: "Use", items: [{ text: "Using the signer", link: "/", items: chapters("../index.md", "/") }, { text: "Signer Lockdown", link: "/lockdown" }, { text: "FAQ", link: "/faq" }] },
-          { text: "Develop", items: [{ text: "Design", link: "/design" }, { text: "Roadmap", link: "/roadmap" }] },
+          { text: "Develop", items: [{ text: "Roadmap", link: "/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "Edit this page on GitHub" },
       },
@@ -54,9 +54,9 @@ export default defineConfig({
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "アプリのインストール方法", link: "/ja/install" }, { text: "アプリの設定方法", link: "/ja/use" }, { text: "端末の機能制限", link: "/ja/use#device" }, { text: "クイックスタート", link: "/ja/quickstart/", items: [{ text: "iPhone(PWA)", link: "/ja/quickstart/ios-pages" }, { text: "iPhone(Native build)", link: "/ja/quickstart/ios-fork" }, { text: "Android(WebUSB build)", link: "/ja/quickstart/android-apk" }, { text: "Android(lockdown build)", link: "/ja/quickstart/android-lockdown" }, { text: "自分でビルド", link: "/ja/quickstart/build" }] }, { text: "セキュリティ仕様", link: "/ja/security" }] },
+          { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "アプリのインストール方法", link: "/ja/install" }, { text: "アプリの設定方法", link: "/ja/use" }, { text: "端末の機能制限", link: "/ja/use#device" }, { text: "クイックスタート", link: "/ja/quickstart/", items: [{ text: "iPhone(PWA)", link: "/ja/quickstart/ios-pages" }, { text: "Android(WebUSB build)", link: "/ja/quickstart/android-apk" }, { text: "Android(lockdown build)", link: "/ja/quickstart/android-lockdown" }, { text: "自分でビルド", link: "/ja/quickstart/build" }] }, { text: "セキュリティ仕様", link: "/ja/security" }] },
           { text: "使う", items: [{ text: "署名アプリの使い方", link: "/ja/", items: chapters("../ja/index.md", "/ja/") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
-          { text: "開発", items: [{ text: "デザイン", link: "/ja/design" }, { text: "ロードマップ", link: "/ja/roadmap" }] },
+          { text: "開発", items: [{ text: "ロードマップ", link: "/ja/roadmap" }] },
         ],
         editLink: { pattern: `${repo}/edit/main/docs/:path`, text: "GitHubでこのページを編集" },
         outline: { label: "このページの内容" },
