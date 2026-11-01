@@ -5,7 +5,7 @@
 Setting up the signer comes down to two choices: how you install the app, and how you use it. You can make both to suit the trade-off between risk and effort that you want.
 
 1. [Installing the app](install.md): whose build you trust. Choose between this site, your own GitHub Pages, the author's release and your own build.
-2. [Using the app](use.md): whether to keep the key on the phone, and how far to lock the phone down. Weigh the risks each setting removes against the convenience it costs.
+2. [Using the app](use.md): whether to keep the key on the phone, and how far to lock the phone down, including [device restriction levels and defaults](use.md#device). Weigh the risks each setting removes against the convenience it costs.
 3. [Quick start](quickstart/index.md): step-by-step setups for five common combinations of the two, with screens.
 
 What is protected where is described in [Security](security.md).

@@ -59,14 +59,28 @@ At level 1 every path depends on your own care: settings can be switched back, a
 
 | Path | 2. Device restrictions | 3. Signer Lockdown |
 | --- | --- | --- |
-| Network (Wi-Fi, mobile) | No key loads while online (Android, iOS; the web app always does this) | Airplane mode kept on |
+| Network (Wi-Fi, mobile) | A warning, or no key loads, while online (Android, iOS; the web app always blocks loading) | Airplane mode kept on |
 | Bluetooth, NFC | A warning, or no key loads, while on (Android; iOS checks Bluetooth only) | Settings cannot be changed |
-| Third-party keyboards | A warning, or no key loads, while one is installed (Android) | Built-in ones only |
+| Third-party keyboards | A warning, or no key loads, while the default keyboard did not come with the device (Android) | Built-in ones only |
 | Accessibility services | A warning, or no key loads, while one is on (Android) | Built-in ones only |
 | USB debugging | A warning, or no key loads, while on (Android) | Blocked |
 | Apps and accounts added later | Not checked | Blocked |
 
-Device restrictions are under Settings › Device restrictions. For each item choose off, warn, or require it to be off before a key loads. They only check; they do not turn anything off.
+Device restrictions are under Settings › Device restrictions in the native apps. They only check; they do not turn anything off.
+
+Device restrictions detect device features that do not suit airgapped signing. Each item can be set to one of three levels. By default Bluetooth and NFC are Off and the rest are Warn.
+
+- Off: not detected
+- Warn: shows a warning at the top of the screen while it is on
+- Require: warns, and also blocks loading and creating seeds while it is on. If a network or radio set to Require turns on after a key is loaded, the key is erased at that moment
+
+| Item | Android | iOS |
+| --- | --- | --- |
+| Network (Wi-Fi, mobile data, tethering, including ones without internet) | Detected | Detected |
+| Bluetooth, NFC | Both detected | Only Bluetooth. Permission is requested when set to anything but Off |
+| Third-party keyboard | Detects whether the default keyboard came with the device | No item, since the app blocks them |
+| USB debugging | Detected | No item |
+| Accessibility services | Detects services that are on, including screen readers such as TalkBack | No item |
 
 ## Input and checks {#habits}
 

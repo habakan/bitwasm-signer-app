@@ -39,19 +39,7 @@ The same steps are shown under "Keyboard privacy" in the app's settings.
 
 ### What does "Device restrictions" in Settings do?
 
-It detects device features that do not suit airgapped signing. Each item can be set to one of three levels. By default Bluetooth and NFC are Off and the rest are Warn.
-
-- Off: not detected
-- Warn: shows a warning at the top of the screen while it is on
-- Require: warns, and also blocks loading and creating seeds while it is on. If the network or a radio turns on after a key is loaded, the key is erased at that moment
-
-| Item | Android | iOS |
-| --- | --- | --- |
-| Network (Wi-Fi, mobile data, tethering, including ones without internet) | Detected | Detected |
-| Bluetooth, NFC | Both detected | Only Bluetooth. Permission is requested when set to anything but Off |
-| Third-party keyboard | Detects whether the default keyboard came with the device | No item, since the app blocks them |
-| USB debugging | Detected | No item |
-| Accessibility services | Detects services that are on, including screen readers such as TalkBack | No item |
+See [Device restrictions](use.md#device) for the Off, Warn and Require levels, defaults, and platform availability.
 
 On Android the app itself has no internet permission.
 
