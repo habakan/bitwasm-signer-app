@@ -25,7 +25,7 @@
 3. signer.wasmがsighashを出し、カードが署名する
 4. 返ってきた署名をlow-Sにそろえ、signer.wasmがPSBTの`partial_sigs`に入れる
 
-signer.wasmに、鍵を持たずにsighashを出す口と、外から署名を受け取る口を足します。これはbitwasm-signer本体の変更です。Taproot（Schnorr）はapplet v0.14以降で使えますが、seedsignerの実装はECDSAだけなので別に確かめます。
+signer.wasmに、鍵を持たずにsighashを出す方法と、外から署名を受け取る方法を足します。これはbitwasm-signer本体の変更です。Taproot（Schnorr）はapplet v0.14以降で使えますが、seedsignerの実装はECDSAだけなので別に確かめます。
 
 ### appletのインストール
 

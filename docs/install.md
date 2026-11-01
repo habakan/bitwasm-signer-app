@@ -22,7 +22,7 @@ Whose build you can trust decides how you install it. The less you trust, the mo
 
 ## Choosing by what you trust {#choose}
 
-![Choosing how to install by what you trust](images/setup-trust-en.svg)
+<Diagram name="setup-trust" alt="Choosing how to install by what you trust" />
 
 The web app's code is the same whoever serves it; only who serves it differs. Only when you cannot trust that does the kind of phone matter. Whether you can trust the phone's other apps is decided by [how you use it](use.md), not by how you install it.
 
@@ -51,4 +51,4 @@ Every way trusts this repository's code and the OS. ● trusted, △ trusted in 
 - **This site**: the web app takes all its files from the site the first time it is opened from the home screen, then runs offline. You trust what the site served at that moment. Going online lets a new build arrive, which takes over when you go to the home screen and open the app again, so keep the phone offline once it is installed.
 - **An APK you build yourself** is signed with a different key from the author's release, so it cannot update a release install.
 
-The steps are in [Setups step by step](recipes.md).
+The steps are in the [Quick start](quickstart/index.md).

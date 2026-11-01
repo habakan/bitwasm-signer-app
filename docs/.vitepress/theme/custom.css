@@ -29,3 +29,9 @@
   --vp-font-family-base: var(--font-sans);
   --vp-font-family-mono: var(--font-mono);
 }
+
+/* Quick start screens side by side (Shot.vue) */
+.vp-doc .shots { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 16px; margin: 16px 0; }
+.vp-doc .shots .shot { margin: 0; }
+.vp-doc .shots .shot:not(.plain) img { width: 300px; }
+.vp-doc .shots .shot figcaption { max-width: 300px; }

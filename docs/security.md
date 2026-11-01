@@ -23,7 +23,7 @@ In the web app the key and the signing engine live in the browser (WebKit on iPh
 What it cannot stop:
 
 - **Flaws in or tampering with the browser itself**: only OS updates fix those. Keeping the phone offline leaves fewer chances to exploit them.
-- **Installing while the site is taken over**: you trust the site at the moment you add the app. To avoid that, [add it from your own Pages](recipes.md#ios-fork).
+- **Installing while the site is taken over**: you trust the site at the moment you add the app. To avoid that, [add it from your own Pages](quickstart/ios-fork.md).
 - **Screenshots and screen recording**: unlike the native apps, it cannot block them.
 
 ## How the signing engine is split up {#engine}
@@ -40,7 +40,7 @@ The signing engine is three WASM modules, each limited to as little input and ou
 
 parser.wasm and signer.wasm are built in [bitwasm-signer](https://github.com/habakan/bitwasm-signer), and checker.wasm in bitwasm-signer-lean. checker.wasm's model is btcsigner-spec, with proofs of what it guarantees.
 
-![The signing engine's three modules and how data moves between them](images/engine-en.svg)
+<Diagram name="engine" :width="460" alt="The signing engine's three modules and how data moves between them" />
 
 ### What each module can read and give out {#access}
 
