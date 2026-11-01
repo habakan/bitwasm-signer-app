@@ -32,7 +32,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/" },
-          { text: "Demo", link: "https://habakan.github.io/bitwasm-signer-app/" },
+          { text: "Web app", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
           { text: "Install", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
@@ -50,11 +50,11 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "使い方", link: "/ja/" },
-          { text: "デモ", link: "https://habakan.github.io/bitwasm-signer-app/" },
+          { text: "Webアプリ", link: "https://habakan.github.io/bitwasm-signer-app/app/" },
           { text: "USBで入れる", link: "https://habakan.github.io/bitwasm-signer-app/install/" },
         ],
         sidebar: [
-          { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "どうアプリを入れるか", link: "/ja/install" }, { text: "どうアプリを使うか", link: "/ja/use" }, { text: "端末の機能制限", link: "/ja/use#device" }, { text: "クイックスタート", link: "/ja/quickstart/", items: [{ text: "iPhone ・ すぐ使う", link: "/ja/quickstart/ios-pages" }, { text: "iPhone ・ 配る人も自分", link: "/ja/quickstart/ios-fork" }, { text: "Android ・ 手軽", link: "/ja/quickstart/android-apk" }, { text: "Android ・ 専用機", link: "/ja/quickstart/android-lockdown" }, { text: "自分でビルド", link: "/ja/quickstart/build" }] }, { text: "セキュリティ仕様", link: "/ja/security" }] },
+          { text: "セットアップ", items: [{ text: "セットアップ方法", link: "/ja/setup" }, { text: "アプリのインストール方法", link: "/ja/install" }, { text: "アプリの設定方法", link: "/ja/use" }, { text: "端末の機能制限", link: "/ja/use#device" }, { text: "クイックスタート", link: "/ja/quickstart/", items: [{ text: "iPhone(PWA)", link: "/ja/quickstart/ios-pages" }, { text: "iPhone(Native build)", link: "/ja/quickstart/ios-fork" }, { text: "Android(WebUSB build)", link: "/ja/quickstart/android-apk" }, { text: "Android(lockdown build)", link: "/ja/quickstart/android-lockdown" }, { text: "自分でビルド", link: "/ja/quickstart/build" }] }, { text: "セキュリティ仕様", link: "/ja/security" }] },
           { text: "使う", items: [{ text: "署名アプリの使い方", link: "/ja/", items: chapters("../ja/index.md", "/ja/") }, { text: "Signer Lockdown", link: "/ja/lockdown" }, { text: "FAQ", link: "/ja/faq" }] },
           { text: "開発", items: [{ text: "デザイン", link: "/ja/design" }, { text: "ロードマップ", link: "/ja/roadmap" }] },
         ],

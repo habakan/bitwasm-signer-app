@@ -1,4 +1,4 @@
-# iPhone ・ 配る人も自分
+# iPhone(Native build)
 
 <sup>[English](../../quickstart/ios-fork.md)</sup>
 
@@ -13,7 +13,7 @@
 
 ## 2. ホーム画面に追加する {#ios-fork-add}
 
-`https://<自分のユーザー名>.github.io/bitwasm-signer-app/app/`をSafariで開き、[iPhone ・ すぐ使う](ios-pages.md#ios-pages-add)と同じようにホーム画面に追加して、オフラインの準備が終わるまで開いておきます。
+`https://<自分のユーザー名>.github.io/bitwasm-signer-app/app/`をSafariで開き、[iPhone(PWA)](ios-pages.md#ios-pages-add)と同じようにホーム画面に追加して、オフラインの準備が終わるまで開いておきます。
 
 <Shot name="preparing" />
 

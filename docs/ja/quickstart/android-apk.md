@@ -1,4 +1,4 @@
-# Android ・ 手軽
+# Android(WebUSB build)
 
 <sup>[English](../../quickstart/android-apk.md)</sup>
 

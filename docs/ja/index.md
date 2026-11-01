@@ -11,7 +11,6 @@ demo:
   load: ["#demo-seed", "#passphrase-continue"]
   passphrase: ["#demo-seed", "type:#passphrase=TREZOR"]
   connect: ["#demo-seed", "#passphrase-continue", "#account"]
-  receive: ["#demo-seed", "#passphrase-continue", "#find-address", "#address-test"]
   scan: ["#demo-seed", "#passphrase-continue", "#psbt"]
   review: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test"]
   sign: ["#demo-seed", "#passphrase-continue", "#psbt", "#scan-test", ".sheet .check input", "scroll:.sheet .screen-body", "#review-sign", "#confirm-sign"]
@@ -85,11 +84,7 @@ Android、iOSのどちらでも使えます。入れ方は何を信頼するか�
 
 **ウォレットアプリに登録する** を押し、書き出す公開鍵を選びます。ふつうは **まとめて書き出す** のまま **QRを表示** を押すと、公開鍵をアニメーションのQRコードで表示します。ウォレットアプリで読み取ると、ウォッチオンリーウォレットが追加されます。秘密鍵は含まれていません。これは最初に一度だけ行います。xpubだけを読むウォレットアプリには、1種類だけ書き出します。
 
-## 5. 受け取る {#receive}
-
-受け取りのアドレスはウォレットアプリに出ます。人に渡す前に、**アドレスを確認する** で、そのアドレスが本当に自分の鍵のものか確かめられます。ウォレットアプリの受け取り画面のQRを読み取るか、アドレスを入力します。署名アプリは受け取りとおつりのアドレスを、範囲を変えなければそれぞれ最初の1000個まで探し、自分のものかと、何番目かを表示します。ブラウザ版では、カメラの代わりに **テスト用のアドレスを使う** で試せます。
-
-## 6. 送る {#send}
+## 5. 送る {#send}
 
 取引はウォレットアプリが作り、署名アプリが確かめて署名します。
 
@@ -105,7 +100,7 @@ Android、iOSのどちらでも使えます。入れ方は何を信頼するか�
 
 署名した取引がQRコードで出ます。ウォレットアプリで読み取り、ウォレットアプリから送金します。署名アプリがネットにつながることはありません。
 
-## 7. 使い終わったら {#lock}
+## 6. 使い終わったら {#lock}
 
 **ウォレットを閉じる** を押すと、鍵がメモリから消えます。アプリを離れたときも同じです。
 
