@@ -53,6 +53,6 @@ internal class CheckerReview(wasm: ByteArray) : AutoCloseable {
     override fun close() = module.close()
 
     companion object {
-        const val CHECKER_SHA256 = "7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37"
+        const val CHECKER_SHA256 = "579bf43d0652ed8152fae6d2ad2b0bf97afb9422e96b0d9e3658a3bd9f2a5912"
     }
 }

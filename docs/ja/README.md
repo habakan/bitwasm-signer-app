@@ -66,7 +66,7 @@ WASMは`src-tauri/plugins/signer/android/src/main/assets/`に同梱し、ロー�
 | --- | --- |
 | parser.wasm | `9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab` |
 | signer.wasm | `d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508` |
-| checker.wasm | `7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37` |
+| checker.wasm | `579bf43d0652ed8152fae6d2ad2b0bf97afb9422e96b0d9e3658a3bd9f2a5912` |
 
 checker.wasmはsigner.wasmとは別に書いたレビューのモデルです。signer.wasmのレビューが通ったあと、同じplanと前のトランザクション、signer.wasmの`signer_facts()`から同じ判断をさせ、合計・手数料・署名する入力・出力の持ち主、画面に出す各出力の金額とアドレス（またはOP_RETURNやスクリプトの16進）が一致したときだけ確認画面を出します。一致しなければ署名しません。
 

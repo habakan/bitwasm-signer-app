@@ -66,7 +66,7 @@ The WASM modules ship in `src-tauri/plugins/signer/android/src/main/assets/` and
 | --- | --- |
 | parser.wasm | `9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab` |
 | signer.wasm | `d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508` |
-| checker.wasm | `7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37` |
+| checker.wasm | `579bf43d0652ed8152fae6d2ad2b0bf97afb9422e96b0d9e3658a3bd9f2a5912` |
 
 checker.wasm is a separate model of the review, written independently of signer.wasm. After signer.wasm's review passes, checker.wasm decides the same plan from the previous transactions and signer.wasm's `signer_facts()`. The review screen is shown only when both agree on the totals, the fee, the inputs to sign, the owner of each output, and each output's amount and address (or OP_RETURN / script hex) as shown on screen. Otherwise nothing is signed.
 
