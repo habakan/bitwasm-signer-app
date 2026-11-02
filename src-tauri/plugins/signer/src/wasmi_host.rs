@@ -13,7 +13,7 @@ use zeroize::{Zeroize, Zeroizing};
 
 const PARSER_SHA256: &str = "9407abe3a65a56ebcfcab6da3b685f4e21ce9f6a60b3feddd299ddc0def89bab";
 const SIGNER_SHA256: &str = "d27fe4f8050193cc7101cf7fab26b0740a1b39e33c867ebc66cd05d9f9003508";
-const CHECKER_SHA256: &str = "7df36b4c3bfb2bec1826fb2a740e9f1ddd8281cb5530a878dc790ebfd7e63e37";
+const CHECKER_SHA256: &str = "579bf43d0652ed8152fae6d2ad2b0bf97afb9422e96b0d9e3658a3bd9f2a5912";
 const PLAN_SIZE: usize = 6712;
 const PLAN_N_INPUTS: usize = 16;
 const PLAN_N_OUTPUTS: usize = 17;
